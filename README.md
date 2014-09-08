@@ -1,2 +1,3 @@
-algos
+"White on White", 1918, Kazimir Malevich
+The great thriumph of supreme laziness...
 =====
