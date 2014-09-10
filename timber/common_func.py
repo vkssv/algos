@@ -24,3 +24,4 @@ def get_body_skeleton(msg):
         return(body_skeleton)
 
 
+def headers_hash()
