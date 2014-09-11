@@ -38,8 +38,10 @@ def vectorize_by_rules(doc_path,label):
 	parser=email.Parser.Parser()
 	f = open(doc_path,"rb")
 	msg = parser.parse(f)
-    headers_only = parser.parse(f,True)
+
 	f.close()
+
+
 
     vect_dict['heads_hash'] =
     # for spam remove Received + X(?) - leave only tuple of unique + get hash + Subj TO Date From == cleans
