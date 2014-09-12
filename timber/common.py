@@ -27,17 +27,18 @@ def get_body_skeleton(msg):
 
 def get_heads_crc(excluded_list=[],heads_vector,without_X=False):
 
+
 	# exclude common headers like Received, From, Date or X-*, etc, if needed
 	if excluded_list:
-		heads = tuple(filter(lambda h: not excluded_heads.count(h),heads_vector))
+		heads_vector = tuple(filter(lambda h: not excluded_heads.count(h),heads_vector[:]))
 
 	elif without_X:
-		heads = tuple(filter(lambda h: not h.startswith('X'),heads_vector))
+		heads_vector = tuple(filter(lambda h: not h.startswith('X'),heads_vector[:]))
 
 	elif excluded_list and without_X:
-		heads = tuple(filter(lambda h: not ( h.startswith('X') or excluded_heads.count(h)), heads_vector))
+		heads_vector = tuple(filter(lambda h: not ( h.startswith('X') or excluded_heads.count(h)), heads_vector[:]))
 
-	crc32 = binascii.crc32(''.join(heads))
+	crc32 = binascii.crc32(''.join(heads_vector))
 
 	return(crc32)
 
@@ -69,5 +70,14 @@ def check_suspect_heads(heads_dict,regexp_dict,with_noise=True):
 
 return (scores.dict)
 
+def make_rcvd_shingles(self.msg,d):
 
-def url_checker()
+	rcvd_values = tuple(m1.get_all('Received'))[-1*d:]
+	l = h.split(';')[0]
+	l.lower().split('with')[0]
+	# vect = normilize + take crc32
+	#return({rcvdn:crc32})
+
+
+# for what heads meats we also need shingles ? for spam
+#def url_checker()

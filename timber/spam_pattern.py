@@ -20,7 +20,7 @@ class SpamPattern():
 		# 1. get crc32 of just unique headers vector
 		heads_vect = tuple(self.msg.keys())
 
-		excluded_heads = ['Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Return-Path']
+		excluded_heads = ['Received', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Return-Path']
 		without_X_heads = True
 		vector_dict['heads_crc'] = common.get_heads_crc(excluded_heads, heads_vect, without_X_heads)
 
@@ -33,7 +33,7 @@ class SpamPattern():
 		vector_dict.update(common.check_suspect_heads(msg.keys(),regexp_dict,with_noise=True))
 		# 3. check Fwd
 
-		# make shingles for RCVD
+		# 4. make shingles for RCVD
 		# 5. check urls
 		# 2. simple checks by regexp for unconditional spams
 		vect_dict.update(common.get_body_skeleton(self.msg))
