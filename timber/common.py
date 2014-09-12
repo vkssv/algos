@@ -6,7 +6,6 @@ import email, os, sys, re, logging
 
 from email.errors import MessageParseError
 
-
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
@@ -22,11 +21,10 @@ def get_body_skeleton(msg):
     else:
         logger.debug("SKELETON: "+str(body_skeleton))
 
-        return(body_skeleton)
+    return(body_skeleton)
 
 
 def get_heads_crc(excluded_list=[],heads_vector,without_X=False):
-
 
 	# exclude common headers like Received, From, Date or X-*, etc, if needed
 	if excluded_list:
@@ -46,10 +44,10 @@ def remove_noise_str(str):
 
 	return(re.sub('[\[\]\\\/\^\.&$#~`"\=@',:;\|\?\*\+\(\)\{\}\s]','',str))
 
-def check_suspect_heads(heads_dict,regexp_dict,with_noise=True):
+def check_suspect_heads(decoded_heads_dict,sus_tokens_dict,with_noise=True):
 	'''''
 		regexp_dict = {'head_name': ([regexp_list],score)}
-		heads_dict = {'head_name':'value'}
+		decoded_heads_dict = {'head_name':'value'}
 	'''''
 
 	scores_dict = {}
@@ -68,16 +66,19 @@ def check_suspect_heads(heads_dict,regexp_dict,with_noise=True):
 
         logger.debug (score_dict[head])
 
-return (scores.dict)
+    return (scores.dict)
 
-def make_rcvd_shingles(self.msg,d):
+# take first n RCVD headers from bottom, extracts gateways names and IP's, normilize
+# and get CRC32, use tuples for keeping order
+def crc_from_rcvd(msg,n=0):
 
-	rcvd_values = tuple(m1.get_all('Received'))[-1*d:]
-	l = h.split(';')[0]
-	l.lower().split('with')[0]
-	# vect = normilize + take crc32
-	#return({rcvdn:crc32})
+	rcvd_values = tuple(msg.get_all('Received'))[-1*n:]
+    rcvds_vect = tuple([rcvd.partition('with')[0] for rcvd in rcvd_values[:]])
 
+    rcvds_vect = tuple([value.lstrip('from') for value in rcvds_vect[:]])
+    rcvds_vect = tuple([re.sub('\s',"",value) for value in rcvds_vect[:]])
+    rcvds_vect = tuple([value.lower() for value in rcvds_vect[:]])
 
-# for what heads meats we also need shingles ? for spam
-#def url_checker()
+    rcvds_crcs = tuple([binascii.crc32(value) for value in rcvds_vect[:]])
+
+	return(rcvds_crcs)
