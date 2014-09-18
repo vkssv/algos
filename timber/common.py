@@ -78,3 +78,9 @@ def parse_trace_fields(msg,n=0)
 
 	return(rcvds_vect)
 
+
+def decode_headers(heads_dict):
+
+    for key in heads_dict.iterkeys():
+
+
