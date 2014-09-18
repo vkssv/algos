@@ -70,15 +70,11 @@ def check_suspect_heads(decoded_heads_dict,sus_tokens_dict,with_noise=True):
 
 # take first n RCVD headers from bottom, extracts gateways names and IP's, normilize
 # and get CRC32, use tuples for keeping order
-def crc_from_rcvd(msg,n=0):
+def parse_trace_fields(msg,n=0)
 
 	rcvd_values = tuple(msg.get_all('Received'))[-1*n:]
-    rcvds_vect = tuple([rcvd.partition('with')[0] for rcvd in rcvd_values[:]])
+	rcvds_vect = tuple([rcvd.partition(';')[0] for rcvd in rcvd_values[:]])
+    rcvds_vect = tuple([rcvd.partition('for') for rcvd in rcvds_vect[:]])
 
-    rcvds_vect = tuple([value.lstrip('from') for value in rcvds_vect[:]])
-    rcvds_vect = tuple([re.sub('\s',"",value) for value in rcvds_vect[:]])
-    rcvds_vect = tuple([value.lower() for value in rcvds_vect[:]])
+	return(rcvds_vect)
 
-    rcvds_crcs = tuple([binascii.crc32(value) for value in rcvds_vect[:]])
-
-	return(rcvds_crcs)
