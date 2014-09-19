@@ -5,6 +5,7 @@ shared module with common-used functions
 import email, os, sys, re, logging
 
 from email.errors import MessageParseError
+from email.header import decode_header
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -82,5 +83,7 @@ def parse_trace_fields(msg,n=0)
 def decode_headers(heads_dict):
 
     for key in heads_dict.iterkeys():
+
+
 
 

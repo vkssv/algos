@@ -16,18 +16,17 @@ class SpamPattern():
 	def run(self):
 
 		vector_dict = {}
-        # size
-		# 1. HEADERS
-		# 1.1 get crc32 of just unique headers vector
-		heads_vect = tuple(self.msg.keys())
 
-		excluded_heads = ['Received', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Return-Path']
-		without_X_heads = True
-		vector_dict['heads_crc'] = common.get_heads_crc(excluded_heads, heads_vect, without_X_heads)
+        # 1. size
+		vector_dict['size'] = 0
+		if (float(os.stat(doc_path).st_size)/1024) < 4:
+			vector_dict['size'] = 1
 
-		# 1.2 features for unconditional spams
-        # Subject checks are valuable only for pure US-ASCII messages
-        # or for Subjects: which contain Latin symbols
+		logger.debug("SIZE: "+str(float(os.stat(doc_path).st_size)/1024))
+
+		# 2. headers values
+
+        # decode headers values only from QP/Base64 => token checks are valuable only for US-ASCII values
 
         subj_value = (decode_header(msg.get('Subject'))[0])
         decoded_heads ={}
@@ -103,6 +102,13 @@ class SpamPattern():
 			result_str=gate_ip + (trace[0]).partition('\r\n')[0].split()[1]
 
 			vector_dict[key] = binascii.crc32(result_str)
+
+		# 2. get crc32 of just unique headers vector
+		heads_vect = tuple(self.msg.keys())
+
+		excluded_heads = ['Received', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Return-Path']
+		without_X_heads = True
+		vector_dict['heads_crc'] = common.get_heads_crc(excluded_heads, heads_vect, without_X_heads)
 
 
 		# . check urls
