@@ -28,13 +28,6 @@ def vectorize_by_rules(doc_path,label):
 	logger.debug("Start processing: " + doc_path)
 	vect_dict = {}
 
-	logger.debug("Checking basic features: ")
-
-	# 1. size
-	vect_dict['size'] = (float(os.stat(doc_path).st_size)/1024)
-	logger.debug("SIZE: "+str(float(os.stat(doc_path).st_size)/1024))
-
-	# parse message
 	parser=email.Parser.Parser()
 	f = open(doc_path,"rb")
 	msg = parser.parse(f)
@@ -43,14 +36,9 @@ def vectorize_by_rules(doc_path,label):
 
 
 
-    vect_dict['heads_hash'] =
-    # for spam remove Received + X(?) - leave only tuple of unique + get hash + Subj TO Date From == cleans
-    # for nets pubs all without Received + Return-Path
-
-    vect_dict['mime_heads_hash'] =
 	try:
 
-		checks_set = MetaPattern.New(msg,label)
+		checks_set = MetaPattern.New(msg,label,score)
 		#print (test)
 		logger.debug ('\t CHECK_'+label.upper())
 		vect_dict.update (checks_set.run())
@@ -61,7 +49,7 @@ def vectorize_by_rules(doc_path,label):
 
 	return (vect_dict, label)
 
-def make_dataset(dir_path,category):
+def make_dataset(dir_path,category,score):
 
 	if not os.listdir(dir_path):
 		raise Exception ('Collection dir "'+dir_path+'" is empty.')
@@ -79,12 +67,12 @@ def make_dataset(dir_path,category):
 			if category == 'test':
 				X={'ham':[],'spam':[],'info':[],'nets':[]}
 				for label in X.iterkeys():
-					vector_x = vectorize_by_rules(sample_path,label)
+					vector_x = vectorize_by_rules(sample_path,label,score)
 					(X.get(label)).append(vector_x)
 
 			else:
 
-				vector_x = vectorize_by_rules(sample_path,category)
+				vector_x = vectorize_by_rules(sample_path,category,score)
 				print(vector_x)
 				X.append(vector_x)
 
@@ -114,6 +102,7 @@ if __name__ == "__main__":
 	parser.add_option("-t", action="store", type="string", dest="collection", metavar="[REQUIRED]", help="path to samples collection")
 
 	parser.add_option("-p", action="store_true", dest="dump", default=False, metavar=" ", help="safe data into file in libsvm format")
+	parser.add_option("-s", type=float, dest = "score", default = 1.0, metavar = " ", help = "score penalty for matched feature, def = 1.0")
 	parser.add_option("-v", action="store_true", dest="visualize", default=False, metavar=" ", help="visualise dataset with matplot")
 	parser.add_option("-c", action="store", dest="category", default='test', metavar=" ", help="samples category, default=test, i.e. not defined")
 	parser.add_option("-d", action="store_true", dest="debug", default=False, metavar=" ", help="be verbose")
@@ -140,7 +129,7 @@ if __name__ == "__main__":
 
 	# 1. create train dataset
 	try:
-		make_dataset(options.collection,options.category)
+		make_dataset(options.collection,options.category,options.score)
 
 	except Exception, details:
 		logger.error(str(details))

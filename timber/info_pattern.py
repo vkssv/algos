@@ -8,13 +8,16 @@ logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 
-class SpamPattern():
+class InfoPattern():
 	"Set vectorising rules for shams."
 
 	def run(self,msg):
         vect = {}
         vect.update(common.get_body_skeleton())
         logger.debug(vect)
+
+
+
 
 		return(vect)
 

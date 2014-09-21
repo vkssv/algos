@@ -9,7 +9,7 @@ class PatternFactory( object ):
 	def __str__( self ):
 		return ("Pattern factory")
 
-	def New ( self, msg, label):
+	def New ( self, msg, label, score):
 		print(label)
 		try:
 

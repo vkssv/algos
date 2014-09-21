@@ -10,7 +10,7 @@ logger.setLevel(logging.DEBUG)
 class SpamPattern():
 	"Keeps and applies vectorising rules for spams."
 
-	def __init__(self,msg):
+	def __init__(self,msg,score):
 		self.msg = msg
 
 	def run(self):
@@ -24,91 +24,89 @@ class SpamPattern():
 
 		logger.debug("SIZE: "+str(float(os.stat(doc_path).st_size)/1024))
 
-		# 2. headers values
+		# 2. Received headers
 
-        # decode headers values only from QP/Base64 => token checks are valuable only for US-ASCII values
+		# get crc32 of just unique headers vector
+		heads_vect = tuple (self.msg.keys())
 
-        subj_value = (decode_header(msg.get('Subject'))[0])
-        decoded_heads ={}
-        for h in regs_dict.keys():
-            head_value, encoding = (decode_header(msg.get('Subject'))[0])
-            decoded_heads[h] = head_value
+		excluded_heads = ['Received', 'Subject', 'From', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Return-Path']
+		without_X_heads = True
+		vector_dict ['heads_crc'] = common.get_heads_crc (excluded_heads, heads_vect, without_X_heads)
 
-        sus_tokens = {
-	        'Subject': (['(SN|viagra|ciali(s|\$)|pfizer|discount|pill|med|free|click|Best\s+Deal\s+Ever|>>:||babe)+'], 1.0),
-	        'Received': (['(.*public.*|.*airnet.*|.*wi-?fi.*|adsl|dsl|dynamic|static)+'], 1.0)
-        }
-
-        headers_scores = common.check_suspect_heads(decoded_heads, sus_tokens, with_noise = False)
-		headers_scores ['Subject'] = headers_scores.get ('Subject') + score
-
-        # 1.3 check correlated heads, MUA's try follow RFC 5322 for generating Replies and Forwards,
-		# spammer's scripts not always
-
-		correlated = {
-						'Re'    :   ['In-Reply-To','(X-)?Thread(-.*)?','(X-)?References'],
-		                'Fwd?'  :   ['(X-)?Forward']
-					}
-
-		for prefix in correlated.keys():
-            logger.debug("prefix: "+prefix)
-
-			if re.search('(prefix\s+:\s+)+', decoded_heads['Subject'],re.I):
-                for regexp in correlated.get(prefix):
-                    if not filter(lambda x: re.search(regexp,x,re.I),self.msg.keys()):
-			            headers_scores ['Subject'] = headers_scores.get ('Subject') + 1.0
-
-        vector_dict.update(headers_scores)
-
-        list_patterns=[
-                        '(.*-)?Unsubscribe(-.*)?',
-                        '(.*-)?UnList(-.*)?',
-                        '(-.*)?List-Help(-.*)?',
-                        '(-.*)?List-Post(-.*)?',
-                        ]
-
-		if self.msg.keys().count('List') and not filter(lambda l: re.search(l, self.msg.keys(), re.I), list_patterns):
-            vector_dict['UnSubscr'] = 1.0
-
-        if self.msg.keys().count('List') and not self.msg.keys().count('Sender')
-            vector_dict['UnSubscr'] = vector_dict.get('UnSubscr')+2.0
-
-        if self.msg.keys().count('Sender') and self.msg.keys().count('From') and not self.msg.keys().count('List'):
-            vector_dict['Sender'] = 1.0
-
-		# 1.4 heuristics for Received: trace headers
-
+		# check trace fields
 		vector_dict["traces_num"] = self.msg.keys().count('Received')
 
-        n_rcvds = 2
-		parsed_rcvds = common.parse_trace_fields(msg,n_rcvds)
+		parsed_rcvds = common.parse_trace_fields(msg)
 
-		# from Received trace value leave only lines with helo domain/IP addr + smtp "rcpt to:" value
-		smtp_traces = tuple([((trace_line[0]).partition('by')[0], trace_line[2]) for trace_line in rcvds_vect[:]])
+		vector_dict ["trace_rule"]=0
+		rcvd_rule = '(.*public.*|.*airnet.*|.*wi-?fi.*|adsl|dsl|dynamic|static)+'
 
-		ipv4_regexp = '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
-		keys = tuple(['rcvd' + str(i) for i in range(n_rcvds)])
+		if filter(lambda l: re.search(rcvd_rule,l),parsed_rcvds)
+			vector_dict ["trace_rule"]=1
 
-		vector_dict['smtp_to']=1
-		for key, trace in zip(keys[:],smtp_traces[:]):
-            logger.debug(key, trace)
-			result_str=''
-            #smtp_
-			# absence of smtp "rcpt to:" value threat as separate feature
-			#if not filter(lambda smtp_to_trace: smtp_to_trace,trace)
-			#	vector_dict['smtp_to']=0
+		vector_dict['smtp_to']=0
 
-			gate_ip = re.findall(ipv4_regexp,trace[0])[-1:]
-			result_str=gate_ip + (trace[0]).partition('\r\n')[0].split()[1]
+		rcvd_vect = tuple([rcvd.partition ('for') [0] for r in parsed_rcvds])
 
-			vector_dict[key] = binascii.crc32(result_str)
+		if not filter(lambda l: re.search('<(.*@.*)?>',l,re.I), rcvd_vect)
+			vector_dict['smtp_to']=1
 
-		# 2. get crc32 of just unique headers vector
-		heads_vect = tuple(self.msg.keys())
+		# from first N trace values leave only gate IP addr and domain values, pack in one line and take crc32
+		regs = ['\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '\s((?!-)[a-z0-9-\.]{1,63}(?<!-))+(\.[a-z]{2,6}){0,}']
+		n_rcvds = 2
 
-		excluded_heads = ['Received', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Return-Path']
-		without_X_heads = True
-		vector_dict['heads_crc'] = common.get_heads_crc(excluded_heads, heads_vect, without_X_heads)
+		rcvd_vect = tuple([rcvd.partition ('by') [0] for r in parsed_rcvds])
+		rcvd_vect = rcvd_vect[-1*n_rcvds:]
+
+		vector_dict.update(common.smtp_trace_crc(rcvd_vect,regs))
+
+        # decode headers values only from QP/Base64 => token checks are valuable only for US-ASCII values
+        needed_heads = dict.fromkeys(filter(lambda x: self.msg.get(x),['Subject','To','From','Cc','Bcc']))
+
+		for k in needed_heads.iterkeys():
+			needed_heads[k]=decode_header(self.msg.get(k))
+
+		# 3. Subject checks
+
+		if self.msg.get('Subject'):
+
+			subject_rule = ['(SN|viagra|ciali(s|\$)|pfizer|discount|pill|med|free|click|Best\s+Deal\s+Ever|,|!|?!|>>:||babe)+']
+			subject_len_trashold = 70
+
+			subj_score, subj_trace = common.check_subject(self.msg.items(),subject_rule,subject_len_trashold,score)
+			vector_dict['subj_score'] = subj_score
+			vector_dict ['subj_trace'] = subj_trace
+
+		else:
+			
+			vector_dict['subj_score']=1
+			vector_dict ['subj_trace']=0
+
+		# 4. List checks and some RFC 5322 compliences checks
+
+		temp_dict = dict.fromkeys('UnSubscr','Sender','Preamble')
+
+		vect_dict ['UnSubscr'] = score # cause spam is BULK
+
+		if filter(lambda list_field: re.search('^(X-)?List(-.*)?',h_line), self.msg.keys()):
+			vect_dict ['UnSubscr'] = 0
+			# simple checks for RFC 5322 compliences for List headers, take some penalty
+			vect_dict['UnSubscr'] = common.check_lists(self.msg.keys())
+
+		elif not self.msg.keys().count('List') and (self.msg.keys().count('Sender') and self.msg.keys().count('From')):
+			vect_dict['Sender'] = 1
+
+
+
+        if not self.msg.preamble and self.msg.get('Content-Type').startswith('multipart')
+	        temp_dict ['preamble'] = 1
+
+	    vector_dict.update(temp_dict)
+
+
+
+
+
 
 
 		# . check urls
