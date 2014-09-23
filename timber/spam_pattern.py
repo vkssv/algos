@@ -63,6 +63,9 @@ class SpamPattern():
 			elif not filter(lamda y: y=='<multiple recipients>',smtp_to_traces) and len(common.get_to_value(msg)[1])>1:
 				vector_dict['To'] = score
 
+			if len(common.get_to_value(msg)[1]) ==1 and smtp_to[0] != (common.get_to_value(msg)[1])[0]:
+				vector_dict['To'] = score
+
 
 		# from first N trace values leave only gate IP addr and domain values, pack in one line and take crc32
 		regs = ['\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '\s((?!-)[a-z0-9-\.]{1,63}(?<!-))+(\.[a-z]{2,6}){0,}']
