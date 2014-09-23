@@ -45,11 +45,24 @@ class SpamPattern():
 			vector_dict ["trace_rule"]=1
 
 		vector_dict['smtp_to']=0
+		vector_dict['To'] = 0
 
 		rcvd_vect = tuple([rcvd.partition ('for') [0] for r in parsed_rcvds])
 
-		if not filter(lambda l: re.search('<(.*@.*)?>',l,re.I), rcvd_vect)
+		if not filter(lambda l: re.search('<(.*@.*)?>',l,re.I), rcvd_vect):
 			vector_dict['smtp_to']=1
+
+		else:
+
+			smtp_to = filter(lambda l: re.search('<(.*@.*)?>',l,re.I), rcvd_vect)
+			smtp_to_traces = [tr.group(0).strip() for tr in smtp_to]
+
+			if filter(lamda y: y=='<multiple recipients>',smtp_to_traces) and len(common.get_to_value(msg)[1]) <=1:
+				vector_dict['To'] = score
+
+			elif not filter(lamda y: y=='<multiple recipients>',smtp_to_traces) and len(common.get_to_value(msg)[1])>1:
+				vector_dict['To'] = score
+
 
 		# from first N trace values leave only gate IP addr and domain values, pack in one line and take crc32
 		regs = ['\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '\s((?!-)[a-z0-9-\.]{1,63}(?<!-))+(\.[a-z]{2,6}){0,}']
@@ -59,12 +72,6 @@ class SpamPattern():
 		rcvd_vect = rcvd_vect[-1*n_rcvds:]
 
 		vector_dict.update(common.smtp_trace_crc(rcvd_vect,regs))
-
-        # decode headers values only from QP/Base64 => token checks are valuable only for US-ASCII values
-        needed_heads = dict.fromkeys(filter(lambda x: self.msg.get(x),['Subject','To','From','Cc','Bcc']))
-
-		for k in needed_heads.iterkeys():
-			needed_heads[k]=decode_header(self.msg.get(k))
 
 		# 3. Subject checks
 
@@ -82,31 +89,24 @@ class SpamPattern():
 			vector_dict['subj_score']=1
 			vector_dict ['subj_trace']=0
 
-		# 4. List checks and some RFC 5322 compliences checks
+		# 4. List checks and some other RFC 5322 compliences checks for headers
 
-		temp_dict = dict.fromkeys('UnSubscr','Sender','Preamble')
+		temp_dict = dict.fromkeys('List','Sender','Preamble')
 
-		vect_dict ['UnSubscr'] = score # cause spam is BULK
+		temp_dict['List'] = score
 
-		if filter(lambda list_field: re.search('^(X-)?List(-.*)?',h_line), self.msg.keys()):
-			vect_dict ['UnSubscr'] = 0
-			# simple checks for RFC 5322 compliences for List headers, take some penalty
-			vect_dict['UnSubscr'] = common.check_lists(self.msg.keys())
+		if filter(lambda list_field: re.search('^List(-.*)?',list_field), self.msg.items()):
+			# well, this unique spam author respects RFC 5322 rules about List fields,
+			# his creation deserved the deep check
+			temp_dict['List'] = common.check_lists(self.msg.items())
 
 		elif not self.msg.keys().count('List') and (self.msg.keys().count('Sender') and self.msg.keys().count('From')):
-			vect_dict['Sender'] = 1
-
-
+			temp_dict['Sender'] = 1
 
         if not self.msg.preamble and self.msg.get('Content-Type').startswith('multipart')
-	        temp_dict ['preamble'] = 1
+	        temp_dict ['Preamble'] = 1
 
 	    vector_dict.update(temp_dict)
-
-
-
-
-
 
 
 		# . check urls

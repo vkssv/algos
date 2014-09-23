@@ -158,15 +158,75 @@ def check_subject(headers_list,regex_list):
 
 	return(total_score,subj_trace)
 
-def check_lists(heads_list,score):
+def get_from_value(msg):
+
+	fr_field = msg.get('From:')
+		if not fr_field:
+			return(None,None)
+
+	parts_list = fr_field.split()
+
+	sender_addr_list = filter(lambda sender_inits: re.search('<(.*@.*)?>',sender_inits,re.I),parts_list)
+
+	sender_name_list = filter(lambda sender_inits: not re.search('<(.*@.*)?>',sender_inits,re.I),parts_list)
+	if sender_name_list:
+		sender_name =[decode_header(part) for part in sender_name_list]
+
+	# return structure ([(part, encoding)],<address>)
+	return(sender_name,sender_addr[0])
+
+def get_to_value(msg):
+
+	to_field = msg.get('To:')
+		if not to_field:
+			return(None,None)
+
+	parts_list = [obj.strip() for obj in msg.get('To').split(',')]
+	parts_list = sum([p.split() for p in parts_list],[])
+
+	rcpt_addr_list = filter(lambda rcpt: re.search('<(.*@.*)?>',rcpt,re.I),parts_list)
+
+	rcpt_name_list = filter(lambda sender_inits: not re.search('<(.*@.*)?>',sender_inits,re.I),parts_list)
+	rcpt_name_list = [rcpt.strip('"') for rcpt in rcpt_name_list]
+	if rcpt_name_list:
+		rcpt_names =[decode_header(part) for part in rcpt_name_list]
+
+	return(rcpt_names,rcpt_addr_list)
+
+def check_lists(msg,score):
 
 	unsubscribe_score = 0
-	for pattern in [ '(.*-)?Unsubscribe(-.*)?', '(.*-)?UnList(-.*)?']:
-		if not filter(lambda head_name: re.search(pattern, head_name, re.I), heads_list):
+
+	for required in [ 'List-Unsubscribe','Sender','Reply-To']:
+		if not (msg.keys()).count(required):
 			unsubscribe_score += score
 
-    if not heads_list.count('Sender')
-            unsubscribe_score += score
+	if heads_list.count('List-Unsubscribe'):
+
+		uri_list = re.findall('<.*?>',msg.get('List-Unsubscribe'),re.I)
+		if not uri_list:
+			return(unsubscribe_score += score) # never go here
+
+		from_value = get_from_value(msg)
+		if not from_value:
+			return(unsubscribe_score += score)
+
+		name, addr = from_value
+		sender_domain = re.match('@((?!-)[a-z0-9-\.]{1,63}(?<!-))+(\.[a-z]{2,6}){0,}',addr)
+		if not sender_domain:
+			return(unsubscribe_score += score)
+
+		sender_domain = sender_domain.group(0).strip('@')
+
+		# some primitive patterns
+		patterns = [
+						'http(s)+:\/\/.*sender_domain\/.*(listinfo|unsub|email=).*',\
+		                'mailto:.*@.*\.sender_domain.*'
+					]
+
+		for uri in uri_list:
+			if not filter(lambda reg: re.search(reg,uri,re.I),patterns):
+				unsubscribe_score += score
 
 	return(unsubscribe_score)
 
