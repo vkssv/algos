@@ -158,8 +158,9 @@ def check_subject(headers_list,regex_list):
 
 	return(total_score,subj_trace)
 
-def get_from_value(msg):
+def get_senders(msg):
 
+    senders = dict.fromkeys(('From','Sender','Reply-To'))
 	fr_field = msg.get('From:')
 		if not fr_field:
 			return(None,None)
@@ -175,7 +176,7 @@ def get_from_value(msg):
 	# return structure ([(part, encoding)],<address>)
 	return(sender_name,sender_addr[0])
 
-def get_to_value(msg):
+def get_rcpts(msg):
 
 	to_field = msg.get('To:')
 		if not to_field:
