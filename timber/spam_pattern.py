@@ -138,11 +138,10 @@ if __name__ == "__main__":
 	except Exception, details:
 		raise
 
-			
-# subj lenght
+
 # from - crc32 addr
 # from - crc32 name
-# to, cc, bcc - count + crc32 addr + name
+
 # url
 # body
 

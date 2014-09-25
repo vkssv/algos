@@ -205,6 +205,7 @@ def check_lists(msg,score):
 	if heads_list.count('List-Unsubscribe'):
 
 		uri_list = re.findall('<.*?>',msg.get('List-Unsubscribe'),re.I)
+
 		if not uri_list:
 			return(unsubscribe_score += score) # never go here
 
