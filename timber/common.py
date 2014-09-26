@@ -44,13 +44,11 @@ def get_heads_crc(excluded_list=[],heads_vector,without_X=False):
 
 def remove_noise_str(str):
 
-	return(re.sub('[\[\]\\\/\^\.&$#~`"\=@',:;\|\?\*\+\(\)\{\}\s]','',str))
+	return(re.sub('[\[\]\\\/\^\.&$#~`"\=@\',:;\|\?\*\+\(\)\{\}\s]','',str))
 
+'''''
 def check_suspect_heads(heads_dict, sus_tokens_dict, score):
-	'''''
-		sus_tokens_dict = {'head_name': ([regexp_list],score)}
-		heads_dict = {'head_name':'value'}
-	'''''
+
 
 	scores_dict = {}
 	for key in sus_tokens_dict.iterkeys():
@@ -64,10 +62,10 @@ def check_suspect_heads(heads_dict, sus_tokens_dict, score):
 		if filter(lambda reg: re.search(reg,value,re.I), regs_list):
 			scores_dict[head] = score_dict.get(head)+score
 
-        logger.debug (score_dict[head])
+        logger.debug(score_dict[head])
 
     return (scores.dict)
-
+'''''
 # take first n RCVD headers from bottom, extracts gateways names and IP's, normilize
 # and get CRC32, use tuples for keeping order
 def parse_trace_fields(msg,n=0):
@@ -160,10 +158,10 @@ def check_subject(headers_list,regex_list):
 
 def get_senders(msg):
 
-    senders = dict.fromkeys(('From','Sender','Reply-To'))
+    senders = dict.fromkeys(['From','Sender','Reply-To'])
 	fr_field = msg.get('From:')
-		if not fr_field:
-			return(None,None)
+	if not fr_field:
+		return(None,None)
 
 	parts_list = fr_field.split()
 
@@ -179,8 +177,8 @@ def get_senders(msg):
 def get_rcpts(msg):
 
 	to_field = msg.get('To:')
-		if not to_field:
-			return(None,None)
+	if not to_field:
+		return(None,None)
 
 	parts_list = [obj.strip() for obj in msg.get('To').split(',')]
 	parts_list = sum([p.split() for p in parts_list],[])
@@ -206,12 +204,11 @@ def check_lists(msg,score):
 
 		uri_list = re.findall('<.*?>',msg.get('List-Unsubscribe'),re.I)
 
-		if not uri_list:
-			return(unsubscribe_score += score) # never go here
+		if not uri_list or not(get_from_value(msg))
+			unsubscribe_score += score
+			return(unsubscribe_score)
 
-		from_value = get_from_value(msg)
-		if not from_value:
-			return(unsubscribe_score += score)
+
 
 		name, addr = from_value
 		sender_domain = re.match('@((?!-)[a-z0-9-\.]{1,63}(?<!-))+(\.[a-z]{2,6}){0,}',addr)

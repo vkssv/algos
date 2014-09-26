@@ -39,7 +39,7 @@ class SpamPattern():
 		parsed_rcvds = common.parse_trace_fields(msg)
 
 		vector_dict ["trace_rule"]=0
-		rcvd_rule = '(.*public.*|.*airnet.*|.*wi-?fi.*|adsl|dsl|dynamic|static)+'
+		rcvd_rules = '(.*public.*|.*airnet.*|.*wi-?fi.*|adsl|dsl|dynamic|static)+'
 
 		if filter(lambda l: re.search(rcvd_rule,l),parsed_rcvds)
 			vector_dict ["trace_rule"]=1
@@ -110,6 +110,8 @@ class SpamPattern():
 	        temp_dict ['Preamble'] = 1
 
 	    vector_dict.update(temp_dict)
+
+	    if self.msg.keys.count('')
 
 
 		# . check urls

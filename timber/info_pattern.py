@@ -9,14 +9,15 @@ logger.setLevel(logging.DEBUG)
 
 
 class InfoPattern():
-	"Set vectorising rules for shams."
+	"Set vectorising rules for ads."
 
 	def run(self,msg):
         vect = {}
         vect.update(common.get_body_skeleton())
         logger.debug(vect)
 
-
+		# cat /tmp/headers.log | grep Keywords
+	
 
 
 		return(vect)
