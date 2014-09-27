@@ -26,50 +26,60 @@ class SpamPattern():
 
 		# 2. Received headers
 
-		# get crc32 of just unique headers vector
-		heads_vect = tuple (self.msg.keys())
+		# get crc32 of only unique headers vector
+		heads_vect = tuple(self.msg.keys())
 
 		excluded_heads = ['Received', 'Subject', 'From', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Return-Path']
-		without_X_heads = True
-		vector_dict ['heads_crc'] = common.get_heads_crc (excluded_heads, heads_vect, without_X_heads)
+		vector_dict ['heads_crc'] = common.get_heads_crc(excluded_heads, heads_vect)
 
-		# check trace fields
+		# keep the count of traces fields
 		vector_dict["traces_num"] = self.msg.keys().count('Received')
 
-		parsed_rcvds = common.parse_trace_fields(msg)
+		# basic parsing and dummy checks with regexp (takes only first n_rcvds headers)
+		n_rcvds = 2
+		rcvd_values = tuple(msg.get_all('Received'))[-1*n_rcvds:]
+		parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in rcvds_tuple[:]])
 
 		vector_dict ["trace_rule"]=0
-		rcvd_rules = '(.*public.*|.*airnet.*|.*wi-?fi.*|adsl|dsl|dynamic|static)+'
+		rcvd_rules = [
+						'(public|airnet|wi-?fi|a?dsl|dynamic|static)+',
+						'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch)'
+					]
 
-		if filter(lambda l: re.search(rcvd_rule,l),parsed_rcvds)
-			vector_dict ["trace_rule"]=1
+		for rule in rcvd_rules:
+			if filter(lambda l: re.search(rule,l), parsed_rcvds)
+				vector_dict ["trace_rule"]=1
 
+		# deep parsing and some kind of spam-specifique checks
 		vector_dict['smtp_to']=0
-		vector_dict['To'] = 0
+		vector_dict['to'] = 0
 
-		rcvd_vect = tuple([rcvd.partition ('for') [0] for r in parsed_rcvds])
+		rcvd_vect = tuple([rcvd.partition('for')[0] for r in parsed_rcvds])
 
+		# don't need to validate email address, just match it within the whole string
 		if not filter(lambda l: re.search('<(.*@.*)?>',l,re.I), rcvd_vect):
 			vector_dict['smtp_to']=1
 
 		else:
 
+			body_to = common.get_decoded_headers(msg.items(),['To'])
+			body_to = [pair[0] for pair in body_to.get('To')]
 			smtp_to = filter(lambda l: re.search('<(.*@.*)?>',l,re.I), rcvd_vect)
 			smtp_to_traces = [tr.group(0).strip() for tr in smtp_to]
 
-			if filter(lamda y: y=='<multiple recipients>',smtp_to_traces) and len(common.get_to_value(msg)[1]) <=1:
-				vector_dict['To'] = score
+			if filter(lamda y: y=='<multiple recipients>',smtp_to_traces) and  <=1:
+				vector_dict['to'] = score
 
-			elif not filter(lamda y: y=='<multiple recipients>',smtp_to_traces) and len(common.get_to_value(msg)[1])>1:
-				vector_dict['To'] = score
+			elif not filter(lamda y: y=='<multiple recipients>',smtp_to_traces) and len(body_to)>1:
+				vector_dict['to'] = score
 
-			if len(common.get_to_value(msg)[1]) ==1 and smtp_to[0] != (common.get_to_value(msg)[1])[0]:
-				vector_dict['To'] = score
+			if len(body_to) == 1 and smtp_to[0] !=
+				vector_dict['to'] = score
 
 
-		# from first N trace values leave only gate IP addr and domain values, pack in one line and take crc32
+		# from first N trace values leave only gate IPv4 addr and domain value, pack in one line and take crc32
+		# I've never seen spam from gates with IPv6 ifaces, IPv6 appears in hams usually ?
 		regs = ['\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '\s((?!-)[a-z0-9-\.]{1,63}(?<!-))+(\.[a-z]{2,6}){0,}']
-		n_rcvds = 2
 
 		rcvd_vect = tuple([rcvd.partition ('by') [0] for r in parsed_rcvds])
 		rcvd_vect = rcvd_vect[-1*n_rcvds:]
@@ -80,7 +90,7 @@ class SpamPattern():
 
 		if self.msg.get('Subject'):
 
-			subject_rule = ['(SN|viagra|ciali(s|\$)|pfizer|discount|pill|med|free|click|Best\s+Deal\s+Ever|,|!|?!|>>:||babe)+']
+			subject_rule = ['(SN|viagra|ciali(s|\$)|pfizer|discount|pill|med|free|click|Best\s+Deal\s+Ever|,|!|?!|>>:|babe)+']
 			subject_len_trashold = 70
 
 			subj_score, subj_trace = common.check_subject(self.msg.items(),subject_rule,subject_len_trashold,score)
@@ -99,12 +109,13 @@ class SpamPattern():
 		temp_dict['List'] = score
 
 		if filter(lambda list_field: re.search('^List(-.*)?',list_field), self.msg.items()):
-			# well, this unique spam author respects RFC 5322 rules about List fields,
+			# well, this unique spam author respects RFC  rules about List fields,
 			# his creation deserved the deep check
 			temp_dict['List'] = common.check_lists(self.msg.items())
 
 		elif not self.msg.keys().count('List') and (self.msg.keys().count('Sender') and self.msg.keys().count('From')):
-			temp_dict['Sender'] = 1
+			temp_dict['Sender'] = 1 # normally (except for info-pubs and messages from nets) From = Sender
+									# MUA didn't generate Sender field cause of redundancy
 
         if not self.msg.preamble and self.msg.get('Content-Type').startswith('multipart')
 	        temp_dict ['Preamble'] = 1

@@ -42,7 +42,7 @@ def headers_parser ( head_string,email ):
 			continue
 
 	for h_key in headers_dict.iterkeys():
-		logger.debug ('__HEADER__('+(d)+'):\t'+ h_key + ' --> ' + quote_the_value(headers_dict.get(h_key)))
+		logger.debug ('__HEADER__( '+(d)+' ):\t'+ h_key + ' --> ' + quote_the_value(headers_dict.get(h_key)))
 
 	return (headers_dict)
 
@@ -94,10 +94,10 @@ if __name__ == "__main__":
 
 				logger.debug ('\n============== parser from STL email ====================\n')
 				for k in msg.keys():
-					logger.debug('HEADER('+(d)+'):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
+					logger.debug('HEADER( '+(d)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
 
-				logger.debug ('EPILOGUE('+(d)+'): ==> '+quote_the_value(str(msg.epilogue)))
-				logger.debug ('PREAMBLE('+(d)+'): ==> '+quote_the_value(str(msg.preamble)))
+				logger.debug ('EPILOGUE( '+(d)+' ): ==> '+quote_the_value(str(msg.epilogue)))
+				logger.debug ('PREAMBLE( '+(d)+' ): ==> '+quote_the_value(str(msg.preamble)))
 
 
 	except Exception, details:

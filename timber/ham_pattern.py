@@ -9,12 +9,15 @@ logger.setLevel(logging.DEBUG)
 
 
 class SpamPattern():
-	"Set vectorising rules for shams."
+	"Set vectorising rules for hams."
 
 	def run(self,msg):
         vect = {}
         vect.update(common.get_body_skeleton())
         logger.debug(vect)
+
+
+
 
 		return(vect)
 
@@ -28,7 +31,7 @@ if __name__ == "__main__":
 	logger.addHandler(ch)
 
 	try:
-		test=SpamPattern(env)
+		test=HamPattern(env)
 		vector = test.run()
 		logger.debug(vector)
 

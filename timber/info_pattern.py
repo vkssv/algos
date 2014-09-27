@@ -17,9 +17,17 @@ class InfoPattern():
         logger.debug(vect)
 
 		# cat /tmp/headers.log | grep Keywords
-	
 
 
+		if filter(lambda list_field: re.search('^List(-.*)?',list_field), self.msg.items()):
+			#deep check
+			temp_dict['List'] = common.check_lists(self.msg.items())
+
+		else:
+			# search unsubscribe link in body
+
+		#Sender != From
+		# Reply-to always
 		return(vect)
 
 
