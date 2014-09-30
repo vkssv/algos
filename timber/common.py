@@ -13,15 +13,26 @@ logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 # excluded_list=['Received', 'From', 'Date', 'X-.*']
-def get_heads_crc(heads_tuple, excluded_list = None):
+# header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items() - save the order of heads
+def get_heads_crc(header_value_list, excluded_list = None):
+
+    vect = dict.fromkeys(['heads_crc','values_crc'])
+    heads_vector = tuple([item[0] for item in header_value_list])
+    heads_dict = {key: value for (key, value) in header_value_list}
+
     if excluded_list:
         for ex_head in excluded_list:
             # can use match - no new lines in r_name
-            heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_tuple[:]))
+            heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
-    checksum = binascii.crc32(''.join(heads_tuple))
+    values_vector = tuple([heads_dict.get(k) for k in heads_vector])
+    # save the last word
+    values_vector = tuple([value.split()[-1:] for value in values_vector[:]])
 
-    return (checksum)
+    vect['heads_crc'] = binascii.crc32(''.join(heads_vector))
+    vect['values_crc'] = binascii.crc32(''.join(reduce(add,values_vector)))
+
+    return (vect)
 
 def get_trace_crc(rcvds_vect):
 
@@ -38,28 +49,43 @@ def get_trace_crc(rcvds_vect):
 
     return (traces_dict)
 
-# header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items()
-def get_decoded_headers(header_value_list, need_header_list):
-    decoded_heads = {}
+def get_addr_fields(head_value):
 
-    for r_name in need_header_list:
-        # can use match - no new lines in r_name
-        header = filter(lambda item: re.match(r_name, item[0], re.I), header_value_list)
-        if header:
-            h_name, value = header[0]
-            decoded_heads[h_name] = decode_header(value)
+    for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9]{1,63}(?:\.[\w]{2,4})+')
 
-    if not decoded_heads:
-        logger.warn("get_decoded_headers: can't find any header from "+str(need_headers))
+    h_value = tuple(decode_header(head_value))
+    # don't use encoding info for translations, so don't keep it
+    h_value = tuple([pair[0] for pair in h_value[:]])
+    # crunch addreses and names
+    addrs=[]
+    names = []
+    for part in h_value:
+        part = re.sub(r'<|>','',part)
+        addrs += for_crunch.findall(part)
+        names += for_crunch.sub('',part)
 
-    return (decoded_heads)
+    return(tuple(names),tuple(addrs))
+
+
+def get_body_skeleton(msg):
+    body_skeleton = { }
+    for part in msg.walk():
+        body_skeleton[part.get_content_type()] = part.get_filename()
+
+    if not len(body_skeleton.keys()):
+        raise MessageParseError
+
+    else:
+        logger.debug("SKELETON: "+str(body_skeleton))
+
+    return (body_skeleton)
+
 
 # returns score + crc32 trace
-def basic_subjects_checker(header_value_list, regex_list, len_threshold, score):
+def basic_subjects_checker(heads_dict, regex_list, len_threshold, score):
     print(regex_list)
     total_score = 0
 
-    heads_dict = {key: value for (key, value) in header_value_list}
     subj_parts = tuple(map(lambda part: part[0].strip(), decode_header(heads_dict.get('Subject'))))
 
     # check total len
@@ -69,7 +95,7 @@ def basic_subjects_checker(header_value_list, regex_list, len_threshold, score):
     # for RFC 5322 checks
     prefix_heads_map = {
                             'RE' : ['In-Reply-To', 'Thread(-.*)?', 'References'],
-                            'FW': ['(X-)?Forward']
+                            'FW' : ['(X-)?Forward']
     }
 
     subj_trace = ''
@@ -126,7 +152,8 @@ def basic_lists_checker(header_value_list, score):
     heads_dict = { key: value for (key, value) in header_value_list }
 
     sender_domain = ''
-    # try to get sender domain from RCVD headers
+    # try to get sender domain from RCVD headers, use header_value_list to obtain
+    # exactly the first rcvd header, order makes sense here
     h_name, value = (filter(lambda rcvd: re.match('Received', rcvd[0]), header_value_list))[-1:][0]
     search = re.search(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+', value.partition(';')[0])
     sender_domain = (search.group(0)).strip('.').strip()
@@ -154,18 +181,9 @@ def basic_lists_checker(header_value_list, score):
     return (unsubscribe_score)
 
 
-def get_body_skeleton(msg):
-    body_skeleton = { }
-    for part in msg.walk():
-        body_skeleton[part.get_content_type()] = part.get_filename()
 
-    if not len(body_skeleton.keys()):
-        raise MessageParseError
+#def basic_bodies_checks():
 
-    else:
-        logger.debug("SKELETON: "+str(body_skeleton))
-
-    return (body_skeleton)
 
 
 
