@@ -1,180 +1,163 @@
 '''
-shared module with common-used functions
+shared module with common-used functions, will be class in future
 '''
 
-import email, os, sys, re, logging
+import email, os, sys, re, logging, binascii
 
 from email.errors import MessageParseError
 from email.header import decode_header
 from operator import add
-#from vectorizer_exceptions import VectError
+
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 # excluded_list=['Received', 'From', 'Date', 'X-.*']
-def get_heads_crc(excluded_list=[], heads_tuple):
+def get_heads_crc(heads_tuple, excluded_list = None):
+    if excluded_list:
+        for ex_head in excluded_list:
+            # can use match - no new lines in r_name
+            heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_tuple[:]))
 
-	if excluded_list:
-		for ex_head in excluded_list:
-			heads_vector = tuple(filter(lambda h_name: not re.match(ex_head,h_name,re.I),heads_tuple[:]))
+    checksum = binascii.crc32(''.join(heads_tuple))
 
-	checksum = binascii.crc32(''.join(heads_tuple))
+    return (checksum)
 
-	return(checksum)
+def get_trace_crc(rcvds_vect):
 
-#def remove_noise_str(str):
+    print('rcvds_vect:'+str(rcvds_vect))
+    traces_dict = {}
 
-#	return(re.sub('[\[\]\\\/\^\.&$#~`"\=@\',:;\|\?\*\+\(\)\{\}\s]','',str))
+    for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
+        print(rcvd_line)
+        trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
+        trace = trace.strip().lower()
+        trace = binascii.crc32(trace)
 
-# very basic here: takes given RCVD headers from bottom, cut timestamp fields
-def basic_traces_parser(rcvds_tuple):
+        traces_dict['rcvd_'+str(n)] = trace
 
+    return (traces_dict)
 
-
-	return(rcvds_vect)
-
-def get_trace_crc(rcvds_vect,regs_list):
-
-	traces_dict={}
-
-	for rcvd, n in zip(rcvds_vect, range(len(rcvds_vect))):
-
-		trace = ''
-
-		temp = tuple(map(lambda x: re.search(x,rcvd,re.I),regs_list))
-		trace = ''.join([item.group(0).strip() for item in temp])
-		trace = binascii.crc32(trace)
-
-		traces_dict['rcvd_'+n] = trace
-
-	return(traces_dict)
-
+# header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items()
 def get_decoded_headers(header_value_list, need_header_list):
+    decoded_heads = {}
 
-	decoded_heads={}
+    for r_name in need_header_list:
+        # can use match - no new lines in r_name
+        header = filter(lambda item: re.match(r_name, item[0], re.I), header_value_list)
+        if header:
+            h_name, value = header[0]
+            decoded_heads[h_name] = decode_header(value)
 
-	for r_name in need_header_list:
-		header = filter(lambda item: re.match(r_name,item[0],re.I),msg.items())
-		if header:
-			h_name, value = header[0]
-			decoded_heads[h_name] = decode_header(value)
+    if not decoded_heads:
+        logger.warn("get_decoded_headers: can't find any header from "+str(need_headers))
 
-	if not decoded_heads:
-		logger.warn("get_decoded_headers: can't find any header from "+str(need_headers))
-
-	return(decoded_heads)
+    return (decoded_heads)
 
 # returns score + crc32 trace
-def basic_subjects_checker(msg.items(), regex_list, len_threshold, score):
+def basic_subjects_checker(header_value_list, regex_list, len_threshold, score):
+    print(regex_list)
+    total_score = 0
 
-	total_score = 0
+    heads_dict = {key: value for (key, value) in header_value_list}
+    subj_parts = tuple(map(lambda part: part[0].strip(), decode_header(heads_dict.get('Subject'))))
 
-	l = filter(lambda pair: pair[0]=='Subject',headers_list)
-	if len(l) > 2:
-		total_score += score*len(l)
-		# never go here, but in case for funny msg with 2 Subjects add them extra penalty?
+    # check total len
+    if sum(map(lambda w: len(w), subj_parts)) >= len_threshold:
+        total_score += score
 
-	header_name, value = l[0]
-	subj_parts = tuple(map(lambda part: part[0].strip(),decode_header(value)))
+    # for RFC 5322 checks
+    prefix_heads_map = {
+                            'RE' : ['In-Reply-To', 'Thread(-.*)?', 'References'],
+                            'FW': ['(X-)?Forward']
+    }
 
-	# check total len
-	if sum(map(lambda w: len(w),subj_parts)) > len_threshold:
-		total_score += score
+    subj_trace = ''
 
-	# for RFC 5322 checks
-	correlated_heads = {
-							'Re'    : ['In-Reply-To', '(X-)?Thread(-.*)?', '(X-)?References'],
-							'Fwd'   : ['(X-)?Forward'],
-	                        'Fw'    : ['(X-)?Forward']
-						}
+    for p in subj_parts:
+        print('part:'+'--'+p+'--')
+        # check if is empty
+        if not len(p) and len(subj_parts) == 1:
+            total_score += score
+            break
 
-	subj_trace = ''
+        elif not len(p):
+            continue
 
-	for p in subj_parts:
-		# check if is empty
-		if not len(p) and len(subj_parts)==1:
-			total_score += score
-			break
+        # only for latin, check if subj has uppercase words
+        if len(filter(lambda word: word.isupper(), p.split())) > 0:
+            total_score += score
 
-		elif not len(p):
-			continue
+        # RFC 5322 checks, usually user's modern MUAs try to follow standards
+        matched_list = map(lambda prefix: re.search(prefix, p, re.I), [r'^\s*Re\s*(?=:)', r'^\s*Fwd?\s*(?=:)'])
+        print ('matched_list:'+str(matched_list))
+        matched_list = filter(lambda obj: obj, matched_list)
+        print ('matched_list:'+str(matched_list))
+        if matched_list:
+            keys = [obj.group(0) for obj in matched_list]
+            keys = [k.strip('d').upper() for k in keys]
+            print(keys)
 
-		# check if subj has uppercase words
-		if len(filter(lambda word: word.isupper(),p.split())) > 0:
-			total_score += score
+            values = [prefix_heads_map.get(k) for k in keys]
+            print(values)
+            correlated = reduce(add,values)
 
-		# RFC 5322 checks, usually user's MUA try to follow standards
-		matched_list = map(lambda prefix: re.search(prefix, p, re.I), ['^\s+Re\s+:','^\s+Fw(d)+\s+:'])
-		matched_list = filter(lambda obj: obj, matched_list)
-		keys = [obj.group(0) for obj in matched_list]
+            for regexp_name in correlated:
+                if not filter(lambda name: re.search(regexp_name, name, re.I), heads_dict.keys()):
+                    total_score += score
 
-		correlated = reduce(add, [correlated_heads.get(k) for k in keys])
-		h_names = [item[0] for item in msg.items()]
+        # check the presence of strong tokens for unconditional
+        matched = filter(lambda r: re.search(r, p, re.I), regex_list)
+        if matched:
+            total_score += score*len(matched)
 
-		for regexp_name in correlated:
-			if not filter(lambda head_name: re.search(regexp_name,name,re.I), h_names):
-				total_score += score
+        # keep the last two word for making crc32 trace (??)
+        words = tuple(p.split())
+        subj_trace += words[-1:][0]
 
-		# check the presence of strong tokens for unconditional
-		matched = filter(lambda r: re.search(r,p,re.I),regex_list)
-		if matched:
-			total_score += score*len(matched)
+    subj_trace = binascii.crc32(subj_trace)
 
-		# keep the last two word for making crc32 trace (??)
-		words = tuple(p.split())
-		subj_trace += words[-1:][0]
+    return (total_score, subj_trace)
 
-	subj_trace = binascii.crc32(subj_trace)
+def basic_lists_checker(header_value_list, score):
+    # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
+    # have to be checking with antiphishing service
+    unsubscribe_score = 0
+    heads_dict = { key: value for (key, value) in header_value_list }
 
-	return(total_score,subj_trace)
+    sender_domain = ''
+    # try to get sender domain from RCVD headers
+    h_name, value = (filter(lambda rcvd: re.match('Received', rcvd[0]), header_value_list))[-1:][0]
+    search = re.search(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+', value.partition(';')[0])
+    sender_domain = (search.group(0)).strip('.').strip()
+    if not sender_domain:
+        # try to get it from From: header value
+        search = re.search(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}', heads_dict.get('From'))
+        sender_domain = search.group(0).strip('@')
 
-def basic_lists_checker(msg,score):
+    patterns = [
+                    r'https?:\/\/.*'+sender_domain+'\/.*(listinfo|unsub|email=).*', \
+                    r'mailto:.*@.*\.'+sender_domain+'.*'
+    ]
 
-	unsubscribe_score = 0
+    for required in [('List-Unsubscribe', 'Errors-To', 'Sender')]:
+        if not filter(lambda head: re.match(required, head, re.I), heads_dict.keys()):
+            # doesn't support RFC 2369 in a proper way
+            unsubscribe_score += score
 
-	for required in [('List-Unsubscribe','Errors-To'),('Sender','Reply-To')]:
-		# according to RFC #2369 every bulk
-		if not (msg.keys()).count(required[0] or msg.keys()).count(required[1]):
-			unsubscribe_score += score
+        else:
+            uri = heads_dict.get(head)
+            if not filter(lambda reg: re.search(reg, uri, re.I), patterns):
+            # probably contains fake URI
+                unsubscribe_score += score
 
-	if heads_list.count('List-Unsubscribe') || heads_list.count('Errors-To'):
-
-		uri_list = re.findall('<.*?>',msg.get('List-Unsubscribe'),re.I)
-
-		if not uri_list or not(get_from_value(msg))
-			unsubscribe_score += score
-			return(unsubscribe_score)
-
-
-
-		name, addr = from_value
-		sender_domain = re.match('@((?!-)[a-z0-9-\.]{1,63}(?<!-))+(\.[a-z]{2,6}){0,}',addr)
-		if not sender_domain:
-			return(unsubscribe_score += score)
-
-		sender_domain = sender_domain.group(0).strip('@')
-
-		# some primitive patterns
-		patterns = [
-						'http(s)+:\/\/.*sender_domain\/.*(listinfo|unsub|email=).*',\
-		                'mailto:.*@.*\.sender_domain.*'
-					]
-
-		for uri in uri_list:
-			if not filter(lambda reg: re.search(reg,uri,re.I),patterns):
-				unsubscribe_score += score
-
-	return(unsubscribe_score)
-
-
+    return (unsubscribe_score)
 
 
 def get_body_skeleton(msg):
-
-    body_skeleton={}
+    body_skeleton = { }
     for part in msg.walk():
-        body_skeleton[part.get_content_type()]=part.get_filename()
+        body_skeleton[part.get_content_type()] = part.get_filename()
 
     if not len(body_skeleton.keys()):
         raise MessageParseError
@@ -182,7 +165,7 @@ def get_body_skeleton(msg):
     else:
         logger.debug("SKELETON: "+str(body_skeleton))
 
-    return(body_skeleton)
+    return (body_skeleton)
 
 
 

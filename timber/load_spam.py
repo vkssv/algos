@@ -17,68 +17,68 @@ logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 # define some functions
-def vectorize_by_rules(doc_path,label):
-	print(doc_path,label)
-	"""
-		Create feature vector for email from doc_path,
-		if label is set => feature set is also predifined by category pattern
 
-	"""
+# create feature vector for email from doc_path,
+# if label is set => feature set is also predifined by pattern for this label
+def vectorize_by_rules(doc_path, label, score):
+    print(doc_path, label)
 
-	logger.debug("Start processing: " + doc_path)
-	vect_dict = {}
+    logger.debug("Start processing: " + doc_path + ' from "' + label + '" set')
+    vect_dict = { }
 
-	parser=email.Parser.Parser()
-	f = open(doc_path,"rb")
-	msg = parser.parse(f)
+    parser = email.Parser.Parser()
+    f = open(doc_path, "rb")
+    msg = parser.parse(f)
+    f.close()
 
-	f.close()
+    # size
+    vect_dict ['size'] = float((os.stat(doc_path).st_size)/1024)
+    logger.debug("SIZE: " + str(vect_dict.get('size')))
+
+    try:
+
+        checks_set = MetaPattern.New(msg, label)
+        # print (test)
+        logger.debug('\t CHECK_' + label.upper())
+        vect_dict.update(checks_set.run(score))
+
+    except Exception, details:
+        logger.error(str(details))
+        raise
+
+    return (vect_dict, label)
 
 
+# NxM input matrix --> N samples x M features
+def make_dataset(dir_path, category, score):
+    if not os.listdir(dir_path):
+        raise Exception('Collection dir "' + dir_path + '" is empty.')
 
-	try:
+    print(category)
+    X = []
 
-		checks_set = MetaPattern.New(msg,label,score)
-		#print (test)
-		logger.debug ('\t CHECK_'+label.upper())
-		vect_dict.update (checks_set.run())
+    for path, subdir, docs in os.walk(dir_path):
 
-	except Exception, details:
-		logger.error(str(details))
-		raise
+        for d in docs:
+            print(os.path.join(path, d))
+            sample_path = os.path.join(path, d)
 
-	return (vect_dict, label)
+            if category == 'test':
+                X = { 'ham': [], 'spam': [], 'info': [], 'nets': [] }
+                for label in X.iterkeys():
+                    vector_x = vectorize_by_rules(sample_path, label, score)
+                    (X.get(label)).append(vector_x)
 
-def make_dataset(dir_path,category,score):
+            else:
 
-	if not os.listdir(dir_path):
-		raise Exception ('Collection dir "'+dir_path+'" is empty.')
+                vector_x = vectorize_by_rules(sample_path, category, score)
+                print(vector_x)
+                X.append(vector_x)
 
-	print(category)
-	X =[]
-	  # NxM input matrix --> N samples x M features
+            logger.debug(str(X))
 
-	for path, subdir, docs in os.walk(dir_path):
+    return (X)
 
-		for d in docs:
-			print(os.path.join(path, d))
-			sample_path = os.path.join(path, d)
-
-			if category == 'test':
-				X={'ham':[],'spam':[],'info':[],'nets':[]}
-				for label in X.iterkeys():
-					vector_x = vectorize_by_rules(sample_path,label,score)
-					(X.get(label)).append(vector_x)
-
-			else:
-
-				vector_x = vectorize_by_rules(sample_path,category,score)
-				print(vector_x)
-				X.append(vector_x)
-
-			logger.debug(str(X))
-
-	return(X)
 
 '''''
 def dump_data_set(data_set):
@@ -96,45 +96,48 @@ def plot_data_set(data_set):
 
 if __name__ == "__main__":
 
-	usage = "usage: %prog [options] -t samples_directory -p dump_dataset -v visualise_with_matplot -d debug"
-	parser = OptionParser(usage)
+    usage = "usage: %prog [options] -t samples_directory -p dump_dataset -d debug"
+    parser = OptionParser(usage)
 
-	parser.add_option("-t", action="store", type="string", dest="collection", metavar="[REQUIRED]", help="path to samples collection")
+    parser.add_option("-t", action = "store", type = "string", dest = "collection", metavar = "[REQUIRED]",
+                      help = "path to samples collection")
 
-	parser.add_option("-p", action="store_true", dest="dump", default=False, metavar=" ", help="safe data into file in libsvm format")
-	parser.add_option("-s", type=float, dest = "score", default = 1.0, metavar = " ", help = "score penalty for matched feature, def = 1.0")
-	parser.add_option("-v", action="store_true", dest="visualize", default=False, metavar=" ", help="visualise dataset with matplot")
-	parser.add_option("-c", action="store", dest="category", default='test', metavar=" ", help="samples category, default=test, i.e. not defined")
-	parser.add_option("-d", action="store_true", dest="debug", default=False, metavar=" ", help="be verbose")
+    parser.add_option("-p", action = "store_true", dest = "dump", default = False, metavar = " ",
+                      help = "safe data into file in libsvm format")
+    parser.add_option("-s", type = float, dest = "score", default = 1.0, metavar = " ",
+                      help = "score penalty for matched feature, def = 1.0")
+    # parser.add_option("-v", action="store_true", dest="visualize", default=False, metavar=" ", help="visualise dataset with matplot")
+    parser.add_option("-c", action = "store", dest = "category", default = 'test', metavar = " ",
+                      help = "samples category, default=test, i.e. not defined")
+    parser.add_option("-v", action = "store_true", dest = "debug", default = False, metavar = " ", help = "be verbose")
+
+    (options, args) = parser.parse_args()
+
+    if options.__dict__.values().count(None) > 0:
+        print("")
+        parser.print_help()
+        print("")
+        sys.exit(1)
 
 
-	(options, args) = parser.parse_args()
+    # in case if options.debug is True
+    formatter = logging.Formatter('%(message)s')
+    logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
-	if options.__dict__.values().count(None) > 0:
-		print("")
-		parser.print_help()
-		print("")
-		sys.exit(1)
+    if options.debug:
+        logger.setLevel(logging.DEBUG)
 
+    # 1. create train dataset
+    try:
+        make_dataset(options.collection, options.category, options.score)
 
-	# in case if options.debug is True
-	formatter = logging.Formatter('%(message)s')
-	logger.setLevel(logging.INFO)
-	ch = logging.StreamHandler(sys.stdout)
-	ch.setFormatter(formatter)
-	logger.addHandler(ch)
-
-	if options.debug:
-		logger.setLevel(logging.DEBUG)
-
-	# 1. create train dataset
-	try:
-		make_dataset(options.collection,options.category,options.score)
-
-	except Exception, details:
-		logger.error(str(details))
-				#sys.exit(1)
-		raise
+    except Exception, details:
+        logger.error(str(details))
+        #sys.exit(1)
+        raise
 
 
 
