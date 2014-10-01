@@ -26,10 +26,10 @@ def get_heads_crc(header_value_list, excluded_list = None):
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
     values_vector = tuple([heads_dict.get(k) for k in heads_vector])
-    print('values_vector'+str(values_vector))
+    #print('values_vector'+str(values_vector))
     # save the last word
     values_vector = tuple([value.split()[-1:] for value in values_vector[:]])
-    print('values_vector --->'+str(values_vector))
+    #print('values_vector --->'+str(values_vector))
 
     vect['heads_crc'] = binascii.crc32(''.join(heads_vector))
     vect['values_crc'] = binascii.crc32(''.join(reduce(add,values_vector)))
@@ -38,11 +38,11 @@ def get_heads_crc(header_value_list, excluded_list = None):
 
 def get_trace_crc(rcvds_vect):
 
-    print('rcvds_vect:'+str(rcvds_vect))
+    #print('rcvds_vect:'+str(rcvds_vect))
     traces_dict = {}
 
     for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
-        print(rcvd_line)
+        #print(rcvd_line)
         trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
         trace = trace.strip().lower()
         trace = binascii.crc32(trace)
@@ -86,7 +86,7 @@ def get_body_skeleton(msg):
 
 # returns score + crc32 trace
 def basic_subjects_checker(heads_dict, regex_list, len_threshold, score):
-    print(regex_list)
+    #print(regex_list)
     total_score = 0
 
     subj_parts = tuple(map(lambda part: part[0].strip(), decode_header(heads_dict.get('Subject'))))
@@ -104,7 +104,7 @@ def basic_subjects_checker(heads_dict, regex_list, len_threshold, score):
     subj_trace = ''
 
     for p in subj_parts:
-        print('part:'+'--'+p+'--')
+        #print('part:'+'--'+p+'--')
         # check if is empty
         if not len(p) and len(subj_parts) == 1:
             total_score += score
@@ -119,16 +119,16 @@ def basic_subjects_checker(heads_dict, regex_list, len_threshold, score):
 
         # RFC 5322 checks, usually user's modern MUAs try to follow standards
         matched_list = map(lambda prefix: re.search(prefix, p, re.I), [r'^\s*Re\s*(?=:)', r'^\s*Fwd?\s*(?=:)'])
-        print ('matched_list:'+str(matched_list))
+        #print ('matched_list:'+str(matched_list))
         matched_list = filter(lambda obj: obj, matched_list)
-        print ('matched_list:'+str(matched_list))
+        #print ('matched_list:'+str(matched_list))
         if matched_list:
             keys = [obj.group(0) for obj in matched_list]
             keys = [k.strip('d').upper() for k in keys]
-            print(keys)
+            #print(keys)
 
             values = [prefix_heads_map.get(k) for k in keys]
-            print(values)
+            #print(values)
             correlated = reduce(add,values)
 
             for regexp_name in correlated:
@@ -152,19 +152,28 @@ def basic_lists_checker(header_value_list, score):
     # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
     # have to be checking with antiphishing service
     unsubscribe_score = 0
-    print('\t=====>'+str(header_value_list))
+
+    for_trace = re.compile(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+',re.M)
+    for_body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
+
+    #print('\t=====>'+str(header_value_list))
     heads_dict = { key: value for (key, value) in header_value_list }
 
-    sender_domain = ''
     # try to get sender domain from RCVD headers, use header_value_list to obtain
     # exactly the first rcvd header, order makes sense here
     h_name, value = (filter(lambda rcvd: re.match('Received', rcvd[0]), header_value_list))[-1:][0]
-    search = re.search(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+', value.partition(';')[0])
-    sender_domain = (search.group(0)).strip('.').strip()
-    if not sender_domain:
+    #print('h_name'+h_name)
+    #print('value'+value)
+
+    sender_domain = ''
+    if for_trace.search(value.partition(';')[0]):
+        sender_domain = (for_trace.search(value.partition(';')[0])).group(0)
+        sender_domain = sender_domain.strip('.').strip()
+
+    elif for_body_from.search(heads_dict.get('From')):
         # try to get it from From: header value
-        search = re.search(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}', heads_dict.get('From'))
-        sender_domain = search.group(0).strip('@')
+        sender_domain = (for_body_from.search(heads_dict.get('From'))).group(0)
+        sender_domain = sender_domain.strip('@')
 
     patterns = [
                     r'https?:\/\/.*'+sender_domain+'\/.*(listinfo|unsub|email=).*', \
@@ -173,19 +182,16 @@ def basic_lists_checker(header_value_list, score):
 
     rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
 
-    for required in rfc_heads:
-        presented = filter(lambda head: re.match(required, head, re.I), heads_dict.keys())
-        unsubscribe_score += (len(rfc_heads)-len(presented))*score
+    presented = filter(lambda h: (heads_dict.keys()).count(h), rfc_heads)
+    # doesn't support RFC 2369 in a proper way
+    unsubscribe_score += (len(rfc_heads)-len(presented))*score
 
-        # doesn't support RFC 2369 in a proper way
+    if not presented:
+        return (unsubscribe_score)
 
-        if not presented:
-            return (unsubscribe_score)
-        #
-        #    uri = heads_dict.get(head)
-        #    if not filter(lambda reg: re.search(reg, uri, re.I), patterns):
-            # probably contains fake URI
-        #        unsubscribe_score += score
+    for uri in [heads_dict.get(head) for head in presented]:
+        if not filter(lambda reg: re.search(reg, uri, re.M), patterns):
+            unsubscribe_score += score
 
     return (unsubscribe_score)
 

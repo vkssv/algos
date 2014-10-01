@@ -20,11 +20,10 @@ logger.setLevel(logging.DEBUG)
 
 # create feature vector for email from doc_path,
 # if label is set => feature set is also predifined by pattern for this label
-def vectorize_by_rules(doc_path, label, score):
-    print(doc_path, label)
+def vectorize(doc_path, label, score):
 
-    logger.debug("Start processing: " + doc_path + ' from "' + label + '" set')
-    vect_dict = { }
+    logger.debug("\n\nStart processing: " + doc_path + ' from "' + label + '" set')
+    vect_dict = {}
 
     parser = email.Parser.Parser()
     f = open(doc_path, "rb")
@@ -33,13 +32,12 @@ def vectorize_by_rules(doc_path, label, score):
 
     # size
     vect_dict ['size'] = float((os.stat(doc_path).st_size)/1024)
-    logger.debug("SIZE: " + str(vect_dict.get('size')))
+    logger.debug('----->'+str(vect_dict))
 
     try:
 
         checks_set = MetaPattern.New(msg, label)
-        # print (test)
-        logger.debug('\t CHECK_' + label.upper())
+        logger.debug('\n\n\t CHECK_' + label.upper()+'\n')
         vect_dict.update(checks_set.run(score))
 
     except Exception, details:
@@ -60,22 +58,22 @@ def make_dataset(dir_path, category, score):
     for path, subdir, docs in os.walk(dir_path):
 
         for d in docs:
-            print(os.path.join(path, d))
+
             sample_path = os.path.join(path, d)
 
             if category == 'test':
                 X = { 'ham': [], 'spam': [], 'info': [], 'nets': [] }
                 for label in X.iterkeys():
-                    vector_x = vectorize_by_rules(sample_path, label, score)
+                    vector_x = vectorize(sample_path, label, score)
                     (X.get(label)).append(vector_x)
 
             else:
 
-                vector_x = vectorize_by_rules(sample_path, category, score)
-                print(vector_x)
+                vector_x = vectorize(sample_path, category, score)
+                logger.debug('----->'+str(vector_x))
                 X.append(vector_x)
 
-            logger.debug(str(X))
+            #logger.debug(str(X))
 
     return (X)
 
@@ -119,13 +117,16 @@ if __name__ == "__main__":
         print("")
         sys.exit(1)
 
-
-    # in case if options.debug is True
-    formatter = logging.Formatter('%(message)s')
+    tmp='/tmp'
+    formatter = logging.Formatter('%(filename)s: %(message)s')
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler(sys.stdout)
+    fh = logging.FileHandler(os.path.join(tmp, options.category+'.log'), mode = 'w')
     ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
     logger.addHandler(ch)
+    logger.addHandler(fh)
+
 
     if options.debug:
         logger.setLevel(logging.DEBUG)

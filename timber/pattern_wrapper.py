@@ -11,7 +11,7 @@ class PatternFactory(object):
         return ("Pattern factory")
 
     def New(self, msg, label):
-        print(label)
+        #print(label)
         try:
 
             pattern = importlib.import_module(label + '_pattern')
