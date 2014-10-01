@@ -26,8 +26,10 @@ def get_heads_crc(header_value_list, excluded_list = None):
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
     values_vector = tuple([heads_dict.get(k) for k in heads_vector])
+    print('values_vector'+str(values_vector))
     # save the last word
     values_vector = tuple([value.split()[-1:] for value in values_vector[:]])
+    print('values_vector --->'+str(values_vector))
 
     vect['heads_crc'] = binascii.crc32(''.join(heads_vector))
     vect['values_crc'] = binascii.crc32(''.join(reduce(add,values_vector)))
@@ -49,7 +51,7 @@ def get_trace_crc(rcvds_vect):
 
     return (traces_dict)
 
-def get_addr_fields(head_value):
+def get_addr_fields(head_value=''):
 
     for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9]{1,63}(?:\.[\w]{2,4})+')
 
@@ -64,6 +66,7 @@ def get_addr_fields(head_value):
         addrs += for_crunch.findall(part)
         names += for_crunch.sub('',part)
 
+    # keep order
     return(tuple(names),tuple(addrs))
 
 
@@ -149,6 +152,7 @@ def basic_lists_checker(header_value_list, score):
     # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
     # have to be checking with antiphishing service
     unsubscribe_score = 0
+    print('\t=====>'+str(header_value_list))
     heads_dict = { key: value for (key, value) in header_value_list }
 
     sender_domain = ''
@@ -167,16 +171,21 @@ def basic_lists_checker(header_value_list, score):
                     r'mailto:.*@.*\.'+sender_domain+'.*'
     ]
 
-    for required in [('List-Unsubscribe', 'Errors-To', 'Sender')]:
-        if not filter(lambda head: re.match(required, head, re.I), heads_dict.keys()):
-            # doesn't support RFC 2369 in a proper way
-            unsubscribe_score += score
+    rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
 
-        else:
-            uri = heads_dict.get(head)
-            if not filter(lambda reg: re.search(reg, uri, re.I), patterns):
+    for required in rfc_heads:
+        presented = filter(lambda head: re.match(required, head, re.I), heads_dict.keys())
+        unsubscribe_score += (len(rfc_heads)-len(presented))*score
+
+        # doesn't support RFC 2369 in a proper way
+
+        if not presented:
+            return (unsubscribe_score)
+        #
+        #    uri = heads_dict.get(head)
+        #    if not filter(lambda reg: re.search(reg, uri, re.I), patterns):
             # probably contains fake URI
-                unsubscribe_score += score
+        #        unsubscribe_score += score
 
     return (unsubscribe_score)
 
