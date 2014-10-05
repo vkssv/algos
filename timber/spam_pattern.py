@@ -133,7 +133,8 @@ class SpamPattern():
             temp_dict ['sender'] = 1
             logger.debug('\t----->'+str(temp_dict))
 
-        if self.msg.get('Content-Type') and self.msg.get('Content-Type').startswith('multipart') and (not self.msg.preamble):
+        if self.msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self.msg.preamble,re.I):
+
             temp_dict ['preamble'] = 1
             logger.debug('\t----->'+str(temp_dict))
 
@@ -156,6 +157,15 @@ class SpamPattern():
                 logger.debug('\t----->'+str(vector_dict))
 
         # 5. Check MIME headers
+
+        mime_heads = common.get_mime_info(msg)
+
+        vector_dict['struct_crc']=common.get_mime_structure_crc(mime_heads)
+        vector_dict['attach']=common.basic_attach_checker(mime_heads)
+
+
+
+
 
 
 

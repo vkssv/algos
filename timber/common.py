@@ -69,19 +69,54 @@ def get_addr_fields(head_value=''):
     # keep order
     return(tuple(names),tuple(addrs))
 
+def get_mime_info(msg):
 
-def get_body_skeleton(msg):
-    body_skeleton = { }
+    mime_heads = ['content-type','content-transfer-encoding','content-id','content-disposition']
+
+    mime_parts=[]
     for part in msg.walk():
-        body_skeleton[part.get_content_type()] = part.get_filename()
+        all_heads = [name.lower() for name in part.keys()]
 
-    if not len(body_skeleton.keys()):
-        raise MessageParseError
+        part_dict = {}
+        for head in filter(lambda n: all_heads.count(n), mime_heads):
+            part_dict[head] = part.get_all(head)
 
-    else:
-        logger.debug("SKELETON: "+str(body_skeleton))
+        mime_parts.append(part_dict)
 
-    return (body_skeleton)
+    return(tuple(mime_parts))
+
+
+def get_mime_structure_crc(mime_info):
+    all_content_types = tuple(reduce(add,[dict.get('content-type') for dict in mime_info]))
+    line = ''.join([l.partition(';')[0] for l in all_content_types])
+
+    return(binascii.crc32(line))
+
+
+def basic_attach_checker(mime_info,score):
+
+    score = 0
+    mime_headers = reduce(add,reduce(add,[dict.values() for dict in mime_info]))
+    regs = [
+                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif))',
+                r'.*\.(com|exe|xlsx?|pptx?|docx?|js|bat|eml|png|gif|cgi)',
+    ]
+
+
+    lens = []
+    for r in regs[]:
+        reg = re.compile(r,re.I)
+        x = filter(lambda value: reg.search(value,re.M),mime_headers)
+        lens.append(x)
+        lens.sort()
+
+    score += score*lens[1]
+
+    disposition = [dict.get('content-disposition') for dict in mime_info]
+
+    score += len(filter(lambda inline: re.search('inline',re.M),disposition))
+
+    return(score)
 
 
 # returns score + crc32 trace
@@ -180,6 +215,7 @@ def basic_lists_checker(header_value_list, score):
                     r'mailto:.*@.*\.'+sender_domain+'.*'
     ]
 
+    # check Reply-To only with infos, very controversial, here are only pure RFC 2369 checks
     rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
 
     presented = filter(lambda h: (heads_dict.keys()).count(h), rfc_heads)
@@ -197,7 +233,7 @@ def basic_lists_checker(header_value_list, score):
 
 
 
-#def basic_bodies_checks():
+def basic_bodies_checks():
 
 
 

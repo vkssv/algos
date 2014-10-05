@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 
-import sys, os, logging, re, email
-from optparse import OptionParser
+import sys, os, logging, re, email, argparse
+
+
 
 # define needed functions
 def cut_header_from_body(email):
@@ -19,10 +20,8 @@ def cut_header_from_body(email):
 
     return (headers_str, corp_lines_list)
 
-
 def quote_the_value(value):
     return ('"'+str(value)+'"')
-
 
 def headers_parser(head_string, email):
     d = os.path.basename(email)
@@ -48,27 +47,34 @@ def headers_parser(head_string, email):
 
     return (headers_dict)
 
+def get_mime_info(msg,d_name):
+
+    print(email.iterators._structure(msg))
+    print
+    mime_heads = ['content-type','content-transfer-encoding','content-id','content-disposition']
+
+    for part in  msg.walk():
+
+        all_heads = [name.lower() for name in part.keys()]
+        for head in filter(lambda n: all_heads.count(n), mime_heads):
+            logger.debug(d_name+':'+head.upper()+' --> '+str(part.get_all(head)))
+
+
+
+    print
+    logger.debug('PAYLOAD( '+(d_name)+' ): ==> '+str(len(msg.get_payload())))
+
+    return
+
+
 
 if __name__ == "__main__":
+    usage = "usage: %prog [ training_directory | file ] -b"
+    parser = argparse.ArgumentParser(prog='helper')
+    parser.add_argument("PATH", type=str, help="path to collection dir or to email")
+    parser.add_argument("-b", action = "store_true", default=False, help="show only bodies MIME structures")
+    args = parser.parse_args()
 
-    usage = "usage: %prog [-t training_directory [-f file]]"
-    parser = OptionParser(usage)
-
-    parser.add_option("-t", action = "store", type = "string", dest = "train_dir",
-                      help = "path to collections")
-    parser.add_option("-f", action = "store", type = "string", dest = "new_doc",
-                      help = "path to checking email")
-
-    (options, args) = parser.parse_args()
-
-    if len(options.__dict__.values()) < 2:
-        print("")
-        parser.print_help()
-        print("")
-        sys.exit(1)
-
-
-    # in case if options.verbose is True
     tmp = '/tmp'
     formatter = logging.Formatter('%(message)s')
     logger = logging.getLogger()
@@ -83,25 +89,39 @@ if __name__ == "__main__":
     # 1. create train dataset
     try:
         parser = email.Parser.Parser()
+        pathes = []
+        if os.path.isfile(args.PATH):
+            pathes = [args.PATH]
+        elif os.path.isdir(args.PATH):
+            for path, subdirs, docs in os.walk(args.PATH):
+                for d in docs:
+                    pathes.append(os.path.join(path, d))
 
-        for path, subdirs, docs in os.walk(options.train_dir):
-            for d in docs:
-                print(d)
-                sample_path = os.path.join(path, d)
-                f = open(sample_path, 'rb')
-                msg = parser.parse(f)
-                f.close()
-                logger.debug('\nPATH: '+sample_path)
+        #print(pathes)
+        for sample_path in pathes:
+            f = open(sample_path, 'rb')
+            msg = parser.parse(f)
+            f.close()
+            logger.debug('\nPATH: '+sample_path)
+
+            filename = os.path.basename(sample_path)
+            if not args.b:
+
                 logger.debug('\n============== common garden parser ====================\n')
                 headers_parser(cut_header_from_body(sample_path)[0], sample_path)
 
                 logger.debug('\n============== parser from STL email ====================\n')
                 for k in msg.keys():
-                    logger.debug('HEADER( '+(d)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
+                    logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
 
-                logger.debug('EPILOGUE( '+(d)+' ): ==> '+quote_the_value(str(msg.epilogue)))
-                logger.debug('PREAMBLE( '+(d)+' ): ==> '+quote_the_value(str(msg.preamble)))
+            logger.debug('PREAMBLE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.preamble)))
+            logger.debug('STRUCTURE')
+            if msg.is_multipart():
+                get_mime_info(msg,filename)
+            else:
+                logger.debug(email.iterators._structure(msg))
 
+            logger.debug('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
 
     except Exception, details:
         logger.error(str(details))
