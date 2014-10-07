@@ -93,36 +93,40 @@ def get_mime_structure_crc(mime_info):
     return(binascii.crc32(line))
 
 
-def basic_attach_checker(mime_info,score):
+def basic_attach_checker(mime_heads,reg_list,score):
 
     score = 0
-    mime_headers = reduce(add,reduce(add,[dict.values() for dict in mime_info]))
-    regs = [
-                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif))',
-                r'.*\.(com|exe|xlsx?|pptx?|docx?|js|bat|eml|png|gif|cgi)',
-    ]
 
+    mime_heads = reduce(add,reduce(add,[dict.values() for dict in mime_heads]))
+    attach_attrs = filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)?=.*;',name),mime_heads)
+    attach_attrs = [(x.partition(';')[2]).strip('\r\n\x20') for x in attach_attrs]
+    attach_count = len(attach_attrs)
+
+    attach_score += score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*;',name),attach_attrs))
 
     lens = []
-    for r in regs[]:
-        reg = re.compile(r,re.I)
-        x = filter(lambda value: reg.search(value,re.M),mime_headers)
+    for rr in [re.compile(r,re.I) for r in reg_list]:
+        x = filter(lambda value: rr.search(value,re.M),attach_attrs)
         lens.append(x)
         lens.sort()
 
     score += score*lens[1]
 
-    disposition = [dict.get('content-disposition') for dict in mime_info]
 
-    score += len(filter(lambda inline: re.search('inline',re.M),disposition))
 
-    return(score)
+
+
+    return(count,score)
 
 
 # returns score + crc32 trace
 def basic_subjects_checker(heads_dict, regex_list, len_threshold, score):
     #print(regex_list)
     total_score = 0
+
+    # unconditional spams without Subject header at all or with empty Subj value are still in traffic
+    if not heads_dict.get('Subject'):
+        return (score, 0)
 
     subj_parts = tuple(map(lambda part: part[0].strip(), decode_header(heads_dict.get('Subject'))))
 
@@ -231,9 +235,9 @@ def basic_lists_checker(header_value_list, score):
 
     return (unsubscribe_score)
 
-
-
 def basic_bodies_checks():
+
+
 
 
 

@@ -97,12 +97,19 @@ class SpamPattern():
         if self.msg.get('Subject'):
 
             subject_rule = [
-                                r'(SN|viagra|ciali(s|\$)|pfizer|discount|pill|med|free|click|Best\s+Deal\s+Ever|,|!|\?!|\>\>\:|sale)+',
+                                r'(SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|!|\?!|\>\>\:|sale)+',
                                 r'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
                                 r'-?[\d]{1,2}\s+%\s+.*',
                                 r'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
-                                r'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}'
+                                r'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
+                                r'(free.*(pills?).*(every?)*.*(order)*|online.*&.*(save)*|tablet.*(split?ed?)*.*has?le)',
+	                            r'(cheap([est])?.*(satisf[ied]?)*.*(U[SK])*.*(CANADIAN)*.*customer|To.*Be.*Remov([ed])?.*(Please?)*)',
+	                            r'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
+	                            r'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|web))',
+                                r'.*(eml|spam).*',
+                                r'.*(payment|receipt|attach(ed)?).*'
                             ]
+
             len_threshold = 70
 
             heads_dict = {key: value for (key, value) in self.msg.items()}
@@ -157,11 +164,20 @@ class SpamPattern():
                 logger.debug('\t----->'+str(vector_dict))
 
         # 5. Check MIME headers
+        attach_score =0
+        attach_regs = [
+                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif))',
+                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+        ]
 
         mime_heads = common.get_mime_info(msg)
 
-        vector_dict['struct_crc']=common.get_mime_structure_crc(mime_heads)
-        vector_dict['attach']=common.basic_attach_checker(mime_heads)
+        vector_dict['att_count'], vector_dict['att_score'] = common.basic_attach_checker(mime_heads,attach_regs,score)
+
+
+
+        vector_dict['att_inline']
+
 
 
 
