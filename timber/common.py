@@ -92,31 +92,34 @@ def get_mime_structure_crc(mime_info):
 
     return(binascii.crc32(line))
 
+def get_nest_level(mime_info):
+    all_content_types = reduce(add,[dict.get('content-type') for dict in mime_info])
+    all_content_types = [x.partition(';')[0] for x in all_content_types]
+    level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),all_content_types))
+
+    return(level)
 
 def basic_attach_checker(mime_heads,reg_list,score):
 
     score = 0
 
-    mime_heads = reduce(add,reduce(add,[dict.values() for dict in mime_heads]))
+    mime_heads = reduce( add,reduce(add,[dict.values() for dict in mime_heads[:]] ))
     attach_attrs = filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)?=.*;',name),mime_heads)
     attach_attrs = [(x.partition(';')[2]).strip('\r\n\x20') for x in attach_attrs]
     attach_count = len(attach_attrs)
 
     attach_score += score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*;',name),attach_attrs))
 
-    lens = []
-    for rr in [re.compile(r,re.I) for r in reg_list]:
-        x = filter(lambda value: rr.search(value,re.M),attach_attrs)
-        lens.append(x)
-        lens.sort()
 
-    score += score*lens[1]
+    for exp in [re.compile(r,re.I) for r in reg_list]:
+        x = filter(lambda value: exp.search(value,re.M), attach_attrs)
+        score += score*len(x)
 
+    inline_pattern = r'inline\s*;'
+    inline_score = score*len(filter(lambda value: re.search(inline_pattern,value,re.I), mime_heads))
 
+    return(attach_count,score,inline_score)
 
-
-
-    return(count,score)
 
 
 # returns score + crc32 trace
@@ -174,9 +177,11 @@ def basic_subjects_checker(heads_dict, regex_list, len_threshold, score):
                 if not filter(lambda name: re.search(regexp_name, name, re.I), heads_dict.keys()):
                     total_score += score
 
-        # check the presence of strong tokens for unconditional
-        matched = filter(lambda r: re.search(r, p, re.I), regex_list)
-        if matched:
+        # check the presence of strong tokens for unconditional in filtered
+        # and unfiltered lines (works only for US-ASCII and UTF8)
+        filtered_line = re.sub(re.sub('[\\\/\s]','',p)
+        for s in [p,filtered_line]:
+            matched = filter(lambda r: re.search(r, s, re.I), regex_list)
             total_score += score*len(matched)
 
         # keep the last two word for making crc32 trace (??)

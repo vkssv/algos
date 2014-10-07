@@ -24,7 +24,7 @@ class SpamPattern():
         # 1. Received headers
 
         # get crc32 of only unique headers and their values
-        excluded_heads = ['Received', 'Subject', 'From', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc']
+        excluded_heads = ['Received', 'Subject', 'From', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path']
         vector_dict.update(common.get_heads_crc(self.msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
@@ -170,16 +170,12 @@ class SpamPattern():
                 r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
         ]
 
-        mime_heads = common.get_mime_info(msg)
-
-        vector_dict['att_count'], vector_dict['att_score'] = common.basic_attach_checker(mime_heads,attach_regs,score)
-
-
-
-        vector_dict['att_inline']
-
-
-
+        mime_heads_vect = common.get_mime_info(msg)
+        count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
+        vector_dict['att_count'] = count
+        vector_dict['att_score'] = att_score
+        vector_dict['in_score'] = in_score
+        vector_dict['nest_level'] = common.get_nest_level(mime_heads_vect)
 
 
 
