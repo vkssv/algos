@@ -75,11 +75,15 @@ def get_mime_info(msg):
 
     mime_parts=[]
     for part in msg.walk():
+
         all_heads = [name.lower() for name in part.keys()]
+        #print(all_heads)
 
         part_dict = {}
         for head in filter(lambda n: all_heads.count(n), mime_heads):
             part_dict[head] = part.get_all(head)
+        if len(part_dict) == 0:
+            continue
 
         mime_parts.append(part_dict)
 
@@ -101,7 +105,7 @@ def get_nest_level(mime_info):
 
 def basic_attach_checker(mime_heads,reg_list,score):
 
-    score = 0
+    attach_score = 0
 
     mime_heads = reduce( add,reduce(add,[dict.values() for dict in mime_heads[:]] ))
     attach_attrs = filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)?=.*;',name),mime_heads)
@@ -179,8 +183,8 @@ def basic_subjects_checker(heads_dict, regex_list, len_threshold, score):
 
         # check the presence of strong tokens for unconditional in filtered
         # and unfiltered lines (works only for US-ASCII and UTF8)
-        filtered_line = re.sub(re.sub('[\\\/\s]','',p)
-        for s in [p,filtered_line]:
+        filtered_line = re.sub(r'[\\\|\/\s\:\.,\!\$\&\*]','',p)
+        for s in [p, filtered_line]:
             matched = filter(lambda r: re.search(r, s, re.I), regex_list)
             total_score += score*len(matched)
 
@@ -240,7 +244,7 @@ def basic_lists_checker(header_value_list, score):
 
     return (unsubscribe_score)
 
-def basic_bodies_checks():
+#def basic_bodies_checks():
 
 
 

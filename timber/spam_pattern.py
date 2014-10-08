@@ -164,19 +164,31 @@ class SpamPattern():
                 logger.debug('\t----->'+str(vector_dict))
 
         # 5. Check MIME headers
-        attach_score =0
-        attach_regs = [
-                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif))',
-                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
-        ]
 
-        mime_heads_vect = common.get_mime_info(msg)
-        count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
-        vector_dict['att_count'] = count
-        vector_dict['att_score'] = att_score
-        vector_dict['in_score'] = in_score
-        vector_dict['nest_level'] = common.get_nest_level(mime_heads_vect)
+        mime_checks = [(x,0) for x in ['mime_spammness', 'att_count','att_score','in_score','nest_level']]
+        mime_dict = dict(mime_checks)
 
+        if self.msg.get('MIME-Version') and not self.msg.is_multipart():
+            mime_dict['mime_spammness'] = score
+
+        elif self.msg.is_multipart():
+
+            attach_regs = [
+                            r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif))',
+                            r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+                            ]
+
+            mime_heads_vect = common.get_mime_info(self.msg)
+            logger.debug(str(mime_heads_vect))
+            count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
+            mime_dict['att_count'] = count
+            mime_dict['att_score'] = att_score
+            mime_dict['in_score'] = in_score
+            mime_dict['nest_level'] = common.get_nest_level(mime_heads_vect)
+
+
+        vector_dict.update(mime_dict)
+        logger.debug('\t----->'+str(vector_dict))
 
 
 
