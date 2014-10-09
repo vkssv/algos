@@ -52,20 +52,20 @@ def get_mime_info(msg,d_name):
     print(email.iterators._structure(msg))
     print
     mime_heads = ['content-type','content-transfer-encoding','content-id','content-disposition']
-
+    total =0
     for part in  msg.walk():
 
         all_heads = [name.lower() for name in part.keys()]
         for head in filter(lambda n: all_heads.count(n), mime_heads):
             logger.debug(d_name+':'+head.upper()+' --> '+str(part.get_all(head)))
 
-
+        total += all_heads.count('content-type')
 
     print
     logger.debug('PAYLOAD( '+(d_name)+' ): ==> '+str(len(msg.get_payload())))
+    logger.debug('MIME_PARTS_NUM( '+(d_name)+' ): ==> '+str(total))
 
     return
-
 
 
 if __name__ == "__main__":
@@ -98,6 +98,7 @@ if __name__ == "__main__":
                     pathes.append(os.path.join(path, d))
 
         #print(pathes)
+        common_heads_list = []
         for sample_path in pathes:
             f = open(sample_path, 'rb')
             msg = parser.parse(f)
@@ -114,6 +115,12 @@ if __name__ == "__main__":
                 for k in msg.keys():
                     logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
 
+            heads_list = msg.keys()
+            common_heads_list.extend([(name, heads_list.count(name)) for name in heads_list])
+
+
+
+
             logger.debug('PREAMBLE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.preamble)))
             logger.debug('STRUCTURE')
             if msg.is_multipart():
@@ -122,6 +129,19 @@ if __name__ == "__main__":
                 logger.debug(email.iterators._structure(msg))
 
             logger.debug('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
+
+        logger.debug('\n============== heads stat ====================\n')
+        stat_dict = {}
+        for item in common_heads_list:
+            k,v = item
+            if stat_dict.has_key(k):
+                value = stat_dict.get[k]
+                stat_dict[k] = value+v
+            else:
+                stat_dict[k]=v
+
+        for key in stat_dict.iterkeys():
+            logger.debug(key+' --> '+str(stat_dict.get(key)) )
 
     except Exception, details:
         logger.error(str(details))

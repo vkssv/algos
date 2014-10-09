@@ -97,7 +97,7 @@ class SpamPattern():
         if self.msg.get('Subject'):
 
             subject_rule = [
-                                r'(SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|!|\?!|\>\>\:|sale)+',
+                                r'(SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
                                 r'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
                                 r'-?[\d]{1,2}\s+%\s+.*',
                                 r'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
@@ -174,7 +174,7 @@ class SpamPattern():
         elif self.msg.is_multipart():
 
             attach_regs = [
-                            r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif))',
+                            r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
                             r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
                             ]
 
@@ -184,7 +184,8 @@ class SpamPattern():
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
             mime_dict['in_score'] = in_score
-            mime_dict['nest_level'] = common.get_nest_level(mime_heads_vect)
+            if common.get_nest_level(mime_heads_vect) > 2:
+                mime_dict['nest_level'] = 1
 
 
         vector_dict.update(mime_dict)
