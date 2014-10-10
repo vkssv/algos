@@ -56,17 +56,17 @@ class InfoPattern():
         if self.msg.get('Subject'):
 
             subject_rule = [
-                                r'(SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|!|\?!|\>\>\:|sale)+',
+                                r'(discount|Best\s+Deal\s+Ever|,|!|\?!|\>\>\:|sale)+',
                                 r'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
                                 r'-?[\d]{1,2}\s+%\s+.*',
                                 r'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
                                 r'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
-                                r'(free.*(pills?).*(every?)*.*(order)*|online.*&.*(save)*|tablet.*(split?ed?)*.*has?le)',
-	                            r'(cheap([est])?.*(satisf[ied]?)*.*(U[SK])*.*(CANADIAN)*.*customer|To.*Be.*Remov([ed])?.*(Please?)*)',
-	                            r'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
-	                            r'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|web))',
+                                r'(free.*(every?)*.*(order)*|online.*&.*(save)*(split?ed?)*.*has?le)',
+	                            r'(cheap([est])?.*(satisf[ied]?)*.**customer|',
+	                            r'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|)',
+	                            r'(dear.*(?:IT\W|Internet|candidate|sirs?|madam||travell?er|car\sshopper|web))',
                                 r'.*(eml|spam).*',
-                                r'.*(payment|receipt|attach(ed)?).*'
+                                # news
                             ]
 
             len_threshold = 70
@@ -85,7 +85,7 @@ class InfoPattern():
         logger.debug('\t----->'+str(vector_dict))
         # 3. List checks and some other RFC 5322 compliences checks for headers
 
-        temp_dict = dict([('list',score), ('sender',0), ('preamble',0), ('disp-notification',0)])
+        temp_dict = dict([('list',score), ('sender',0), ('disp-notification',0)])
         logger.debug('\t----->'+str(temp_dict))
 
         if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.msg.keys()):
@@ -97,11 +97,6 @@ class InfoPattern():
             # if we don't have List header From = Sender (RFC 5322),
             # MUA didn't generate Sender field cause of redundancy
             temp_dict ['sender'] = 1
-            logger.debug('\t----->'+str(temp_dict))
-
-        if self.msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self.msg.preamble,re.I):
-
-            temp_dict ['preamble'] = 1
             logger.debug('\t----->'+str(temp_dict))
 
         vector_dict.update(temp_dict)
@@ -125,8 +120,8 @@ class InfoPattern():
         # 5. Check MIME headers
         attach_score =0
         attach_regs = [
-                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif))',
-                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+                        r'image\/(png|gif)',
+                        r'.*\.(html|js|jpeg|png|gif|cgi)',
         ]
 
         mime_heads_vect = common.get_mime_info(msg)
@@ -135,38 +130,6 @@ class InfoPattern():
         vector_dict['att_score'] = att_score
         vector_dict['in_score'] = in_score
         vector_dict['nest_level'] = common.get_nest_level(mime_heads_vect)
-
-    def run(self, msg):
-
-
-        vect = { }
-
-
-    vect.update(common.get_body_skeleton())
-    logger.debug(vect)
-
-    # cat /tmp/headers.log | grep Keywords
-
-
-    if filter(lambda list_field: re.search('^List(-.*)?', list_field), self.msg.items()):
-        #deep check
-        temp_dict ['List'] = common.check_lists(self.msg.items())
-
-        # some primitive patterns
-        patterns = [
-            'http(s)+:\/\/.*sender_domain\/.*(listinfo|unsub|email=).*', \
-            'mailto:.*@.*\.sender_domain.*'
-        ]
-
-
-    else:
-    # search unsubscribe link in body
-
-    #Sender != From
-    # Reply-to always
-    return (vect)
-
-       # regs = [r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', r'\s((?!-)[a-z0-9-\.]{1,63}(?<!-))+(\.[a-z]{2,6}){0,}']
 
 
 if __name__ == "__main__":
@@ -178,7 +141,7 @@ if __name__ == "__main__":
     logger.addHandler(ch)
 
     try:
-        test = SpamPattern(env)
+        test = InfoPattern(env)
         vector = test.run()
         logger.debug(vector)
 
