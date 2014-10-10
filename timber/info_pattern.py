@@ -24,7 +24,10 @@ class InfoPattern():
         # 1. Received headers
 
         # get crc32 of only unique headers and their values
-        excluded_heads = ['Received', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path']
+        excluded_heads = [
+                            'Received', 'Subject','From','Date', 'Received-SPF','To', 'Content-Type',\
+                            'Authentication-Results', 'MIME-Version', 'DKIM-Signature','Return-Path','Delivered-To','X-Received'
+                          ]
         vector_dict.update(common.get_heads_crc(self.msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
@@ -33,7 +36,7 @@ class InfoPattern():
         logger.debug('\t----->'+str(vector_dict))
 
         # basic parsing and dummy checks with regexps (takes only first n_rcvds headers)
-        n_rcvds = 3
+        n_rcvds = 0
         rcvd_values = tuple(self.msg.get_all('Received'))[-1*n_rcvds:]
         #print('rcvd_values: '+str(rcvd_values))
         parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in rcvd_values[:]])
@@ -41,40 +44,6 @@ class InfoPattern():
 
 
 
-        # deep parsing and checks for some wellknown spammers tricks with To: header
-        vector_dict ['smtp_to'] = 0
-        vector_dict ['to'] = 0
-        logger.debug('\t----->'+str(vector_dict))
-
-        to_values, to_addrs = common.get_addr_fields(self.msg.get('To'))
-        if to_values and filter(lambda x: re.search(r'undisclosed-recipients',x,re.I), to_values):
-            vector_dict['to'] += score
-            logger.debug('\t----->'+str(vector_dict))
-
-        if not to_addrs:
-            vector_dict['to'] += score
-            logger.debug('\t----->'+str(vector_dict))
-
-        smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in parsed_rcvds]))
-
-        if smtp_to_list:
-            trace_str_with_to = smtp_to_list[0]
-            smtp_to = re.search(r'<(.*@.*)?>', trace_str_with_to)
-            if smtp_to:
-                smtp_to = smtp_to.group(0)
-                #logger.debug(smtp_to)
-
-                if len(to_addrs) == 1 and smtp_to != to_addrs[0]:
-                    vector_dict['to'] += score
-                    logger.debug('\t----->'+str(vector_dict))
-
-                elif len(to_addrs) > 2 and smtp_to != '<multiple recipients>':
-                    vector_dict['to'] += score
-                    logger.debug('\t----->'+str(vector_dict))
-
-        else:
-            vector_dict ['smtp_to'] += 1
-            logger.debug('\t----->'+str(vector_dict))
 
         # get crc32 from first N trace fields
         rcvd_vect = tuple([rcvd.partition('by')[0] for r in parsed_rcvds])

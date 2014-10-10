@@ -24,7 +24,11 @@ class SpamPattern():
         # 1. Received headers
 
         # get crc32 of only unique headers and their values
-        excluded_heads = ['Received', 'Subject', 'From', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path']
+        excluded_heads = [
+                            'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
+                            'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
+                            ]
+
         vector_dict.update(common.get_heads_crc(self.msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 

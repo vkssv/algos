@@ -119,8 +119,6 @@ if __name__ == "__main__":
             common_heads_list.extend([(name, heads_list.count(name)) for name in heads_list])
 
 
-
-
             logger.debug('PREAMBLE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.preamble)))
             logger.debug('STRUCTURE')
             if msg.is_multipart():
@@ -131,17 +129,15 @@ if __name__ == "__main__":
             logger.debug('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
 
         logger.debug('\n============== heads stat ====================\n')
-        stat_dict = {}
-        for item in common_heads_list:
-            k,v = item
-            if stat_dict.has_key(k):
-                value = stat_dict.get[k]
-                stat_dict[k] = value+v
-            else:
-                stat_dict[k]=v
+        heads = [ i[0] for i in common_heads_list ]
+        unique = tuple(set([ i[0] for i in common_heads_list ]))
+        unique_list = zip(tuple([heads.count(u) for u in unique]),unique)
+        unique_list.sort()
 
-        for key in stat_dict.iterkeys():
-            logger.debug(key+' --> '+str(stat_dict.get(key)) )
+
+        for item in unique_list:
+            value,key = item
+            logger.debug(key+' --> '+str(value))
 
     except Exception, details:
         logger.error(str(details))
