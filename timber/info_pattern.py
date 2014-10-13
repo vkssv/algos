@@ -26,7 +26,7 @@ class InfoPattern():
         # get crc32 of only unique headers and their values
         excluded_heads = [
                             'Received', 'Subject','From','Date', 'Received-SPF','To', 'Content-Type',\
-                            'Authentication-Results', 'MIME-Version', 'DKIM-Signature','Return-Path','Delivered-To','X-Received'
+                            'Authentication-Results', 'MIME-Version', 'DKIM-Signature','Return-Path','Delivered-To'
                           ]
         vector_dict.update(common.get_heads_crc(self.msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
@@ -50,6 +50,10 @@ class InfoPattern():
         logger.debug(rcvd_vect)
         vector_dict.update(common.get_trace_crc(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
+
+        # DMARC checks
+
+
 
         # 2. Subject checks
 

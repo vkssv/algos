@@ -229,7 +229,8 @@ def basic_lists_checker(header_value_list, score):
     ]
 
     # check Reply-To only with infos, very controversial, here are only pure RFC 2369 checks
-    rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
+    # leave Errors-To cause all russian Senders rather put exactly Errors-To in their infos instead of List-Unsubscribe
+    rfc_heads = ['List-Unsubscribe','Errors-To', 'Sender']
 
     presented = filter(lambda h: (heads_dict.keys()).count(h), rfc_heads)
     # doesn't support RFC 2369 in a proper way
@@ -243,6 +244,52 @@ def basic_lists_checker(header_value_list, score):
             unsubscribe_score += score
 
     return (unsubscribe_score)
+
+def basic_dmarc_checker(header_value_list,required_heads_list=[],score):
+
+    if not required_heads_list:
+        required_heads = [('Authentication-Results',0),('DKIM(-.*)*',0),('Received-SPF',0),('DomainKey(-.*)*',0)]
+
+    total = []
+    dmarc_dict = temp_dict = dict([('auth-res',0), ('spf',0), ('dkim',0)])
+    msg_heads = [i[0] for i in header_value_list]
+
+    for h in dmarc_dict.iterkeys():
+        total.append(filter(lambda sp: not re.match(r'^'+h+'$',sp), msg_heads))
+
+
+    basic_score = (len(required_heads_list) - len(sum(t,[])))*score
+
+    # simple checks for Received-SPF, Authentication-Results
+
+    if msg_heads.count('Received-SPF') and re.match(r'^\s*pass\s+',msg.get('Received-SPF'),re.I):
+        dmarc_dict['Received-SPF'] = 1
+
+        if msg_heads.count('Authentication-Results'):
+            dmarc_dict['Authentication-Results'] = 1
+        else:
+            dmarc_dict['Received-SPF'] = dmarc_dict.get('Received-SPF') - score
+
+    
+
+    # simple checks for DKIM
+
+
+
+
+
+
+
+
+
+
+
+    return(basic_score)
+
+
+
+
+
 
 #def basic_bodies_checks():
 

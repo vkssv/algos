@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import sys, os, logging, re, email, argparse
+import sys, os, logging, re, email, argparse,time
 
 
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler(sys.stdout)
-    fh = logging.FileHandler(os.path.join(tmp, 'headers.log'), mode = 'w')
+    fh = logging.FileHandler(os.path.join(tmp, 'headers_'+time.strftime("%y%m%d_%H%M", time.localtime())+'.log'), mode = 'w')
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
     logger.addHandler(ch)

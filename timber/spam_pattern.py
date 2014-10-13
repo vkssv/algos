@@ -156,6 +156,9 @@ class SpamPattern():
             vector_dict ['disp-notification'] = 1
             logger.debug('\t----->'+str(vector_dict))
 
+        # 5. assert the absence of SPF, Auth and DKIM headers, what is very typycally exactly for spam
+        vector_dict['dmarc']=common.basic_dmarc_checker(self.msg.items(),,score)
+
         # 4. crc for From values
         vector_dict['from']=0
         logger.debug('\t----->'+str(vector_dict))
