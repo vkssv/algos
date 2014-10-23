@@ -248,10 +248,11 @@ def basic_lists_checker(header_value_list, score):
 def basic_dmarc_checker(header_value_list,required_heads_list=[],score):
 
     if not required_heads_list:
-        required_heads = [('Authentication-Results',0),('DKIM(-.*)*',0),('Received-SPF',0),('DomainKey(-.*)*',0)]
+        required_heads = ['Authentication-Results','DKIM(-.*)*','Received-SPF','DomainKey(-.*)*']
 
     total = []
-    dmarc_dict = temp_dict = dict([('auth-res',0), ('spf',0), ('dkim',0)])
+    dmarc_dict = dict(map(lambda x,y: (x,y),required_heads,[0]*len(required_heads)))
+    # dict(filter(lambda n: n[0], map(lambda x,y:(x,y),k,v)))
     msg_heads = [i[0] for i in header_value_list]
 
     for h in dmarc_dict.iterkeys():
@@ -273,15 +274,6 @@ def basic_dmarc_checker(header_value_list,required_heads_list=[],score):
     
 
     # simple checks for DKIM
-
-
-
-
-
-
-
-
-
 
 
     return(basic_score)
