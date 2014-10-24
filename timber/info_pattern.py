@@ -1,21 +1,15 @@
 #! /usr/bin/env python
+"""Keeps and applies vectorising rules for infos."""
 
-import os, sys, logging, subprocess, ConfigParser, re, shutil, time, env, common
-from signal import SIGHUP, SIGTERM, SIGKILL
+import os, sys, logging, common
+from pattern_wrapper import BasePattern
 
 # formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 
-class InfoPattern():
-
-    def __init__(self, msg):
-        self.msg = msg
-
-    # ?
-    def __str__(self):
-        return("Keeps and applies vectorising rules for info-pubs")
+class InfoPattern(BasePattern):
 
     def run(self, score):
 

@@ -1,15 +1,16 @@
 #! /usr/bin/env python
+"Set vectorising rules for hams."
 
-import os, sys, logging, subprocess, ConfigParser, re, shutil, time, env, common
-from signal import SIGHUP, SIGTERM, SIGKILL
+import os, sys, logging, common
+from pattern_wrapper import BasePattern
 
 #formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 
-class SpamPattern():
-	"Set vectorising rules for hams."
+class SpamPattern(BasePattern):
+
 
 	def run(self,msg):
         vect = {}

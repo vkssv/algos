@@ -1,21 +1,15 @@
 #! /usr/bin/env python
+"""Keeps and applies vectorising rules for spams."""
 
 import os, sys, logging, re, common, binascii
 from operator import add
-
+from pattern_wrapper import BasePattern
 # formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 
-class SpamPattern():
-
-    def __init__(self, msg):
-        self.msg = msg
-
-    # ?
-    def __str__(self):
-        return("Keeps and applies vectorising rules for spams.")
+class SpamPattern(BasePattern):
 
     def run(self, score):
 
@@ -156,7 +150,7 @@ class SpamPattern():
             vector_dict ['disp-notification'] = 1
             logger.debug('\t----->'+str(vector_dict))
 
-        # 5. assert the absence of SPF, Auth and DKIM headers, what is very typycally exactly for spam
+        # 5. assert the absence of SPF, Auth and DKIM headers, what is very typically exactly for spam
         vector_dict['dmarc']=common.basic_dmarc_checker(self.msg.items(),,score)
 
         # 4. crc for From values
