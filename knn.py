@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os, logging, re, math
+import sys, os, logging, re, math, pdb
 from optparse import OptionParser
 # import matplotlib.pyplot as plt
 SCORE=1.0
@@ -218,6 +218,8 @@ def get_total_sum(neigh_list):
 
 
 if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
 
     usage = "usage: %prog [options] -t training_directory -f file -k k"
     parser = OptionParser(usage)
@@ -260,6 +262,7 @@ if __name__ == "__main__":
                 sample_path = os.path.join(path, d)
                 vector = create_doc_vector(sample_path)
                 train_dataset.append(vector)
+                pdb.set_trace()
 
         # 2. create vector model for processing email
         email_coordinates = (create_doc_vector(options.new_doc))

@@ -42,8 +42,8 @@ def headers_parser(head_string, email):
             # just skip unmached headers
             continue
 
-    for h_key in headers_dict.iterkeys():
-        logger.debug('__HEADER__( '+(d)+' ):\t'+h_key+' --> '+quote_the_value(headers_dict.get(h_key)))
+    #for h_key in headers_dict.iterkeys():
+    #    logger.debug('__HEADER__( '+(d)+' ):\t'+h_key+' --> '+quote_the_value(headers_dict.get(h_key)))
 
     return (headers_dict)
 

@@ -48,7 +48,6 @@ class SpamPattern(BasePattern):
             if filter(lambda l: re.search(rule, l), parsed_rcvds):
                 vector_dict ["trace_rule"] = 1
 
-
         # deep parsing and checks for some wellknown spammers tricks with To: header
         vector_dict ['smtp_to'] = 0
         vector_dict ['to'] = 0

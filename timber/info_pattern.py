@@ -1,5 +1,8 @@
 #! /usr/bin/env python
-"""Keeps and applies vectorising rules for infos."""
+"""Keeps and applies vectorising rules for infos.
+If doc(email) is very similar to this pattern
+its vector will be filled by "1" or score value > 0
+or crc32 value for each feature, otherwise - "0" """
 
 import os, sys, logging, common
 from pattern_wrapper import BasePattern
@@ -19,8 +22,8 @@ class InfoPattern(BasePattern):
 
         # get crc32 of only unique headers and their values
         excluded_heads = [
-                            'Received', 'Subject','From','Date', 'Received-SPF','To', 'Content-Type',\
-                            'Authentication-Results', 'MIME-Version', 'DKIM-Signature','Return-Path','Delivered-To'
+                            'Received', 'Subject', 'From', 'Date', 'Received-SPF', 'To', 'Content-Type',\
+                            'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
                           ]
         vector_dict.update(common.get_heads_crc(self.msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
@@ -37,8 +40,6 @@ class InfoPattern(BasePattern):
         #logger.debug('parsed_rcvds -->'+str(parsed_rcvds))
 
 
-
-
         # get crc32 from first N trace fields
         rcvd_vect = tuple([rcvd.partition('by')[0] for r in parsed_rcvds])
         logger.debug(rcvd_vect)
@@ -46,6 +47,22 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # DMARC checks
+
+
+
+
+        # Presense of X-EMID && X-EMMAIL
+        em_names = ['X-EMID','X-EMMAIL']
+        sc = 0
+        pat = '^X-EM(ID|MAIL)$'
+
+        if len(set(filter(lambda xx: re.match(pat,xx,re.I),self.msg.keys()))) == len(em_names):
+            if self.msg.get('X-EMMAIL') == self.msg.get('To'):
+                sc = 1
+
+        em_dict = dict(map(lambda x,y: (x,y),em_names,[sc]*len(em_names)))
+        vector_dict.update(em_dict)
+
 
 
 

@@ -245,35 +245,45 @@ def basic_lists_checker(header_value_list, score):
 
     return (unsubscribe_score)
 
-def basic_dmarc_checker(header_value_list,required_heads_list=[],score):
+def basic_dmarc_checker(header_value_list, required_heads_list=[], score):
 
     if not required_heads_list:
-        required_heads = ['Authentication-Results','DKIM(-.*)*','Received-SPF','DomainKey(-.*)*']
+        # Google policies now claim both 'DKIM-Signature' && 'DomainKey-Signature'
+        required_heads = ['Received-SPF','DKIM-Signature','DomainKey-Signature']
+
+    init_score = 0
+    dmarc_dict = dict(map(lambda x,y: (x,y),required_heads,[init_score]*len(required_heads)))
+
+    msg_heads = [i[0] for i in header_value_list]
+    # according to RFC 7001, authorized should bulk senders respect it
+    if not msg_heads.count('Authentication-Results'):
+        return(dmarc_dict)
 
     total = []
-    dmarc_dict = dict(map(lambda x,y: (x,y),required_heads,[0]*len(required_heads)))
-    # dict(filter(lambda n: n[0], map(lambda x,y:(x,y),k,v)))
-    msg_heads = [i[0] for i in header_value_list]
-
     for h in dmarc_dict.iterkeys():
-        total.append(filter(lambda sp: not re.match(r'^'+h+'$',sp), msg_heads))
+        total.extend(filter(lambda z: z.count(h), msg_heads))
 
+    basic_score = (len(required_heads_list) - len(sum(total,[])))*score
 
-    basic_score = (len(required_heads_list) - len(sum(t,[])))*score
-
-    # simple checks for Received-SPF, Authentication-Results
-
+    # simple checks for Received-SPF and DKIM/DomainKey-Signature
     if msg_heads.count('Received-SPF') and re.match(r'^\s*pass\s+',msg.get('Received-SPF'),re.I):
         dmarc_dict['Received-SPF'] = 1
 
-        if msg_heads.count('Authentication-Results'):
-            dmarc_dict['Authentication-Results'] = 1
-        else:
-            dmarc_dict['Received-SPF'] = dmarc_dict.get('Received-SPF') - score
+    # check domain names in From and DKIMs (but now it's probably redundant)
+    from_domain = (dict(msg.items()).get('From')).partition('@')[2]
+    from_domain = from_domain.strip()
 
     
 
-    # simple checks for DKIM
+
+
+
+
+
+
+
+
+
 
 
     return(basic_score)
