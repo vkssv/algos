@@ -248,32 +248,42 @@ def basic_lists_checker(header_value_list, score):
 def basic_dmarc_checker(header_value_list, required_heads_list=[], score):
 
     if not required_heads_list:
-        # Google policies now claim both 'DKIM-Signature' && 'DomainKey-Signature'
-        required_heads = ['Received-SPF','DKIM-Signature','DomainKey-Signature']
+
+        required_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
 
     init_score = 0
     dmarc_dict = dict(map(lambda x,y: (x,y),required_heads,[init_score]*len(required_heads)))
 
-    msg_heads = [i[0] for i in header_value_list]
+    msg_heads = dict(header_value_list).keys()
     # according to RFC 7001, authorized should bulk senders respect it
     if not msg_heads.count('Authentication-Results'):
         return(dmarc_dict)
 
     total = []
     for h in dmarc_dict.iterkeys():
-        total.extend(filter(lambda z: z.count(h), msg_heads))
+        dkims = filter(lambda z: re.search(h,z), msg_heads)
+        total.extend(dkims)
 
-    basic_score = (len(required_heads_list) - len(sum(total,[])))*score
+    # (len(required_heads_list)+1, cause we can find DKIM-Signature and DomainKey-Signature in one doc
+    basic_score = ((len(required_heads_list)+1) - len(sum(total,[])))*score
 
     # simple checks for Received-SPF and DKIM/DomainKey-Signature
     if msg_heads.count('Received-SPF') and re.match(r'^\s*pass\s+',msg.get('Received-SPF'),re.I):
-        dmarc_dict['Received-SPF'] = 1
+        dmarc_dict['Received-SPF'] += score
 
-    # check domain names in From and DKIMs (but now it's probably redundant)
+    # check domain names in From and DKIM-headers (but now it's probably redundant)
     from_domain = (dict(msg.items()).get('From')).partition('@')[2]
-    from_domain = from_domain.strip()
+    from_domain = from_domain.strip('>').strip()
 
-    
+    # in case if dict(header_value_list) doesn't contain one of ['DomainKey', 'DKIM'], usually
+    valid_lines = filter(lambda f: re.search(from_domain,f),[dict(header_value_list).get(h) for h in dkims])
+    if len(valid_lines) == len(lines):
+        dmarc_dict['(DKIM|DomainKey)-Signature'] += score
+
+
+    return(dmarc_dict)
+
+
 
 
 

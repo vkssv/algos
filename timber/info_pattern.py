@@ -47,9 +47,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # DMARC checks
-
-
-
+        vector_dict.update(common.basic_dmarc_checker(msg.items(), score)
 
         # Presense of X-EMID && X-EMMAIL
         em_names = ['X-EMID','X-EMMAIL']
@@ -63,15 +61,12 @@ class InfoPattern(BasePattern):
         em_dict = dict(map(lambda x,y: (x,y),em_names,[sc]*len(em_names)))
         vector_dict.update(em_dict)
 
-
-
-
         # 2. Subject checks
 
         if self.msg.get('Subject'):
 
             subject_rule = [
-                                r'(discount|Best\s+Deal\s+Ever|,|!|\?!|\>\>\:|sale)+',
+                                r'^(\xe2\x9c\x88|)!$',
                                 r'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
                                 r'-?[\d]{1,2}\s+%\s+.*',
                                 r'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
