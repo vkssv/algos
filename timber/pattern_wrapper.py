@@ -20,7 +20,7 @@ class PatternFactory(object):
             # logger.debug ((check.title()).replace('_',''))
             current_test_obj = getattr(pattern, (label.title() + 'Pattern'))
 
-        except Exception, details:
+        except Exception as details:
             raise
 
         return (current_test_obj(msg))

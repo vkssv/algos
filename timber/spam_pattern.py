@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for spams."""
 
 import os, sys, logging, re, common, binascii
@@ -150,7 +151,7 @@ class SpamPattern(BasePattern):
             logger.debug('\t----->'+str(vector_dict))
 
         # 5. assert the absence of SPF, Auth and DKIM headers, what is very typically exactly for spam
-        vector_dict['dmarc']=common.basic_dmarc_checker(self.msg.items(),,score)
+        vector_dict.update(common.basic_dmarc_checker(self.msg.items(), score))
 
         # 4. crc for From values
         vector_dict['from']=0
@@ -215,7 +216,7 @@ if __name__ == "__main__":
         logger.debug(vector)
 
 
-    except Exception, details:
+    except Exception as details:
         raise
 
 

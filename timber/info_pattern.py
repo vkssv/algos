@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for infos.
 If doc(email) is very similar to this pattern
 its vector will be filled by "1" or score value > 0
@@ -47,7 +48,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # DMARC checks
-        vector_dict.update(common.basic_dmarc_checker(msg.items(), score)
+        vector_dict.update(common.basic_dmarc_checker(self.msg.items(), score)
 
         # Presense of X-EMID && X-EMMAIL
         em_names = ['X-EMID','X-EMMAIL']
@@ -156,7 +157,7 @@ if __name__ == "__main__":
         logger.debug(vector)
 
 
-    except Exception, details:
+    except Exception as details:
         raise
 
 			

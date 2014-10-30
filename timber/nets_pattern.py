@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for nets."""
 
 import os, sys, logging, common
@@ -213,7 +214,7 @@ if __name__ == "__main__":
 		logger.debug(vector)
 
 
-	except Exception, details:
+	except Exception as details:
 		raise
 
 			

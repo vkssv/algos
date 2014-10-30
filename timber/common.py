@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 shared module with common-used functions, will be class in future
 '''
@@ -245,7 +246,7 @@ def basic_lists_checker(header_value_list, score):
 
     return (unsubscribe_score)
 
-def basic_dmarc_checker(header_value_list, required_heads_list=[], score):
+def basic_dmarc_checker(header_value_list, score, required_heads_list=[]):
 
     if not required_heads_list:
 

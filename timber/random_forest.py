@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 
 -can be imported as submodule to build feature vectors from emails collections,
@@ -10,6 +11,7 @@ using different presets of loaded heuristics
 
 import sys, os, logging, re, email
 from optparse import OptionParser
+
 # import matplotlib.pyplot as plt
 
 from pattern_wrapper import MetaPattern
@@ -26,7 +28,7 @@ def vectorize(doc_path, label, score):
     logger.debug("\n\nStart processing: " + doc_path + ' from "' + label + '" set')
     vect_dict = {}
 
-    parser = email.Parser.Parser()
+    parser = email.parser.Parser()
     f = open(doc_path, "rb")
     msg = parser.parse(f)
     f.close()
@@ -41,7 +43,7 @@ def vectorize(doc_path, label, score):
         logger.debug('\n\n\t CHECK_' + label.upper()+'\n')
         vect_dict.update(checks_set.run(score))
 
-    except Exception, details:
+    except Exception as details:
         logger.error(str(details))
         raise
 
@@ -111,7 +113,7 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
 
-    if options.__dict__.values().count(None) > 0:
+    if list(options.__dict__.values()).count(None) > 0:
         print("")
         parser.print_help()
         print("")
@@ -135,7 +137,7 @@ if __name__ == "__main__":
     try:
         make_dataset(options.collection, options.category, options.score)
 
-    except Exception, details:
+    except Exception as details:
         logger.error(str(details))
         #sys.exit(1)
         raise

@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- coding: utf-8 -*-
 "Set vectorising rules for hams."
 
 import os, sys, logging, common
@@ -9,7 +10,7 @@ logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 
-class SpamPattern(BasePattern):
+class HamPattern(BasePattern):
 
 
 	def run(self,msg):
@@ -37,7 +38,7 @@ if __name__ == "__main__":
 		logger.debug(vector)
 
 
-	except Exception, details:
+	except Exception as details:
 		raise
 
 			
