@@ -1,6 +1,9 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import sys, os, logging, re, email, argparse,time
+from email.parser import BytesParser
+from email.header import decode_header
+
 
 
 
@@ -42,8 +45,8 @@ def headers_parser(head_string, email):
             # just skip unmached headers
             continue
 
-    #for h_key in headers_dict.iterkeys():
-    #    logger.debug('__HEADER__( '+(d)+' ):\t'+h_key+' --> '+quote_the_value(headers_dict.get(h_key)))
+    for h_key in headers_dict.iterkeys():
+        logger.debug('__HEADER__( '+(d)+' ):\t'+h_key+' --> '+quote_the_value(headers_dict.get(h_key)))
 
     return (headers_dict)
 
@@ -88,7 +91,7 @@ if __name__ == "__main__":
 
     # 1. create train dataset
     try:
-        parser = email.Parser.Parser()
+        parser = BytesParser()
         pathes = []
         if os.path.isfile(args.PATH):
             pathes = [args.PATH]
@@ -101,6 +104,7 @@ if __name__ == "__main__":
         common_heads_list = []
         for sample_path in pathes:
             f = open(sample_path, 'rb')
+
             msg = parser.parse(f)
             f.close()
             logger.debug('\nPATH: '+sample_path)
@@ -108,12 +112,16 @@ if __name__ == "__main__":
             filename = os.path.basename(sample_path)
             if not args.b:
 
-                logger.debug('\n============== common garden parser ====================\n')
-                headers_parser(cut_header_from_body(sample_path)[0], sample_path)
+                #logger.debug('\n============== common garden parser ====================\n')
+                #headers_parser(cut_header_from_body(sample_path)[0], sample_path)
 
                 logger.debug('\n============== parser from STL email ====================\n')
                 for k in msg.keys():
-                    logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
+                    if k == 'Subject':
+                        logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(decode_header(msg.get(k))))
+
+                    else:
+                        logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
 
             heads_list = msg.keys()
             common_heads_list.extend([(name, heads_list.count(name)) for name in heads_list])
@@ -131,7 +139,8 @@ if __name__ == "__main__":
         logger.debug('\n============== heads stat ====================\n')
         heads = [ i[0] for i in common_heads_list ]
         unique = tuple(set([ i[0] for i in common_heads_list ]))
-        unique_list = zip(tuple([heads.count(u) for u in unique]),unique)
+        unique_list = list(zip(tuple([heads.count(u) for u in unique]),unique))
+
         unique_list.sort()
 
 
@@ -139,7 +148,9 @@ if __name__ == "__main__":
             value,key = item
             logger.debug(key+' --> '+str(value))
 
-    except Exception, details:
+
+
+    except Exception as details:
         logger.error(str(details))
         raise
 

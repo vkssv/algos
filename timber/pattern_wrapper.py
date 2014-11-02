@@ -5,8 +5,12 @@ logger.setLevel(logging.DEBUG)
 
 class BasePattern(object):
     """Base parent class for created all other pattern classes."""
+    INIT_SCORE = 0
+    MIN_TOKEN_LEN = 3
+
     def __init__(self, msg):
         self.msg = msg
+
 
 
 class PatternFactory(object):

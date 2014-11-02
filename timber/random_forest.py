@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """
 
@@ -11,6 +11,7 @@ using different presets of loaded heuristics
 
 import sys, os, logging, re, email
 from optparse import OptionParser
+from email.parser import Parser
 
 # import matplotlib.pyplot as plt
 
@@ -28,7 +29,7 @@ def vectorize(doc_path, label, score):
     logger.debug("\n\nStart processing: " + doc_path + ' from "' + label + '" set')
     vect_dict = {}
 
-    parser = email.parser.Parser()
+    parser = Parser()
     f = open(doc_path, "rb")
     msg = parser.parse(f)
     f.close()

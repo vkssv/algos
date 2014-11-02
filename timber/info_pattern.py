@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for infos.
 If doc(email) is very similar to this pattern
@@ -64,36 +64,58 @@ class InfoPattern(BasePattern):
 
         # 2. Subject checks
 
+        features = ['len','style','score','checksum']
+        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [BasePattern.INIT_SCORE]*len(features)))
+
         if self.msg.get('Subject'):
 
-            subject_rule = [
-                                r'^(\xe2\x9c\x88|)!$',
-                                r'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
-                                r'-?[\d]{1,2}\s+%\s+.*',
-                                r'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
-                                r'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
-                                r'(free.*(every?)*.*(order)*|online.*&.*(save)*(split?ed?)*.*has?le)',
-	                            r'(cheap([est])?.*(satisf[ied]?)*.**customer|',
-	                            r'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|)',
-	                            r'(dear.*(?:IT\W|Internet|candidate|sirs?|madam||travell?er|car\sshopper|web))',
-                                r'.*(eml|spam).*',
-                                # news
+            total_score = BasePattern.INIT_SCORE
+
+            unicode_subj, norm_words_list = common.get_subject(self.msg("Subject"),BasePattern.MIN_TOKEN_LEN)
+
+            info_patterns = [
+                                ur'([\u25a0-\u29ff]|)', # dingbats
+                                ur'([\u0370-\u03ff]|[\u2010-\u337b]|)', # separators, math, currency signs, etc
+                                ur'^(Hi|Hello|Good\s+(day|(morn|even)ing)|Dear\s+){0,1}\s{0,}[\w-]{2,10}(\s+[\w-]{2,10}){0,3},.*$',
+                                ur'^\s*(what\s+(are|is)|why|how\s+(do)?|when|since|could|may|is|in).*[\?!:;\s-]{0,}.',
+                                ur'(SALE|FREE|News?|Do\s+not\s+|Don\'t\s+|miss\s+|They.*back|is\s+here|now\s+with)+',
+                                ur'(interesting|announcing|hurry|big(gest)?|great|only|deal|groupon|tour|travel|hot|inside)+',
+                                ur'(all\s+for|price|vip|special|trends|brands|shopping|hysteria|save|kick|super(b)?)+',
+                                ur'(Now\s+or\s+Never|call|share|stock|exclusive|free\s+shipping|car|shopper|bonus)+',
+                                ur'(lpg|spa|trend|brand|opportunity|be\s+the\s+first|get\s+it\s+now|see|look|watch)+'
+                                ur'(Нов|Скидк|(Сам|Ожидаем)[аяыйео]|Распродаж|Покупк|Товар|Выгодн|Внутри)+',
+                                ur'(Дар|Отда[мёе]|предложени|горяч|Здравствуйте|Спасибо|Привет|Внимание|Больше|бешен)+',
+                                ur'(Скидк|Акци|Купон|Групон|Тур|Открой|Лет|много|Уведомля|Только|Сегодня|Сезонн|Вс(е|ё)\s+д(о|ля))+',
+                                ur'(Жар|Выходн[ыоей]|Посетите|Подготовьте|Отпуск|режем\s+цены|купи|мода|шопинг)+',
+                                ur'(теперь\s+и\s+для|ликвид|эксклюзив|информационн\s+(выпуск|анонс)|продаж|рублей|хит|топ)+',
+                                ur'(доставка\s+(бесплатн)?|сниж|низк|магаз|курьер|специал|перв|супер)+',
+                                ur'(Зим|Осен|Вес[енa]|Каникул|Празник|Год)+',
+                                ur'([\w-\s]{2,10}){1,2}\s*:([\w\s+,\.$?!]{2,15})+',
+                                ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
+                                ur'-?[\d]{1,2}\s+%\s+.*',
+                                ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
+                                ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}'
                             ]
 
-            len_threshold = 70
 
-            heads_dict = {key: value for (key, value) in self.msg.items()}
-            subj_score, subj_trace = common.basic_subjects_checker(heads_dict, subject_rule, len_threshold, score)
+            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj,subject_rule,score)
+            # almoust all words in subj string are Titled
+            if (len(norm_words_list) - title_flag ) < 3:
+                features_dict['subj_style'] = 1
 
-            vector_dict ['subj_score'] = subj_score
-            vector_dict ['subj_trace'] = subj_trace
+            # un mine d'or for infos  http://emailmarketing.comm100.com/email-marketing-tutorial/
+            if 2 < len(norm_words_list) < 7:
+                features_dict['subj_len'] = 1
 
-        else:
+            features_dict['subj_score'] = total_score + subj_score
 
-            vector_dict ['subj_score'] = 1
-            vector_dict ['subj_trace'] = 0
+            # take crc32 from the second half (first can vary cause of personalisation, etc.)
+            subj_trace = ''.join(tuple(norm_words_list[len(norm_words_list)/2:]))
+            features_dict['subj_checksum'] = binascii.crc32(subj_trace)
 
+        vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
+
         # 3. List checks and some other RFC 5322 compliences checks for headers
 
         temp_dict = dict([('list',score), ('sender',0), ('disp-notification',0)])

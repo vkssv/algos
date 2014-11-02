@@ -3,7 +3,7 @@
 shared module with common-used functions, will be class in future
 '''
 
-import email, os, sys, re, logging, binascii
+import email, os, sys, re, logging, binascii, unicodedata
 
 from email.errors import MessageParseError
 from email.header import decode_header
@@ -104,6 +104,24 @@ def get_nest_level(mime_info):
 
     return(level)
 
+
+def get_subject(subj_line):
+
+    subj_parts =  decode_header(subj_line, token_len=0)
+    subj = u''
+    for p in subj_parts:
+        line, encoding = p
+        if encoding or encoding!='ascii':
+            line = line.decode(encoding)
+
+        subj+=line
+
+    words_list = tuple(subj.split())
+    # remove short tockens
+    words_list = filter(lambda s: len(s)>token_len,words_list[:])
+
+    return(unicodedata.normalize('NFC',subj),words_list)
+
 def basic_attach_checker(mime_heads,reg_list,score):
 
     attach_score = 0
@@ -125,77 +143,22 @@ def basic_attach_checker(mime_heads,reg_list,score):
 
     return(attach_count,score,inline_score)
 
+# returns score
+def basic_subjects_checker(line_in_unicode, regexes, score):
 
+    # check by regexp rules
+    subj_score = 0
 
-# returns score + crc32 trace
-def basic_subjects_checker(heads_dict, regex_list, len_threshold, score):
-    #print(regex_list)
-    total_score = 0
+    line = re.sub(ur'[\\\|\/\*]','',line_in_unicode)
+    matched = filter(lambda r: re.search(r, line, re.I), regex_list)
+    total_score += score*len(matched)
 
-    # unconditional spams without Subject header at all or with empty Subj value are still in traffic
-    if not heads_dict.get('Subject'):
-        return (score, 0)
+    words = [w for w in line.split()]
 
-    subj_parts = tuple(map(lambda part: part[0].strip(), decode_header(heads_dict.get('Subject'))))
+    upper_flag = len(filter(lambda w: w.isupper(),words))
+    title_flag = len(filter(lambda w: w.isupper(),words))
 
-    # check total len
-    if sum(map(lambda w: len(w), subj_parts)) >= len_threshold:
-        total_score += score
-
-    # for RFC 5322 checks
-    prefix_heads_map = {
-                            'RE' : ['In-Reply-To', 'Thread(-.*)?', 'References'],
-                            'FW' : ['(X-)?Forward']
-    }
-
-    subj_trace = ''
-
-    for p in subj_parts:
-        #print('part:'+'--'+p+'--')
-        # check if is empty
-        if not len(p) and len(subj_parts) == 1:
-            total_score += score
-            break
-
-        elif not len(p):
-            continue
-
-        # only for latin, check if subj has uppercase words
-        if len(filter(lambda word: word.isupper(), p.split())) > 0:
-            total_score += score
-
-        # RFC 5322 checks, usually user's modern MUAs try to follow standards
-        matched_list = map(lambda prefix: re.search(prefix, p, re.I), [r'^\s*Re\s*(?=:)', r'^\s*Fwd?\s*(?=:)'])
-        #print ('matched_list:'+str(matched_list))
-        matched_list = filter(lambda obj: obj, matched_list)
-        #print ('matched_list:'+str(matched_list))
-        if matched_list:
-            keys = [obj.group(0) for obj in matched_list]
-            keys = [k.strip('d').upper() for k in keys]
-            #print(keys)
-
-            values = [prefix_heads_map.get(k) for k in keys]
-            #print(values)
-            correlated = reduce(add,values)
-
-            for regexp_name in correlated:
-                if not filter(lambda name: re.search(regexp_name, name, re.I), heads_dict.keys()):
-                    total_score += score
-
-        # check the presence of strong tokens for unconditional in filtered
-        # and unfiltered lines (works only for US-ASCII and UTF8)
-        filtered_line = re.sub(r'[\\\|\/\s\:\.,\!\$\&\*]','',p)
-        for s in [p, filtered_line]:
-            matched = filter(lambda r: re.search(r, s, re.I), regex_list)
-            total_score += score*len(matched)
-
-        # keep the last two word for making crc32 trace (??)
-        words = tuple(p.split())
-        subj_trace += words[-1:][0]
-
-    subj_trace = binascii.crc32(subj_trace)
-
-    return (total_score, subj_trace)
+    return (subj_score, upper_flag, title_flag)
 
 def basic_lists_checker(header_value_list, score):
     # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'

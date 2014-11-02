@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 "Set vectorising rules for hams."
 
@@ -19,6 +19,35 @@ class HamPattern(BasePattern):
         logger.debug(vect)
 
 
+        # Subject checks
+        features = ['len','style','score']
+        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [BasePattern.INIT_SCORE]*len(features)))
+
+        if self.msg.get('Subject'):
+
+            total_score = BasePattern.INIT_SCORE
+            unicode_subj, norm_words_list = common.get_subject(self.msg("Subject"))
+
+            if 5 < len(unicode_subj) < 60:
+                features_dict['subj_len'] = 1
+
+            hams_patterns = [
+                                ur'(Re\s*:|Fw(d)?\s*:|fly|ticket|account|payment|verify\s+your\s+(email|account)|bill)',
+                                ur'(support|help|participate|registration|electronic|answer|from|update|undelivered)',
+                                ur'(от\s+([\w-\.]{3,10})\s+|счет|отчет|выписка|электронный\s+(билет)?)'
+                            ]
+
+
+
+            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_rule, score)
+            # almoust all words in subj string are Titled
+            if len(title_flag) < 3:
+                features_dict['subj_style'] = 1
+
+            features_dict['subj_score'] = total_score + subj_score
+
+        vector_dict.update(features_dict)
+        logger.debug('\t----->'+str(vector_dict))
 
 
 		return(vect)

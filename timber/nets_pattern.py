@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for nets."""
 
@@ -93,36 +93,46 @@ class NetsPattern(BasePattern):
 
         # 2. Subject checks
 
+        features = ['style','score','checksum']
+        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [BasePattern.INIT_SCORE]*len(features)))
+
         if self.msg.get('Subject'):
 
-            subject_rule = [
-                                r'(SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
-                                r'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
-                                r'-?[\d]{1,2}\s+%\s+.*',
-                                r'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
-                                r'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
-                                r'(free.*(pills?).*(every?)*.*(order)*|online.*&.*(save)*|tablet.*(split?ed?)*.*has?le)',
-	                            r'(cheap([est])?.*(satisf[ied]?)*.*(U[SK])*.*(CANADIAN)*.*customer|To.*Be.*Remov([ed])?.*(Please?)*)',
-	                            r'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
-	                            r'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|web))',
-                                r'.*(eml|spam).*',
-                                r'.*(payment|receipt|attach(ed)?).*'
+            total_score = BasePattern.INIT_SCORE
+            unicode_subj, norm_words_list = common.get_subject(self.msg("Subject"))
+
+            nets_patterns = [
+                                # dingbats
+                                ur'(Meetup|Do\+you\+know|Congrat(s|uleta)\s+([\w-]{2,10}\s+){1,3}|you\s+g[eo]t)',
+                                ur'(See\s+([\w-]{2,10}\s+){1,3}\s+new|Welcome.*to|stay\s+in\s+touch\s+with|meet\s+the\s+new)',
+                                ur'^([\w-\s]{2,10}){1,2}\s*[,:]\s*.*(please\s+add|try\s+free|join\s+these|are\s+looking\s+for)',
+                                ur'(Google+|LinkedIn|Twitter|Facebook|Viadeo|vk.com|vkontakte|odnoklassniki|create\s+community)',
+                                ur'(top\s+post|this\s+week|viewed\s+your|added\s+you|you\s+miss(ed)?|discussion\s+on|connection)',
+                                ur'(invitation|reminder|(a)?wait(ing)?\s+(for\s+)?(you|your)?\s+(response)?|suggested\s+for)',
+                                ur'(comment\s+on|check\s+out|tomorrow|(mon|thurs|wednes|tues|sun|satur|fri)day|new\s+.*\s+group)',
+                                ur'^(Invitation|Reminder)\s*:\s.*$',
+                                ur'(you\s+g[eo]t|job\s+on|endorsed|try\s+a\s+free|top\s+pages|blog|profile)',
+                                ur'(Вы\s+знаете|Вернуться\s+на|предложение)',
+                                ur'(Ajoutez\s+)'
                             ]
 
-            len_threshold = 70
 
-            heads_dict = {key: value for (key, value) in self.msg.items()}
-            subj_score, subj_trace = common.basic_subjects_checker(heads_dict, subject_rule, len_threshold, score)
+            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj,subject_rule,score)
+            # almoust all words in subj string are Titled
+            if (len(norm_words_list) - title_flag ) < 5:
+                features_dict['subj_style'] = 1
 
-            vector_dict ['subj_score'] = subj_score
-            vector_dict ['subj_trace'] = subj_trace
+            features_dict['subj_score'] = total_score + subj_score
 
-        else:
+            # take crc32 only from words in lower case, cause Names and etc. are titled here
 
-            vector_dict ['subj_score'] = 1
-            vector_dict ['subj_trace'] = 0
+            subj_trace = ''.join(tuple(filter(lambda word: not word.istitle(), norm_words_list))
+            if subj_trace:
+                features_dict['subj_checksum'] = binascii.crc32(subj_trace)
 
+        vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
+
         # 3. List checks and some other RFC 5322 compliences checks for headers
 
         temp_dict = dict([('list',score), ('sender',0), ('preamble',0), ('disp-notification',0)])
