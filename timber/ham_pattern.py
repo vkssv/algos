@@ -4,6 +4,8 @@
 
 import os, sys, logging, common
 from pattern_wrapper import BasePattern
+INIT_SCORE = BasePattern.INIT_SCORE
+MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
 
 #formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')

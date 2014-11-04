@@ -55,7 +55,7 @@ class SpamPattern(BasePattern):
         vector_dict ['to'] = BasePattern.INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
 
-        to_values, to_addrs = common.get_addr_fields(self.msg.get('To'))
+        to_values, to_addrs = common.get_addr_values(self.msg.get('To'))
         if to_values and filter(lambda x: re.search(r'undisclosed-recipients',x,re.I), to_values):
             vector_dict['to'] += score
             logger.debug('\t----->'+str(vector_dict))
@@ -92,13 +92,13 @@ class SpamPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # 2. Subject checks
-        features = ['len','style','score','checksum']
+        features = ['len','style','score','checksum','encoding']
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [BasePattern.INIT_SCORE]*len(features)))
 
         if self.msg("Subject"):
 
             total_score = BasePattern.INIT_SCORE
-            unicode_subj, norm_words_list = common.get_subject(self.msg("Subject"),BasePattern.MIN_TOKEN_LEN)
+            unicode_subj, norm_words_list, encodings = common.get_subject(self.msg("Subject"),BasePattern.MIN_TOKEN_LEN)
             # check the length of subj in chars, unicode str was normilised by Unicode NFC rule, i.e.
             # use a single code point if possible, spams still use very short subjects like ">>:\r\n", or
             # very long
@@ -131,7 +131,9 @@ class SpamPattern(BasePattern):
 	                            ur'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
 	                            ur'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
                                 ur'.*(eml|spam).*',
-                                ur'.*(payment|receipt|attach(ed)?).*'
+                                ur'.*(payment|receipt|attach(ed)?|extra\s+inches).*',
+                                ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|Только\s+для\s+(владельц.*|директор.*))'
+                                ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
                             ]
 
             subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_rule, score)
@@ -141,6 +143,11 @@ class SpamPattern(BasePattern):
 
             features_dict['subj_score'] = total_score + subj_score
 
+            if len(set(encodings)) > 1:
+                features_dict['encoding'] += score
+
+
+
             # take crc32, make line only from words on even positions
             subj_trace = ''.join(tuple(norm_words_list[i] for i in filter(lambda i: i%2, range(len(norm_words_list)))))
             features_dict['subj_checksum'] = binascii.crc32(subj_trace)
@@ -148,29 +155,30 @@ class SpamPattern(BasePattern):
         vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
-        # 3. List checks and some other RFC 5322 compliences checks for headers
+        # 3. assert the absence of List headers + some other RFC 5322 compliences checks for headers
 
-        temp_dict = dict([('list',score), ('sender',0), ('preamble',0), ('disp-notification',0)])
+        list_features = ['list', 'sender','preamble', 'disp-notification']
+        list_features_dict = dict(map(lambda x,y: (x,y), list_features, [BasePattern.INIT_SCORE]*len(list_features)))
         logger.debug('\t----->'+str(temp_dict))
 
         if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.msg.keys()):
             # well, this unique spam author respects RFC 2369, his creation deservs more attentive check
-            temp_dict['list'] = common.basic_lists_checker(self.msg.items(), score)
-            logger.debug('\t----->'+str(temp_dict))
+            list_features_dict['list'] = common.basic_lists_checker(self.msg.items(), score)
+            logger.debug('\t----->'+str(list_features_dict))
 
         elif (self.msg.keys().count('Sender') and self.msg.keys().count('From')):
             # if we don't have List header From = Sender (RFC 5322),
             # MUA didn't generate Sender field cause of redundancy
-            temp_dict ['sender'] = 1
-            logger.debug('\t----->'+str(temp_dict))
+            list_features_dict ['sender'] = 1
+            logger.debug('\t----->'+str(list_features_dict))
 
         if self.msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self.msg.preamble,re.I):
 
-            temp_dict ['preamble'] = 1
-            logger.debug('\t----->'+str(temp_dict))
+            list_features_dict ['preamble'] = 1
+            logger.debug('\t----->'+str(list_features_dict))
 
-        vector_dict.update(temp_dict)
-        logger.debug('\t----->'+str(vector_dict))
+        vector_dict.update(list_features_dict)
+        logger.debug('\t----->'+str(list_features_dict))
 
         if (self.msg.keys()).count('Disposition-Notification-To'):
             vector_dict ['disp-notification'] = 1
@@ -180,20 +188,20 @@ class SpamPattern(BasePattern):
         vector_dict.update(common.basic_dmarc_checker(self.msg.items(), score))
 
         # 4. crc for From values
-        vector_dict['from']=0
+        vector_dict['from_checksum']=0
         logger.debug('\t----->'+str(vector_dict))
 
         if self.msg.get('From'):
-            from_values = common.get_addr_fields(self.msg.get('From'))[0]
+            from_values = common.get_addr_values(self.msg.get('From'))[0]
 
             if from_values:
-                vector_dict['from'] = binascii.crc32(reduce(add,from_values[:1]))
+                vector_dict['from_checksum'] = binascii.crc32(reduce(add,from_values[:1]))
                 logger.debug('\t----->'+str(vector_dict))
 
         # 5. Check MIME headers
 
-        mime_checks = [(x,0) for x in ['mime_spammness', 'att_count','att_score','in_score','nest_level']]
-        mime_dict = dict(mime_checks)
+        mime_features = ['mime_spammness', 'att_count','att_score','in_score','nest_level','checksum']
+        mime_dict = dict(map(lambda x,y: (x,y), mime_features, [BasePattern.INIT_SCORE]*len(mime_features)))
 
         if self.msg.get('MIME-Version') and not self.msg.is_multipart():
             mime_dict['mime_spammness'] = score
@@ -213,6 +221,9 @@ class SpamPattern(BasePattern):
             mime_dict['in_score'] = in_score
             if common.get_nest_level(mime_heads_vect) > 2:
                 mime_dict['nest_level'] = 1
+
+
+            mime_dict['checksum'] = common.get_mime_structure_crc(mime_heads_vect)
 
 
         vector_dict.update(mime_dict)

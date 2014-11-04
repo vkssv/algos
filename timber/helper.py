@@ -5,8 +5,6 @@ from email.parser import BytesParser
 from email.header import decode_header
 
 
-
-
 # define needed functions
 def cut_header_from_body(email):
     doc = open(email, "rb")
@@ -70,6 +68,12 @@ def get_mime_info(msg,d_name):
 
     return
 
+def replace(x):
+    if x is None:
+        x=''
+
+    return(x)
+
 
 if __name__ == "__main__":
     usage = "usage: %prog [ training_directory | file ] -b"
@@ -83,7 +87,7 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler(sys.stdout)
-    fh = logging.FileHandler(os.path.join(tmp, 'headers_'+time.strftime("%y%m%d_%H%M", time.localtime())+'.log'), mode = 'w')
+    fh = logging.FileHandler(os.path.join(tmp, 'headers_'+os.path.basename(args.PATH)+'_'+time.strftime("%y%m%d_%H%M", time.localtime())+'.log'), mode = 'w')
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
     logger.addHandler(ch)
@@ -118,7 +122,9 @@ if __name__ == "__main__":
                 logger.debug('\n============== parser from STL email ====================\n')
                 for k in msg.keys():
                     if k == 'Subject':
-                        logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(decode_header(msg.get(k))))
+
+                        subj_parts_list = [(l[0],(replace(l[1])).upper()) for l in decode_header(msg.get(k))]
+                        logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(subj_parts_list))
 
                     else:
                         logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))

@@ -9,13 +9,16 @@ from email.errors import MessageParseError
 from email.header import decode_header
 from operator import add
 
+from pattern_wrapper import BasePattern
+INIT_SCORE = BasePattern.INIT_SCORE
+MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 # excluded_list=['Received', 'From', 'Date', 'X-.*']
 # header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items() - save the order of heads
-def get_heads_crc(header_value_list, excluded_list = None):
+def get_all_heads_crc(header_value_list, excluded_list = None):
 
     vect = dict.fromkeys(['heads_crc','values_crc'])
     heads_vector = tuple([item[0] for item in header_value_list])
@@ -52,23 +55,34 @@ def get_trace_crc(rcvds_vect):
 
     return (traces_dict)
 
-def get_addr_fields(head_value=''):
-
-    for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9]{1,63}(?:\.[\w]{2,4})+')
+def get_addr_values(head_value=''):
+    print('+++++>'+str(head_value))
+    for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9-]{1,63}(?:\.[\w]{2,4})+',re.I)
 
     h_value = tuple(decode_header(head_value))
+    print(h_value)
     # don't use encoding info for translations, so don't keep it
-    h_value = tuple([pair[0] for pair in h_value[:]])
+    h_value = tuple([pair[0] for pair in h_value])
+    print('+++++'+str(h_value))
     # crunch addreses and names
     addrs=[]
     names = []
     for part in h_value:
+        print('part  '+str(part))
         part = re.sub(r'<|>','',part)
+        print(part)
         addrs += for_crunch.findall(part)
-        names += for_crunch.sub('',part)
+        print(addrs)
+        names.append(for_crunch.sub('',part))
 
-    # keep order
+    #print('names: '+str(names))
+
+    # keep order => use tuples, + cause function should works
+    # either for To/CC/Bcc headers with many senders,
+    # or for From/Sender
+    # names are raw encoded strings
     return(tuple(names),tuple(addrs))
+
 
 def get_mime_info(msg):
 
@@ -105,28 +119,42 @@ def get_nest_level(mime_info):
     return(level)
 
 
-def get_subject(subj_line):
+def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
 
-    subj_parts =  decode_header(subj_line, token_len=0)
+    subj_parts = decode_header(subj_line)
     subj = u''
+    encodings_list = []
     for p in subj_parts:
+        print(p)
         line, encoding = p
-        if encoding or encoding!='ascii':
+        print('enc:'+str(encoding))
+        if encoding:
             line = line.decode(encoding)
+            encodings_list.append(encoding)
+        else:
+            try:
+                line = line.decode('utf-8')
+                encodings_list.append('utf-8')
+            except UnicodeDecodeError as err:
+                logger.warning('Can\'t decode Subject\'s part: "'+line+'", it will be skipped.')
+                continue
 
         subj+=line
+    # force decode to utf
 
     words_list = tuple(subj.split())
     # remove short tockens
-    words_list = filter(lambda s: len(s)>token_len,words_list[:])
+    words_list = filter(lambda s: len(s)>token_len, words_list[:])
+    if not encodings_list:
+        encodings_list = ['ascii']
 
-    return(unicodedata.normalize('NFC',subj),words_list)
+    return(unicodedata.normalize('NFC',subj), words_list, encodings_list)
 
 def basic_attach_checker(mime_heads,reg_list,score):
 
-    attach_score = 0
+    attach_score = INIT_SCORE
 
-    mime_heads = reduce( add,reduce(add,[dict.values() for dict in mime_heads[:]] ))
+    mime_heads = reduce(add, reduce(add,[dict.values() for dict in mime_heads[:]]))
     attach_attrs = filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)?=.*;',name),mime_heads)
     attach_attrs = [(x.partition(';')[2]).strip('\r\n\x20') for x in attach_attrs]
     attach_count = len(attach_attrs)
@@ -141,16 +169,26 @@ def basic_attach_checker(mime_heads,reg_list,score):
     inline_pattern = r'inline\s*;'
     inline_score = score*len(filter(lambda value: re.search(inline_pattern,value,re.I), mime_heads))
 
-    return(attach_count,score,inline_score)
+    return(attach_count, score, inline_score)
 
 # returns score
 def basic_subjects_checker(line_in_unicode, regexes, score):
 
     # check by regexp rules
-    subj_score = 0
+    total_score = INIT_SCORE
+    print('line: '+line_in_unicode)
+    line = re.sub(ur'[\\\|\/\*]', '', line_in_unicode)
+    print('line after: '+line_in_unicode)
+    # for debug purposes:
+    regs = []
+    for exp in regexes:
+        logger.debug(exp)
+        exp = re.compile(exp)
+        regs.append(exp)
 
-    line = re.sub(ur'[\\\|\/\*]','',line_in_unicode)
-    matched = filter(lambda r: re.search(r, line, re.I), regex_list)
+    #regexes = [re.compile(exp) for exp in regexes]
+    matched = filter(lambda r: r.search(line, re.I), regs)
+    print(matched)
     total_score += score*len(matched)
 
     words = [w for w in line.split()]
@@ -158,20 +196,21 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
     upper_flag = len(filter(lambda w: w.isupper(),words))
     title_flag = len(filter(lambda w: w.isupper(),words))
 
-    return (subj_score, upper_flag, title_flag)
+    return (total_score, upper_flag, title_flag)
 
 def basic_lists_checker(header_value_list, score):
     # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
-    # have to be checking with antiphishing service
-    unsubscribe_score = 0
+    # have to be checked with antiphishing service
+    unsubscribe_score = INIT_SCORE
 
     for_trace = re.compile(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+',re.M)
     for_body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
 
     #print('\t=====>'+str(header_value_list))
-    heads_dict = { key: value for (key, value) in header_value_list }
+    heads_dict = dict(header_value_list)
 
-    # try to get sender domain from RCVD headers, use header_value_list to obtain
+    # try to get sender domain from RCVD headers,
+    # use header_value_list to obtain
     # exactly the first rcvd header, order makes sense here
     h_name, value = (filter(lambda rcvd: re.match('Received', rcvd[0]), header_value_list))[-1:][0]
     #print('h_name'+h_name)
@@ -193,7 +232,8 @@ def basic_lists_checker(header_value_list, score):
     ]
 
     # check Reply-To only with infos, very controversial, here are only pure RFC 2369 checks
-    # leave Errors-To cause all russian Senders rather put exactly Errors-To in their infos instead of List-Unsubscribe
+    # leave Errors-To cause all russian authorized email market players
+    # rather put exactly Errors-To in their infos instead of List-Unsubscribe
     rfc_heads = ['List-Unsubscribe','Errors-To', 'Sender']
 
     presented = filter(lambda h: (heads_dict.keys()).count(h), rfc_heads)
@@ -215,59 +255,72 @@ def basic_dmarc_checker(header_value_list, score, required_heads_list=[]):
 
         required_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
 
-    init_score = 0
-    dmarc_dict = dict(map(lambda x,y: (x,y),required_heads,[init_score]*len(required_heads)))
+    dmarc_dict = dict(map(lambda x,y: (x,y),required_heads,[INIT_SCORE]*len(required_heads)))
+    print(dmarc_dict)
+    dkim_domain = ''
+    heads_dict = dict(header_value_list)
 
-    msg_heads = dict(header_value_list).keys()
-    # according to RFC 7001, authorized should bulk senders respect it
-    if not msg_heads.count('Authentication-Results'):
-        return(dmarc_dict)
+    # according to RFC 7001, this header has to be included
+    if not (heads_dict.keys()).count('Authentication-Results'):
+        return(dmarc_dict, dkim_domain)
 
     total = []
     for h in dmarc_dict.iterkeys():
-        dkims = filter(lambda z: re.search(h,z), msg_heads)
+        dkims = filter(lambda z: re.search(h, z), heads_dict.keys())
         total.extend(dkims)
 
+    print('TOTAL:'+str(total))
+
     # (len(required_heads_list)+1, cause we can find DKIM-Signature and DomainKey-Signature in one doc
-    basic_score = ((len(required_heads_list)+1) - len(sum(total,[])))*score
+    print('req_head:'+str(len(required_heads_list)+1))
+    #print('req_head:'+str(len(required_heads_list)+1))
+    print('found:'+str(len(set(total))*score))
+
+    basic_score = (len(required_heads_list)+1) - (len(set(total))*score)
 
     # simple checks for Received-SPF and DKIM/DomainKey-Signature
-    if msg_heads.count('Received-SPF') and re.match(r'^\s*pass\s+',msg.get('Received-SPF'),re.I):
+    if heads_dict.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', heads_dict.get('Received-SPF'), re.I):
         dmarc_dict['Received-SPF'] += score
 
     # check domain names in From and DKIM-headers (but now it's probably redundant)
-    from_domain = (dict(msg.items()).get('From')).partition('@')[2]
+    from_domain = (heads_dict.get('From')).partition('@')[2]
     from_domain = from_domain.strip('>').strip()
 
-    # in case if dict(header_value_list) doesn't contain one of ['DomainKey', 'DKIM'], usually
-    valid_lines = filter(lambda f: re.search(from_domain,f),[dict(header_value_list).get(h) for h in dkims])
-    if len(valid_lines) == len(lines):
+    dkim_domain=''
+    print('dkims'+str(dkims))
+    valid_lines = filter(lambda f: re.search(from_domain,f), [heads_dict.get(h) for h in dkims])
+    if len(valid_lines) == len(dkims):
         dmarc_dict['(DKIM|DomainKey)-Signature'] += score
+        dkim_domain = from_domain
+        print('dkim_domain '+str(dkim_domain))
+
+    return(dmarc_dict, dkim_domain)
+
+# TODO: add support the comparation of addrs vectors,
+# so now in general in commercial infos only one rcpt in To field
+# but in software email-discussions there are always many rcpts in To !
+def basic_rcpts_checker(score, traces_values_list, to_values_list):
+
+    rcpt_score = INIT_SCORE
+
+    to_values, to_addrs = get_addr_values(to_values_list)
+    print(">>to_addrs: "+str(to_addrs))
+    parsed_rcvds = [rcvd.partition(';')[0] for rcvd in traces_values_list]
+    smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in parsed_rcvds]))
+    if not smtp_to_list:
+        return(rcpt_score)
+
+    print(">>smtp_to_list: "+str(smtp_to_list))
+    smtp_to = re.search(r'<(.*@.*)?>', smtp_to_list[0])
+
+    if to_addrs and smtp_to and smtp_to.group(0) == to_addrs[0]:
+        rcpt_score+= score
 
 
-    return(dmarc_dict)
+    return(rcpt_score)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-    return(basic_score)
-
-
-
-
-
-
-#def basic_bodies_checks():
 
 
 
