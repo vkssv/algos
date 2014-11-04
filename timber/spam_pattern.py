@@ -1,11 +1,13 @@
 #! /usr/bin/env python2.7
-
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for spams."""
 
 import os, sys, logging, re, common, binascii
 from operator import add
 from pattern_wrapper import BasePattern
+INIT_SCORE = BasePattern.INIT_SCORE
+MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+
 # formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -25,7 +27,7 @@ class SpamPattern(BasePattern):
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
                             ]
 
-        vector_dict.update(common.get_heads_crc(self.msg.items(), excluded_heads))
+        vector_dict.update(common.get_all_heads_crc(self.msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
@@ -93,12 +95,12 @@ class SpamPattern(BasePattern):
 
         # 2. Subject checks
         features = ['len','style','score','checksum','encoding']
-        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [BasePattern.INIT_SCORE]*len(features)))
+        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
-        if self.msg("Subject"):
+        if self.msg.get("Subject"):
 
-            total_score = BasePattern.INIT_SCORE
-            unicode_subj, norm_words_list, encodings = common.get_subject(self.msg("Subject"),BasePattern.MIN_TOKEN_LEN)
+            total_score = INIT_SCORE
+            unicode_subj, norm_words_list, encodings = common.get_subject(self.msg.get("Subject"),MIN_TOKEN_LEN)
             # check the length of subj in chars, unicode str was normilised by Unicode NFC rule, i.e.
             # use a single code point if possible, spams still use very short subjects like ">>:\r\n", or
             # very long
@@ -131,8 +133,8 @@ class SpamPattern(BasePattern):
 	                            ur'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
 	                            ur'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
                                 ur'.*(eml|spam).*',
-                                ur'.*(payment|receipt|attach(ed)?|extra\s+inches).*',
-                                ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|Только\s+для\s+(владельц.*|директор.*))'
+                                ur'.*(payment|receipt|attach(ed)?|extra\s+inches)',
+                                ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|Только\s+для\s+(владельц.*|директор.*))',
                                 ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
                             ]
 
@@ -144,12 +146,13 @@ class SpamPattern(BasePattern):
             features_dict['subj_score'] = total_score + subj_score
 
             if len(set(encodings)) > 1:
-                features_dict['encoding'] += score
+                features_dict['encoding'] = score
 
 
 
             # take crc32, make line only from words on even positions
-            subj_trace = ''.join(tuple(norm_words_list[i] for i in filter(lambda i: i%2, range(len(norm_words_list)))))
+            norm_words_list = tuple([norm_words_list[i] for i in filter(lambda i: i%2, range(len(norm_words_list)))])
+            subj_trace = ''.join(tuple([w.encode('utf-8') for w in norm_words_list]))
             features_dict['subj_checksum'] = binascii.crc32(subj_trace)
 
         vector_dict.update(features_dict)
@@ -159,7 +162,7 @@ class SpamPattern(BasePattern):
 
         list_features = ['list', 'sender','preamble', 'disp-notification']
         list_features_dict = dict(map(lambda x,y: (x,y), list_features, [BasePattern.INIT_SCORE]*len(list_features)))
-        logger.debug('\t----->'+str(temp_dict))
+        logger.debug('\t----->'+str(list_features_dict))
 
         if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.msg.keys()):
             # well, this unique spam author respects RFC 2369, his creation deservs more attentive check
@@ -185,7 +188,8 @@ class SpamPattern(BasePattern):
             logger.debug('\t----->'+str(vector_dict))
 
         # 5. assert the absence of SPF, Auth and DKIM headers, what is very typically exactly for spam
-        vector_dict.update(common.basic_dmarc_checker(self.msg.items(), score))
+        dmarc_dict, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
+        vector_dict.update(dmarc_dict)
 
         # 4. crc for From values
         vector_dict['from_checksum']=0
