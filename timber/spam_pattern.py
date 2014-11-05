@@ -243,14 +243,15 @@ class SpamPattern(BasePattern):
             urls_features = ['score','distinct_domains','count']
             urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
-            urls_results = [common.basic_url_checker(url) for url in urls_list]
-            urls_dict['score'] = sum([item(0) for item in urls_results ])
-            urls_dict['distinct_domains'] = len(set([item(1) for item in urls_results]))
-            urls_dict['count'] = len(urls_list)
+            urls_score, domains_list =  common.basic_url_checker(urls_list)
+            urls_dict['score'] = urls_score
+
+            urls_dict['distinct_domains'] = len(set(domains_list))
+            urls_dict['count'] = len(domains_list)
 
 
 
-        
+
 
 
 

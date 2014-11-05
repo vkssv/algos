@@ -51,6 +51,16 @@ class HamPattern(BasePattern):
         vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
+        if urls_list:
+            urls_features = ['score','count']
+            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+
+            urls_score, domains_list =  common.basic_url_checker(urls_list)
+            urls_dict['score'] = urls_score
+
+
+            urls_dict['count'] = len(domains_list)
+
 
 		return(vect)
 

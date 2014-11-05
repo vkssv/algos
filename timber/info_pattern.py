@@ -216,23 +216,12 @@ class InfoPattern(BasePattern):
             urls_features = ['score','count','same_as_sender']
             urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
-            urls_results = [common.basic_url_checker(url) for url in urls_list]
-            urls_dict['score'] = sum([item(0) for item in urls_results ])
+            urls_score, domains_list =  common.basic_url_checker(urls_list)
+            urls_dict['score'] = urls_score
 
-            domain_matches = filter(lambda d: re.search(dkim_domain,d), set([item(1) for item in urls_results]))
+            domain_matches = filter(lambda d: re.search(dkim_domain,d), domains_list)
             urls_dict['same_as_sender'] = len(domain_matches)
-            urls_dict['count'] = len(urls_list)
-
-
-            from_domain
-
-            from_addr = common.get_addr_values(self.msg.get('From'))[1]
-            if from_addr:
-                from_domain = from_addr[0]
-                if from_addr.partition('@')[2] !=
-
-            if common.ge
-            urls_dict['same_as_sender'] = len(urls_list)
+            urls_dict['count'] = len(domains_list)
 
 
         return (vector_dict)

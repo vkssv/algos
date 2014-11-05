@@ -331,13 +331,13 @@ def basic_mime_checker(mime_heads_vect,score):
     else:
         return(INIT_SCORE)
 
-def basic_url_checker(link, score):
+def basic_url_checker(links_list, score):
 
-    link = (link.replace('\r\n','')).replace('\t','')
-    url_score = INIT_SCORE
-    domain=''
+    links_list = [(link.replace('\r\n','')).replace('\t','') for link in links_list]
+    link_score = INIT_SCORE
+    domains_list=[]
 
-    url_regexes = [
+    link_regexes = [
                     ur'(https?|ftp):\/\/\d{1,3}(\.\d{1,3}){3}(\/.*)?',
                     ur'(https?|ftp):\/\/[\u0410-\u0451]{2,10}(-?[\u0410-\u0451]{2,10}){0,4}(\.[\u0410-\u0451]{2,5}){1,3}',
                     ur'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|google\.ad)+',
@@ -348,10 +348,6 @@ def basic_url_checker(link, score):
                     ur'(https?|ftp):\/\/[\u2e80-\u30ff\d\.-]{2,252}\.[\u2e80-\u30ff]{2,5}(\/[-\w\d]){0,}', # all CJK
                     ur'(https?|ftp):\/\/[\ufb50-\ufdff\u0600-\u06ff\d\.-]{2,252}\.[\u0600-\u06ff\ufb50-\ufdff]{2,5}(\/[-\w\d]){0,}', # arabics
                     ur'(https?|ftp):\/\/[\u0750-\u07ff\d\.-]{2,252}\.[\u0750-\u07ff]{2,5}(\/[-\w\d]){0,}', # one more arabic extended
-
-    ]
-
-    href_regexes = [
                     ur'(Click\s+Here|(<|>)+|Login|Update|verify|Go)',
                     ur'(Клик\s+|жми\s+.*\s+сюда\s+|просмотреть\s+каталог|сайт)',
                     ur'(новости|ссылке|идите|переход|услуги|цены|фото|страничка)',
@@ -359,22 +355,24 @@ def basic_url_checker(link, score):
 
     ]
 
-    match = filter(lambda r: re.search(r, link, re.I), url_regexes + href_regexes)
-    url_score += len(match)
+    for link in links_list
+        match = filter(lambda exp: re.search(exp, link, re.I), link_regexes)
+        link_score += len(match)
 
-    url_match = re.search(ur'(https?|ftp):\/\/[\w\d\.-]{2,252}(\.[\w]{2,4})', link, re.I)
-    if url_match:
-        url = domain_match.group(0)
-        only_tag_data = re.sub(url,'',link)
-        domain = re.sub(ur'(https?|ftp):\/\/','',url)
-        # number of dots in domain
-        url_score += len(re.findall(ur'\.',domain))
+        url_match = re.search(ur'(https?|ftp):\/\/[\w\d\.-]{2,252}(\.[\w]{2,4})', link, re.I)
+        if url_match:
+            url = domain_match.group(0)
+            only_tag_data = re.sub(url,'',link)
+            domain = re.sub(ur'(https?|ftp):\/\/','',url)
+            # number of dots in domain
+            link_score += len(re.findall(ur'\.',domain))
+            domains.append(domain)
 
-        # check presense of <IMG> or <script> inside anchor
-        if re.search(ur'(<IMG|<script)', link, re.I):
-            url_score += score
+            # check presense of <IMG> or <script> inside anchor
+            if re.search(ur'(<IMG|<script)', link, re.I):
+                link_score += score
 
-    return(url_score, domain)
+    return(link_score,domains_list)
 
 
 

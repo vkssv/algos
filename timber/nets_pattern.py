@@ -200,8 +200,19 @@ class NetsPattern(BasePattern):
         # analyse attachements extensions
 
         #vect_dict.update(common.get_body_skeleton(self.msg))
+
         '''
 
+        if urls_list:
+            urls_features = ['score','count','same_as_sender']
+            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+
+            urls_score, domains_list =  common.basic_url_checker(urls_list)
+            urls_dict['score'] = urls_score
+
+            domain_matches = filter(lambda d: re.search(dkim_domain,d), domains_list)
+            urls_dict['same_as_sender'] = len(domain_matches)
+            urls_dict['count'] = len(domains_list)
         return (vector_dict)
 
 
