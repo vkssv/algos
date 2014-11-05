@@ -319,6 +319,67 @@ def basic_rcpts_checker(score, traces_values_list, to_values_list):
 
     return(rcpt_score)
 
+def basic_mime_checker(mime_heads_vect,score):
+
+    all_content_types = [mime_dict.get('content-type') for d in mime_heads_vect]
+
+    html_parts =  len(filter(lambda t: re.match('text/html\s*;',value),reduce(add,all_content_types)))
+    plain_parts = len(filter(lambda t: re.match('text/plain\s*;',t,re.I),reduce(add,all_content_types)))
+
+    if html_parts != plain_parts:
+        return(score)
+    else:
+        return(INIT_SCORE)
+
+def basic_url_checker(link, score):
+
+    link = (link.replace('\r\n','')).replace('\t','')
+    url_score = INIT_SCORE
+    domain=''
+
+    url_regexes = [
+                    ur'(https?|ftp):\/\/\d{1,3}(\.\d{1,3}){3}(\/.*)?',
+                    ur'(https?|ftp):\/\/[\u0410-\u0451]{2,10}(-?[\u0410-\u0451]{2,10}){0,4}(\.[\u0410-\u0451]{2,5}){1,3}',
+                    ur'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|google\.ad)+',
+                    ur'(https?|ftp):\/\/[\w\d-]{2,63}\.(ro|ru|ua|in|id|ch)(\/[\w\d]){0,}',
+                    # more common for cyrillic, arabic, cjk, split in some expressions just to make it more readable
+                    ur'(https?|ftp):\/\/[\u0410-\u0451\d\.-]{2,252}\.[\u0410-\u0451]{2,5}(\/[-\w\d]){0,}', # cyrillic
+                    ur'(https?|ftp):\/\/[\u0000-\u024f\d\.-]{2,252}\.[\u0000-\u024f]{2,5}(\/[-\w\d]){0,}', # latin-1
+                    ur'(https?|ftp):\/\/[\u2e80-\u30ff\d\.-]{2,252}\.[\u2e80-\u30ff]{2,5}(\/[-\w\d]){0,}', # all CJK
+                    ur'(https?|ftp):\/\/[\ufb50-\ufdff\u0600-\u06ff\d\.-]{2,252}\.[\u0600-\u06ff\ufb50-\ufdff]{2,5}(\/[-\w\d]){0,}', # arabics
+                    ur'(https?|ftp):\/\/[\u0750-\u07ff\d\.-]{2,252}\.[\u0750-\u07ff]{2,5}(\/[-\w\d]){0,}', # one more arabic extended
+
+    ]
+
+    href_regexes = [
+                    ur'(Click\s+Here|(<|>)+|Login|Update|verify|Go)',
+                    ur'(Клик\s+|жми\s+.*\s+сюда\s+|просмотреть\s+каталог|сайт)',
+                    ur'(новости|ссылке|идите|переход|услуги|цены|фото|страничка)',
+                    ur'([\u25a0-\u29ff]|)', # dingbats
+
+    ]
+
+    match = filter(lambda r: re.search(r, link, re.I), url_regexes + href_regexes)
+    url_score += len(match)
+
+    url_match = re.search(ur'(https?|ftp):\/\/[\w\d\.-]{2,252}(\.[\w]{2,4})', link, re.I)
+    if url_match:
+        url = domain_match.group(0)
+        only_tag_data = re.sub(url,'',link)
+        domain = re.sub(ur'(https?|ftp):\/\/','',url)
+        # number of dots in domain
+        url_score += len(re.findall(ur'\.',domain))
+
+        # check presense of <IMG> or <script> inside anchor
+        if re.search(ur'(<IMG|<script)', link, re.I):
+            url_score += score
+
+    return(url_score, domain)
+
+
+
+
+
 
 
 

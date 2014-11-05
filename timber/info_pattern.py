@@ -193,7 +193,7 @@ class InfoPattern(BasePattern):
 
         logger.debug('\t----->'+str(vector_dict))
 
-        '''
+
         # 5. Check MIME headers
         attach_score =0
         attach_regs = [
@@ -201,14 +201,40 @@ class InfoPattern(BasePattern):
                         r'.*\.(html|js|jpeg|png|gif|cgi)',
         ]
 
-        mime_heads_vect = common.get_mime_info(msg)
+        mime_heads_vect = common.get_mime_info(self.msg)
+        print("")
+        logger.debug(str(mime_heads_vect))
+        print("")
         count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
         vector_dict['att_count'] = count
         vector_dict['att_score'] = att_score
         vector_dict['in_score'] = in_score
         vector_dict['nest_level'] = common.get_nest_level(mime_heads_vect)
 
-        '''
+         # 6. check urls
+        if urls_list:
+            urls_features = ['score','count','same_as_sender']
+            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+
+            urls_results = [common.basic_url_checker(url) for url in urls_list]
+            urls_dict['score'] = sum([item(0) for item in urls_results ])
+
+            domain_matches = filter(lambda d: re.search(dkim_domain,d), set([item(1) for item in urls_results]))
+            urls_dict['same_as_sender'] = len(domain_matches)
+            urls_dict['count'] = len(urls_list)
+
+
+            from_domain
+
+            from_addr = common.get_addr_values(self.msg.get('From'))[1]
+            if from_addr:
+                from_domain = from_addr[0]
+                if from_addr.partition('@')[2] !=
+
+            if common.ge
+            urls_dict['same_as_sender'] = len(urls_list)
+
+
         return (vector_dict)
 
 if __name__ == "__main__":

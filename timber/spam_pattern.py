@@ -123,7 +123,7 @@ class SpamPattern(BasePattern):
 
             # some common greedy regexes
             subject_rule = [
-                                ur'(SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
+                                ur'((S)?SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
                                 ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
                                 ur'-?[\d]{1,2}\s+%\s+.*',
                                 ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
@@ -205,10 +205,12 @@ class SpamPattern(BasePattern):
         # 5. Check MIME headers
 
         mime_features = ['mime_spammness', 'att_count','att_score','in_score','nest_level','checksum']
-        mime_dict = dict(map(lambda x,y: (x,y), mime_features, [BasePattern.INIT_SCORE]*len(mime_features)))
+        mime_dict = dict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         if self.msg.get('MIME-Version') and not self.msg.is_multipart():
             mime_dict['mime_spammness'] = score
+
+
 
         elif self.msg.is_multipart():
 
@@ -218,7 +220,9 @@ class SpamPattern(BasePattern):
                             ]
 
             mime_heads_vect = common.get_mime_info(self.msg)
+            print("")
             logger.debug(str(mime_heads_vect))
+            print("")
             count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
@@ -233,6 +237,20 @@ class SpamPattern(BasePattern):
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
 
+
+        # 6. check urls
+        if urls_list:
+            urls_features = ['score','distinct_domains','count']
+            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+
+            urls_results = [common.basic_url_checker(url) for url in urls_list]
+            urls_dict['score'] = sum([item(0) for item in urls_results ])
+            urls_dict['distinct_domains'] = len(set([item(1) for item in urls_results]))
+            urls_dict['count'] = len(urls_list)
+
+
+
+        
 
 
 
