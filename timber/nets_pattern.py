@@ -5,6 +5,7 @@
 import os, sys, logging, common, re, binascii
 from operator import add
 from pattern_wrapper import BasePattern
+from collections import OrderedDict
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
@@ -18,7 +19,7 @@ class NetsPattern(BasePattern):
 
     def run(self, score):
 
-        vector_dict = {}
+        vector_dict = OrderedDict()
 
         # 1. Received headers
 

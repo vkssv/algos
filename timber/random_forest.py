@@ -30,9 +30,9 @@ def vectorize(doc_path, label, score):
     vect_dict = {}
 
     parser = Parser()
-    f = open(doc_path, "rb")
-    msg = parser.parse(f)
-    f.close()
+    with open(doc_path, 'rb') as f:
+        msg = parser.parse(f)
+        f.close()
 
     # size
     vect_dict ['size'] = float((os.stat(doc_path).st_size)/1024)

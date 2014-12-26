@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for spams."""
 
-import os, sys, logging, re, common, binascii
+import os, sys, logging, re, common, binascii, urllib
 from operator import add
 from pattern_wrapper import BasePattern
+from collections import OrderedDict
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+MAX_SUBJ_LEN = 5
+MIN_SUBJ_LEN = 70
 
 # formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
@@ -17,7 +20,7 @@ class SpamPattern(BasePattern):
 
     def run(self, score):
 
-        vector_dict = {}
+        vector_dict = OrderedDict()
 
         # 1. Received headers
 
@@ -104,7 +107,7 @@ class SpamPattern(BasePattern):
             # check the length of subj in chars, unicode str was normilised by Unicode NFC rule, i.e.
             # use a single code point if possible, spams still use very short subjects like ">>:\r\n", or
             # very long
-            if len(unicode_subj)< 5 or len(unicode_subj)> 70:
+            if len(unicode_subj)< MAX_SUBJ_LEN or len(unicode_subj)> MIN_SUBJ_LEN:
                 features_dict['subj_len'] = 1
 
             # for RFC 5322 checks

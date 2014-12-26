@@ -3,7 +3,7 @@
 shared module with common-used functions, will be class in future
 '''
 
-import email, os, sys, re, logging, binascii, unicodedata
+import email, os, sys, re, logging, binascii, unicodedata, urllib
 
 from email.errors import MessageParseError
 from email.header import decode_header

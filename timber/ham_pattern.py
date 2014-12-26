@@ -4,8 +4,11 @@
 
 import os, sys, logging, common
 from pattern_wrapper import BasePattern
+from collections import OrderedDict
+
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+
 
 #formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
@@ -16,9 +19,10 @@ class HamPattern(BasePattern):
 
 
 	def run(self,msg):
-        vect = {}
-        vect.update(common.get_body_skeleton())
-        logger.debug(vect)
+        vector_dict = OrderedDict()
+
+        vector_dict.update(common.get_body_skeleton())
+        logger.debug(vector_dict)
 
 
         # Subject checks
@@ -62,7 +66,7 @@ class HamPattern(BasePattern):
             urls_dict['count'] = len(domains_list)
 
 
-		return(vect)
+		return(vector_dict)
 
 
 if __name__ == "__main__":
