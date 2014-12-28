@@ -37,16 +37,8 @@ class InfoPattern(BasePattern):
         vector_dict ["traces_num"] = self.msg.keys().count('Received')
         logger.debug('\t----->'+str(vector_dict))
 
-        # basic parsing and dummy checks with regexps (takes only first n_rcvds headers)
-        n_rcvds = 0
-        rcvd_values = tuple(self.msg.get_all('Received'))[-1*n_rcvds:]
-        #print('rcvd_values: '+str(rcvd_values))
-        parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in rcvd_values[:]])
-        #logger.debug('parsed_rcvds -->'+str(parsed_rcvds))
-
-
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([rcvd.partition('by')[0] for r in parsed_rcvds])
+        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds()])
         logger.debug(rcvd_vect)
         vector_dict.update(common.get_trace_crc(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))

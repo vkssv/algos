@@ -38,11 +38,7 @@ class SpamPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # basic parsing and dummy checks with regexps (takes only first n_rcvds headers)
-        n_rcvds = 2
-        rcvd_values = tuple(self.msg.get_all('Received'))[-1*n_rcvds:]
-        #print('rcvd_values: '+str(rcvd_values))
-        parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in rcvd_values[:]])
-        #logger.debug('parsed_rcvds -->'+str(parsed_rcvds))
+
 
         vector_dict ["trace_rule"] = BasePattern.INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
@@ -51,9 +47,17 @@ class SpamPattern(BasePattern):
                         r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch)'
         ]
 
+        n_rcvds = 2
         for rule in rcvd_rules:
-            if filter(lambda l: re.search(rule, l), parsed_rcvds):
+            if filter(lambda l: re.search(rule, l), BasePattern.get_rcvds(self,n_rcvds)):
                 vector_dict ["trace_rule"] = 1
+
+        # get crc32 from first N trace fields
+        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds(self,n_rcvds)])
+
+        logger.debug(rcvd_vect)
+        vector_dict.update(common.get_trace_crc(rcvd_vect))
+        logger.debug('\t----->'+str(vector_dict))
 
         # deep parsing and checks for some wellknown spammers tricks with To: header
         vector_dict ['smtp_to'] = BasePattern.INIT_SCORE
@@ -61,7 +65,7 @@ class SpamPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         to_values, to_addrs = common.get_addr_values(self.msg.get('To'))
-        if to_values and filter(lambda x: re.search(r'undisclosed-recipients',x,re.I), to_values):
+        if to_values and filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), to_values):
             vector_dict['to'] += score
             logger.debug('\t----->'+str(vector_dict))
 
@@ -69,7 +73,7 @@ class SpamPattern(BasePattern):
             vector_dict['to'] += score
             logger.debug('\t----->'+str(vector_dict))
 
-        smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in parsed_rcvds]))
+        smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in BasePattern.get_rcvds(self,n_rcvds)]))
 
         if smtp_to_list:
             trace_str_with_to = smtp_to_list[0]
@@ -89,12 +93,6 @@ class SpamPattern(BasePattern):
         else:
             vector_dict ['smtp_to'] += 1
             logger.debug('\t----->'+str(vector_dict))
-
-        # get crc32 from first N trace fields
-        rcvd_vect = tuple([rcvd.partition('by')[0] for r in parsed_rcvds])
-        logger.debug(rcvd_vect)
-        vector_dict.update(common.get_trace_crc(rcvd_vect))
-        logger.debug('\t----->'+str(vector_dict))
 
         # 2. Subject checks
         features = ['len','style','score','checksum','encoding']
@@ -213,8 +211,6 @@ class SpamPattern(BasePattern):
         if self.msg.get('MIME-Version') and not self.msg.is_multipart():
             mime_dict['mime_spammness'] = score
 
-
-
         elif self.msg.is_multipart():
 
             attach_regs = [
@@ -222,10 +218,11 @@ class SpamPattern(BasePattern):
                             r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
                             ]
 
-            mime_heads_vect = common.get_mime_info(self.msg)
+            mime_skeleton = BasePattern.get_mime_struct(self)
             print("")
-            logger.debug(str(mime_heads_vect))
+            logger.debug(str(mime_skeleton))
             print("")
+            '''''
             count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
@@ -233,8 +230,8 @@ class SpamPattern(BasePattern):
             if common.get_nest_level(mime_heads_vect) > 2:
                 mime_dict['nest_level'] = 1
 
-
-            mime_dict['checksum'] = common.get_mime_structure_crc(mime_heads_vect)
+            '''''
+            mime_dict['checksum'] = BasePattern.get_mime_structure_crc(self)
 
 
         vector_dict.update(mime_dict)
@@ -242,16 +239,18 @@ class SpamPattern(BasePattern):
 
 
         # 6. check urls
+        urls_list = BasePattern.get_url_list(self)
         if urls_list:
             urls_features = ['score','distinct_domains','count']
             urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
+            '''''
             urls_score, domains_list =  common.basic_url_checker(urls_list)
             urls_dict['score'] = urls_score
 
             urls_dict['distinct_domains'] = len(set(domains_list))
             urls_dict['count'] = len(domains_list)
-
+            '''''
 
 
 

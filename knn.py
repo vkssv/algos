@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 
 import sys, os, logging, re, math, pdb
 from optparse import OptionParser
@@ -7,9 +7,9 @@ SCORE=1.0
 
 # define needed functions
 def cut_header_from_body(email):
-    doc = open(email, "rb")
-    doc_content = ''.join(doc.readlines())
-    doc.close()
+
+    with open(email, "rb") as msg:
+        doc_content = ''.join(msg.readlines())
 
     # cut headers from body
     headers_str = re.split('\r\n\r\n', doc_content)[0]

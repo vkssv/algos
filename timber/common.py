@@ -7,7 +7,7 @@ import email, os, sys, re, logging, binascii, unicodedata, urllib
 
 from email.errors import MessageParseError
 from email.header import decode_header
-from operator import add
+from operator import add, itemgetter
 
 from pattern_wrapper import BasePattern
 INIT_SCORE = BasePattern.INIT_SCORE
@@ -21,8 +21,9 @@ logger.setLevel(logging.DEBUG)
 def get_all_heads_crc(header_value_list, excluded_list = None):
 
     vect = dict.fromkeys(['heads_crc','values_crc'])
-    heads_vector = tuple([item[0] for item in header_value_list])
-    heads_dict = {key: value for (key, value) in header_value_list}
+    logger.debug("header_value_list >>"+str(header_value_list))
+    heads_vector = tuple(map(itemgetter(0), header_value_list))
+    heads_dict = dict(header_value_list)
 
     if excluded_list:
         for ex_head in excluded_list:
@@ -104,7 +105,6 @@ def get_mime_info(msg):
 
     return(tuple(mime_parts))
 
-
 def get_mime_structure_crc(mime_info):
     all_content_types = tuple(reduce(add,[dict.get('content-type') for dict in mime_info]))
     line = ''.join([l.partition(';')[0] for l in all_content_types])
@@ -117,7 +117,6 @@ def get_nest_level(mime_info):
     level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),all_content_types))
 
     return(level)
-
 
 def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
 
@@ -149,6 +148,9 @@ def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
         encodings_list = ['ascii']
 
     return(unicodedata.normalize('NFC',subj), words_list, encodings_list)
+
+#def get_body_skeleton(msg):
+
 
 def basic_attach_checker(mime_heads,reg_list,score):
 
@@ -332,7 +334,9 @@ def basic_mime_checker(mime_heads_vect,score):
         return(INIT_SCORE)
 
 def basic_url_checker(links_list, score):
+    print(links_list)
 
+    '''''
     links_list = [(link.replace('\r\n','')).replace('\t','') for link in links_list]
     link_score = INIT_SCORE
     domains_list=[]
@@ -355,7 +359,7 @@ def basic_url_checker(links_list, score):
 
     ]
 
-    for link in links_list
+    for link in links_list:
         match = filter(lambda exp: re.search(exp, link, re.I), link_regexes)
         link_score += len(match)
 
@@ -371,8 +375,8 @@ def basic_url_checker(links_list, score):
             # check presense of <IMG> or <script> inside anchor
             if re.search(ur'(<IMG|<script)', link, re.I):
                 link_score += score
-
-    return(link_score,domains_list)
+    '''''
+    return(links_list)
 
 
 

@@ -18,7 +18,7 @@ logger.setLevel(logging.DEBUG)
 class HamPattern(BasePattern):
 
 
-	def run(self,msg):
+	def run(self, score):
         vector_dict = OrderedDict()
 
         vector_dict.update(common.get_body_skeleton())
