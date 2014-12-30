@@ -77,26 +77,6 @@ def replace(x):
 
     return(x)
 
-def get_mime_info(msg,d_name):
-
-    print(email.iterators._structure(msg))
-    print
-    mime_heads = ['content-type','content-transfer-encoding','content-id','content-disposition']
-    total =0
-    for part in  msg.walk():
-
-        all_heads = [name.lower() for name in part.keys()]
-        for head in filter(lambda n: all_heads.count(n), mime_heads):
-            logger.debug(d_name+':'+head.upper()+' --> '+str(part.get_all(head)))
-
-        total += all_heads.count('content-type')
-
-    print
-    logger.debug('PAYLOAD( '+(d_name)+' ): ==> '+str(len(msg.get_payload())))
-    logger.debug('MIME_PARTS_NUM( '+(d_name)+' ): ==> '+str(total))
-
-    return
-
 def replace(x):
     if x is None:
         x=''
@@ -129,6 +109,11 @@ def get_text_parts(msg):
                 f = encodings.get(part.get('Content-Transfer-Encoding'))
                 decoded_line = f(decoded_line)
 
+            #print(type(decoded_line))
+
+            if isinstance(decoded_line, bytes):
+                decoded_line = decoded_line.decode(part.get_content_charset(),'replace')
+
             text_parts.append((decoded_line, part.get_content_charset(), part.get_content_type()))
 
     return (text_parts)
@@ -138,54 +123,57 @@ def get_mime_struct(msg):
     mime_heads = ['content-type', 'content-transfer-encoding', 'content-id', 'content-disposition']
     mime_parts= OrderedDict()
 
-    for part in self.msg.walk():
+    for part in msg.walk():
+        #print("outer"+str(part))
         all_heads = [name.lower() for name in part.keys()]
-            #print(all_heads)
+        #print(all_heads)
 
         part_dict = {}
         part_key = 'text/plain'
         for head in filter(lambda n: all_heads.count(n), mime_heads):
-            part_dict[head] = part.get_all(head)
-            if head == 'content-type':
-                part_key = part.get(head)
 
-        if len(part_dict) == 0:
-            continue
+            if head == 'content-type':
+
+                part_key = part.get(head)
+                part_key = part_key.partition(';')[0].strip()
+                part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
+
+            else:
+                part_dict[head] = part.get(head)
 
         mime_parts[(part_key.partition(';')[0]).strip()] = part_dict
 
-        return(mime_parts)
+    return(mime_parts)
 
 def get_nest_level(msg):
 
-    mime_parts = get_mime_struct()
-    level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
+    mime_parts = get_mime_struct(msg)
+    print(list(mime_parts.keys()))
+    level = len(list(filter(lambda n: re.match('(multipart|message)',n,re.I), list(mime_parts.keys()))))
 
     return(level)
 
 def get_url_list(msg):
 
     text_parts = get_text_parts(msg)
-    logger.debug("TEXT PARTS "+str(text_parts))
+    #logger.debug("TEXT PARTS "+str(text_parts))
     url_list = []
-    url_regexp= r'(https?|mailto|ftps?):'
-    for obj in text_parts:
-        prin\
-            (obj)
-        line, encoding, content_type = obj
-        #logger.debug("part content type: "+content_type.upper())
-        #logger.debug("LINE '"+line+"'")
+    url_regexp= r'(((https?|ftps?):\/\/)|www:).*'
+    for line, encoding, content_type in text_parts:
+
+        #print(type(line))
+
+        #logger.debug(str(('###'+line,)))
         if 'html' in content_type:
 
             soup = BeautifulSoup(line)
             if soup.a:
                 url_list.extend(soup.a)
         else:
-            ll = [l.strip() for l in line.split('\r\n')]
-            print(ll)
-            url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\r\n')]))
 
-    logger.debug('URL LIST >>>> '+str(url_list))
+            url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\n')]))
+
+    #logger.debug('URL LIST >>>> '+str(url_list))
     return(url_list)
 
 
@@ -222,11 +210,10 @@ if __name__ == "__main__":
         #print(pathes)
         common_heads_list = []
         for sample_path in pathes:
-            f = open(sample_path, 'rb')
+            with open(sample_path, 'rb') as f:
+                msg = parser.parse(f)
 
-            msg = parser.parse(f)
-            f.close()
-            logger.debug('\nPATH: '+sample_path)
+            logger.debug('\nPATH: '+sample_path.upper()+'\n')
 
             filename = os.path.basename(sample_path)
             if not args.b:
@@ -250,21 +237,25 @@ if __name__ == "__main__":
 
             logger.debug('PREAMBLE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.preamble)))
             logger.debug('STRUCTURE')
-            logger.debug(email.iterators._structure(msg))
+            logger.debug('\t'+str(email.iterators._structure(msg)))
             logger.debug("IS_MULTIPART_FLAG = "+str(msg.is_multipart()))
             if msg.is_multipart():
 
                 d = get_mime_struct(msg)
                 logger.debug('=====================================')
                 for k in d.keys():
-                    logger.debug(k+' -- > '+d.get(k))
+                    logger.debug(k+' -- > '+str(d.get(k)))
 
                 logger.debug('=====================================')
 
             logger.debug('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
             logger.debug('==========URL_LIST==========')
+            i = 0
             for l in get_url_list(msg):
-                logger.debug('>>>>>'+l+'<<<<')
+                logger.debug('\t'+str(i)+'. >'+str(l)+'<')
+                i +=1
+
+            logger.debug('NEST LEVEL: '+str(get_nest_level(msg)))
 
         if args.stat:
             logger.debug('\n============== heads stat ====================\n')
@@ -285,3 +276,4 @@ if __name__ == "__main__":
         logger.error(str(details))
         raise
 
+#TODO: analayze boundaries multipart/mixed;\n boundary="----_=_NextPart_27088_00010285.00024182 (consequences)
