@@ -84,49 +84,18 @@ def get_addr_values(head_value=''):
     # names are raw encoded strings
     return(tuple(names),tuple(addrs))
 
-
-def get_mime_info(msg):
-
-    mime_heads = ['content-type','content-transfer-encoding','content-id','content-disposition']
-
-    mime_parts=[]
-    for part in msg.walk():
-
-        all_heads = [name.lower() for name in part.keys()]
-        #print(all_heads)
-
-        part_dict = {}
-        for head in filter(lambda n: all_heads.count(n), mime_heads):
-            part_dict[head] = part.get_all(head)
-        if len(part_dict) == 0:
-            continue
-
-        mime_parts.append(part_dict)
-
-    return(tuple(mime_parts))
-
-def get_mime_structure_crc(mime_info):
-    all_content_types = tuple(reduce(add,[dict.get('content-type') for dict in mime_info]))
-    line = ''.join([l.partition(';')[0] for l in all_content_types])
-
-    return(binascii.crc32(line))
-
-def get_nest_level(mime_info):
-    all_content_types = reduce(add,[dict.get('content-type') for dict in mime_info])
-    all_content_types = [x.partition(';')[0] for x in all_content_types]
-    level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),all_content_types))
-
-    return(level)
-
 def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
 
+    logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
     subj_parts = decode_header(subj_line)
+    logger.debug('parts >>>>>'+str(subj_parts))
     subj = u''
     encodings_list = []
     for p in subj_parts:
-        print(p)
+        logger.debug(p)
         line, encoding = p
-        print('enc:'+str(encoding))
+        logger.debug('enc:'+str(encoding))
+        logger.debug(line)
         if encoding:
             line = line.decode(encoding)
             encodings_list.append(encoding)
@@ -152,7 +121,7 @@ def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
 #def get_body_skeleton(msg):
 
 
-def basic_attach_checker(mime_heads,reg_list,score):
+def basic_attach_checker(mime_heads, reg_list, score):
 
     attach_score = INIT_SCORE
 
@@ -178,9 +147,9 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
 
     # check by regexp rules
     total_score = INIT_SCORE
-    print('line: '+line_in_unicode)
+    logger.debug('line: '+line_in_unicode)
     line = re.sub(ur'[\\\|\/\*]', '', line_in_unicode)
-    print('line after: '+line_in_unicode)
+    logger.debug('line after: '+line_in_unicode)
     # for debug purposes:
     regs = []
     for exp in regexes:

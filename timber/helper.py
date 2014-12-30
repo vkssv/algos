@@ -3,6 +3,9 @@
 import sys, os, logging, re, email, argparse, time
 from email.parser import BytesParser
 from email.header import decode_header
+from email import iterators, base64mime, quoprimime
+from bs4 import BeautifulSoup
+from collections import OrderedDict
 
 
 # define needed functions
@@ -74,12 +77,124 @@ def replace(x):
 
     return(x)
 
+def get_mime_info(msg,d_name):
+
+    print(email.iterators._structure(msg))
+    print
+    mime_heads = ['content-type','content-transfer-encoding','content-id','content-disposition']
+    total =0
+    for part in  msg.walk():
+
+        all_heads = [name.lower() for name in part.keys()]
+        for head in filter(lambda n: all_heads.count(n), mime_heads):
+            logger.debug(d_name+':'+head.upper()+' --> '+str(part.get_all(head)))
+
+        total += all_heads.count('content-type')
+
+    print
+    logger.debug('PAYLOAD( '+(d_name)+' ): ==> '+str(len(msg.get_payload())))
+    logger.debug('MIME_PARTS_NUM( '+(d_name)+' ): ==> '+str(total))
+
+    return
+
+def replace(x):
+    if x is None:
+        x=''
+
+    return(x)
+
+def get_text_parts(msg):
+
+    text_parts = []
+    encodings = {
+                            'quoted-printable'  : lambda payload: quoprimime.body_decode(payload),
+                            'base64'            : lambda payload: base64mime.body_decode(payload)
+                }
+
+    decoded_line = ''
+    parts_iterator = iterators.typed_subpart_iterator(msg)
+    while(True):
+        try:
+            part = next(parts_iterator)
+                #logger.debug("next text part: "+str(part))
+        except StopIteration as err:
+            break
+
+        if part:
+            decoded_line = part.get_payload()
+                #logger.debug("decoded_line "+str(decoded_line))
+                #logger.debug("part.keys() "+str(part.keys()))
+
+            if part.get('Content-Transfer-Encoding') in encodings.keys():
+                f = encodings.get(part.get('Content-Transfer-Encoding'))
+                decoded_line = f(decoded_line)
+
+            text_parts.append((decoded_line, part.get_content_charset(), part.get_content_type()))
+
+    return (text_parts)
+
+def get_mime_struct(msg):
+
+    mime_heads = ['content-type', 'content-transfer-encoding', 'content-id', 'content-disposition']
+    mime_parts= OrderedDict()
+
+    for part in self.msg.walk():
+        all_heads = [name.lower() for name in part.keys()]
+            #print(all_heads)
+
+        part_dict = {}
+        part_key = 'text/plain'
+        for head in filter(lambda n: all_heads.count(n), mime_heads):
+            part_dict[head] = part.get_all(head)
+            if head == 'content-type':
+                part_key = part.get(head)
+
+        if len(part_dict) == 0:
+            continue
+
+        mime_parts[(part_key.partition(';')[0]).strip()] = part_dict
+
+        return(mime_parts)
+
+def get_nest_level(msg):
+
+    mime_parts = get_mime_struct()
+    level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
+
+    return(level)
+
+def get_url_list(msg):
+
+    text_parts = get_text_parts(msg)
+    logger.debug("TEXT PARTS "+str(text_parts))
+    url_list = []
+    url_regexp= r'(https?|mailto|ftps?):'
+    for obj in text_parts:
+        prin\
+            (obj)
+        line, encoding, content_type = obj
+        #logger.debug("part content type: "+content_type.upper())
+        #logger.debug("LINE '"+line+"'")
+        if 'html' in content_type:
+
+            soup = BeautifulSoup(line)
+            if soup.a:
+                url_list.extend(soup.a)
+        else:
+            ll = [l.strip() for l in line.split('\r\n')]
+            print(ll)
+            url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\r\n')]))
+
+    logger.debug('URL LIST >>>> '+str(url_list))
+    return(url_list)
+
 
 if __name__ == "__main__":
     usage = "usage: %prog [ training_directory | file ] -b"
     parser = argparse.ArgumentParser(prog='helper')
     parser.add_argument("PATH", type=str, help="path to collection dir or to email")
     parser.add_argument("-b", action = "store_true", default=False, help="show only bodies MIME structures")
+    parser.add_argument("-stat", action = "store_true", default=False, help="print headers stat")
     args = parser.parse_args()
 
     tmp = '/tmp'
@@ -135,24 +250,34 @@ if __name__ == "__main__":
 
             logger.debug('PREAMBLE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.preamble)))
             logger.debug('STRUCTURE')
+            logger.debug(email.iterators._structure(msg))
+            logger.debug("IS_MULTIPART_FLAG = "+str(msg.is_multipart()))
             if msg.is_multipart():
-                get_mime_info(msg,filename)
-            else:
-                logger.debug(email.iterators._structure(msg))
+
+                d = get_mime_struct(msg)
+                logger.debug('=====================================')
+                for k in d.keys():
+                    logger.debug(k+' -- > '+d.get(k))
+
+                logger.debug('=====================================')
 
             logger.debug('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
+            logger.debug('==========URL_LIST==========')
+            for l in get_url_list(msg):
+                logger.debug('>>>>>'+l+'<<<<')
 
-        logger.debug('\n============== heads stat ====================\n')
-        heads = [ i[0] for i in common_heads_list ]
-        unique = tuple(set([ i[0] for i in common_heads_list ]))
-        unique_list = list(zip(tuple([heads.count(u) for u in unique]),unique))
+        if args.stat:
+            logger.debug('\n============== heads stat ====================\n')
+            heads = [ i[0] for i in common_heads_list ]
+            unique = tuple(set([ i[0] for i in common_heads_list ]))
+            unique_list = list(zip(tuple([heads.count(u) for u in unique]),unique))
 
-        unique_list.sort()
+            unique_list.sort()
 
 
-        for item in unique_list:
-            value,key = item
-            logger.debug(key+' --> '+str(value))
+            for item in unique_list:
+                value,key = item
+                logger.debug(key+' --> '+str(value))
 
 
 
