@@ -9,11 +9,9 @@ using different presets of loaded heuristics
 (or "test" label if not defined) in numpy array type
 """
 
-import sys, os, logging, re, email
-from optparse import OptionParser
+import sys, os, logging, re, email, argparse, stat, tempfile
 from email.parser import Parser
-
-# import matplotlib.pyplot as plt
+from collections import defaultdict
 
 from pattern_wrapper import MetaPattern
 
@@ -50,35 +48,17 @@ def vectorize(doc_path, label, score):
 
     return (vect_dict, label)
 
-# NxM input matrix --> N samples x M features
-def make_dataset(dir_path, category, score):
-    if not os.listdir(dir_path):
-        raise Exception('Collection dir "' + dir_path + '" is empty.')
+def pathes_gen(path,st_mode):
 
-    print(category)
-    X = []
+    sample_path = path
+    if st_mode == stat.S_IFREG:
+        yield(sample_path)
 
-    for path, subdir, docs in os.walk(dir_path):
-
-        for d in docs:
-
-            sample_path = os.path.join(path, d)
-
-            if category == 'test':
-                X = { 'ham': [], 'spam': [], 'info': [], 'nets': [] }
-                for label in X.iterkeys():
-                    vector_x = vectorize(sample_path, label, score)
-                    (X.get(label)).append(vector_x)
-
-            else:
-
-                vector_x = vectorize(sample_path, category, score)
-                logger.debug('----->'+str(vector_x))
-                X.append(vector_x)
-
-            #logger.debug(str(X))
-
-    return (X)
+    elif st_mode == stat.S_IFDIR:
+        for path, subdir, docs in os.walk(path):
+            for d in docs:
+                sample_path = os.path.join(path,d)
+                yield(sample_path)
 
 
 '''''
@@ -97,46 +77,64 @@ def plot_data_set(data_set):
 
 if __name__ == "__main__":
 
-    usage = "usage: %prog [options] -t samples_directory -p dump_dataset -d debug"
-    parser = OptionParser(usage)
+    usage = 'usage: %prog [ samples_directory | file ] -c category -s score -v debug'
+    parser = argparse.ArgumentParser(prog='helper')
+    parser.add_argument('PATH', type=str, metavar = 'PATH', help="path to samples dir or to email")
+    parser.add_argument('-c', action = "store", dest = 'category',default = 'test',
+                            help = "samples category, default=test, i.e. not defined")
+    parser.add_argument('-s', type = float,  action = 'store', dest = "score", default = 1.0,
+                            help = "score penalty for matched feature, def = 1.0")
+    parser.add_argument('-v', action = "store_true", dest = "debug", default = False, help = "be verbose")
 
-    parser.add_option("-t", action = "store", type = "string", dest = "collection", metavar = "[REQUIRED]",
-                      help = "path to samples collection")
+    args = parser.parse_args()
 
-    parser.add_option("-p", action = "store_true", dest = "dump", default = False, metavar = " ",
-                      help = "safe data into file in libsvm format")
-    parser.add_option("-s", type = float, dest = "score", default = 1.0, metavar = " ",
-                      help = "score penalty for matched feature, def = 1.0")
-    # parser.add_option("-v", action="store_true", dest="visualize", default=False, metavar=" ", help="visualise dataset with matplot")
-    parser.add_option("-c", action = "store", dest = "category", default = 'test', metavar = " ",
-                      help = "samples category, default=test, i.e. not defined")
-    parser.add_option("-v", action = "store_true", dest = "debug", default = False, metavar = " ", help = "be verbose")
-
-    (options, args) = parser.parse_args()
-
-    if list(options.__dict__.values()).count(None) > 0:
-        print("")
-        parser.print_help()
-        print("")
-        sys.exit(1)
-
-    tmp='/tmp'
     formatter = logging.Formatter('%(filename)s: %(message)s')
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler(sys.stdout)
-    fh = logging.FileHandler(os.path.join(tmp, options.category+'.log'), mode = 'w')
+    fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), args.category+'.log'), mode = 'w')
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
     logger.addHandler(ch)
     logger.addHandler(fh)
 
-
-    if options.debug:
+    if args.debug:
         logger.setLevel(logging.DEBUG)
 
-    # 1. create train dataset
+    # 1. check and determine pathes
+    checks = {
+                stat.S_IFREG : lambda fd: os.stat(fd).st_size,
+                stat.S_IFDIR : lambda d: os.listdir(d)
+            }
+
+    mode = filter(lambda key: os.stat(args.PATH).st_mode & key, checks.keys())
+    f = checks.get(*mode)
+    if not f(args.PATH):
+        raise Exception(args.PATH + '" is empty.')
+
+    # 2. make datasets
     try:
-        make_dataset(options.collection, options.category, options.score)
+        X = defaultdict(list)
+        pathes_iterator = pathes_gen(args.PATH, *mode)
+
+        while(True):
+            sample_path = next(pathes_iterator)
+            logger.debug('PATH: '+sample_path)
+            if args.category == 'test':
+                for label in ['ham', 'spam', 'info', 'nets']:
+
+                    vector_x = vectorize(sample_path, label, args.score)
+                    logger.debug('----->'+str(vector_x))
+                    X[label].append(vector_x)
+            else:
+
+                vector_x = vectorize(sample_path, args.category, args.score)
+                logger.debug('----->'+str(vector_x))
+                X[args.category].append(vector_x)
+
+        logger.debug(X)
+
+    except StopIteration as details:
+        pass
 
     except Exception as details:
         logger.error(str(details))

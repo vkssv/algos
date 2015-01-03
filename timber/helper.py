@@ -77,12 +77,6 @@ def replace(x):
 
     return(x)
 
-def replace(x):
-    if x is None:
-        x=''
-
-    return(x)
-
 def get_text_parts(msg):
 
     text_parts = []
@@ -96,20 +90,16 @@ def get_text_parts(msg):
     while(True):
         try:
             part = next(parts_iterator)
-                #logger.debug("next text part: "+str(part))
+
         except StopIteration as err:
             break
 
         if part:
             decoded_line = part.get_payload()
-                #logger.debug("decoded_line "+str(decoded_line))
-                #logger.debug("part.keys() "+str(part.keys()))
 
             if part.get('Content-Transfer-Encoding') in encodings.keys():
                 f = encodings.get(part.get('Content-Transfer-Encoding'))
                 decoded_line = f(decoded_line)
-
-            #print(type(decoded_line))
 
             if isinstance(decoded_line, bytes):
                 decoded_line = decoded_line.decode(part.get_content_charset(),'replace')
@@ -124,9 +114,7 @@ def get_mime_struct(msg):
     mime_parts= OrderedDict()
 
     for part in msg.walk():
-        #print("outer"+str(part))
         all_heads = [name.lower() for name in part.keys()]
-        #print(all_heads)
 
         part_dict = {}
         part_key = 'text/plain'
@@ -148,7 +136,6 @@ def get_mime_struct(msg):
 def get_nest_level(msg):
 
     mime_parts = get_mime_struct(msg)
-    print(list(mime_parts.keys()))
     level = len(list(filter(lambda n: re.match('(multipart|message)',n,re.I), list(mime_parts.keys()))))
 
     return(level)
@@ -156,14 +143,10 @@ def get_nest_level(msg):
 def get_url_list(msg):
 
     text_parts = get_text_parts(msg)
-    #logger.debug("TEXT PARTS "+str(text_parts))
     url_list = []
     url_regexp= r'(((https?|ftps?):\/\/)|www:).*'
     for line, encoding, content_type in text_parts:
 
-        #print(type(line))
-
-        #logger.debug(str(('###'+line,)))
         if 'html' in content_type:
 
             soup = BeautifulSoup(line)
@@ -171,7 +154,7 @@ def get_url_list(msg):
                 url_list.extend(soup.a)
         else:
 
-            url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\n')]))
+            url_list.extend(list(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\n')])))
 
     #logger.debug('URL LIST >>>> '+str(url_list))
     return(url_list)
@@ -207,7 +190,6 @@ if __name__ == "__main__":
                 for d in docs:
                     pathes.append(os.path.join(path, d))
 
-        #print(pathes)
         common_heads_list = []
         for sample_path in pathes:
             with open(sample_path, 'rb') as f:
@@ -244,7 +226,7 @@ if __name__ == "__main__":
                 d = get_mime_struct(msg)
                 logger.debug('=====================================')
                 for k in d.keys():
-                    logger.debug(k+' -- > '+str(d.get(k)))
+                    print('\t{0:25} {1:}'.format(k,str(d.get(k))))
 
                 logger.debug('=====================================')
 
@@ -265,11 +247,9 @@ if __name__ == "__main__":
 
             unique_list.sort()
 
-
             for item in unique_list:
                 value,key = item
                 logger.debug(key+' --> '+str(value))
-
 
 
     except Exception as details:

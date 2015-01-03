@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import sys, os, importlib, logging, re
 from email import iterators, base64mime, quoprimime
 from bs4 import BeautifulSoup
@@ -11,37 +13,63 @@ class BasePattern(object):
     Provides access to some pre-parsed attributes of msg"""
     INIT_SCORE = 0
     MIN_TOKEN_LEN = 3
-
+ 
     def __init__(self, msg):
         self.msg = msg
 
+
     def get_text_parts(self):
+    # returns list of text body's parts: each in one unicode line
+        encodings = {
+                        'quoted-printable'  : lambda payload: quoprimime.body_decode(payload),
+                        'base64'            : lambda payload: base64mime.body_decode(payload)
+                    }
 
         self.text_parts = []
-        encodings = {
-                            'quoted-printable'  : lambda payload: quoprimime.body_decode(payload),
-                            'base64'            : lambda payload: base64mime.body_decode(payload)
-                    }
 
         decoded_line = ''
         parts_iterator = iterators.typed_subpart_iterator(self.msg)
+
         while(True):
             try:
                 part = next(parts_iterator)
-                #logger.debug("next text part: "+str(part))
+                #print('TEXT PART:')
+                #print(part)
+
             except StopIteration as err:
                 break
 
             if part:
-                decoded_line = part.get_payload()
-                #logger.debug("decoded_line "+str(decoded_line))
-                #logger.debug("part.keys() "+str(part.keys()))
+                decoded_line = part.get_payload(decode=True)
+                #print('DEC LINE: '+str(decoded_line))
 
-                if part.get('Content-Transfer-Encoding') in encodings.keys():
-                    f = encodings.get(part.get('Content-Transfer-Encoding'))
-                    decoded_line = f(decoded_line)
+                print('CHARSET: ')
+                print(part.get_content_charset())
 
-                self.text_parts.append((decoded_line, part.get_content_charset(), part.get_content_type()))
+
+                #if part.get('Content-Transfer-Encoding') in encodings.keys():
+                #    f = encodings.get(part.get('Content-Transfer-Encoding'))
+                #    decoded_line = f(decoded_line)
+
+                #print('decoded_line: >'.upper()+str((decoded_line,))+'<')
+                print('Type of line >>>>>>>>>'+str(type(decoded_line)))
+
+                charset_map = {'x-sjis': 'shift_jis'}
+                # Python2.7 => try to decode all lines from their particular charsets,
+                # add U+FFFD, 'REPLACEMENT CHARACTER' if will be faced with UnicodeDecodeError
+                for charset in (part.get_content_charset(), part.get_charset()):
+                    if charset:
+                        if charset in charset_map.keys():
+                            charset =  charset_map.get(charset)
+
+                        print(charset)
+                        decoded_line = decoded_line.decode(charset, 'replace')
+                        break
+
+                if not len(decoded_line.strip()):
+                    continue
+
+                self.text_parts.append((decoded_line, part.get_content_type()))
 
         return (self.text_parts)
 
@@ -53,24 +81,27 @@ class BasePattern(object):
 
     def get_mime_struct(self):
 
-        self.mime_heads = ['content-type', 'content-transfer-encoding', 'content-id', 'content-disposition']
         self.mime_parts= OrderedDict()
+        
+        mime_heads = ['content-type', 'content-transfer-encoding', 'content-id', 'content-disposition']
 
         for part in self.msg.walk():
             all_heads = [name.lower() for name in part.keys()]
-            #print(all_heads)
 
-            part_dict = {}
-            part_key = 'text/plain'
-            for head in filter(lambda n: all_heads.count(n), self.mime_heads):
-                part_dict[head] = part.get_all(head)
-                if head == 'content-type':
-                    part_key = part.get(head)
+        part_dict = {}
+        part_key = 'text/plain'
+        for head in filter(lambda n: all_heads.count(n), mime_heads):
 
-            if len(part_dict) == 0:
-                continue
+            if head == 'content-type':
 
-            self.mime_parts[(part_key.partition(';')[0]).strip()] = part_dict
+                part_key = part.get(head)
+                part_key = part_key.partition(';')[0].strip()
+                part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
+
+            else:
+                part_dict[head] = part.get(head)
+
+        self.mime_parts[(part_key.partition(';')[0]).strip()] = part_dict
 
         return(self.mime_parts)
 
@@ -84,23 +115,24 @@ class BasePattern(object):
     def get_url_list(self):
 
         text_parts = self.get_text_parts()
-        logger.debug("TEXT PARTS "+str(text_parts))
+        #print('TEXT_PARTS: '+str(text_parts))
         self.url_list = []
-        url_regexp= ur'(https?|mailto|ftps?):'
-        for obj in text_parts:
-            line, encoding, content_type = obj
-            #logger.debug("part content type: "+content_type.upper())
-            #logger.debug("LINE '"+line+"'")
-            if 'html' in content_type:
+        url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
+        for line, content_type in text_parts:
 
+            if 'html' in content_type:
                 soup = BeautifulSoup(line)
                 if soup.a:
                     self.url_list.extend(soup.a)
             else:
-                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\r\n')]))
 
-        logger.debug('URL LIST >>>> '+str(self.url_list))
+                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\n')]))
+
+        for i in self.url_list:
+            print(i)
+
         return(self.url_list)
+
 
 class PatternFactory(object):
     """Factory for creating on the fly set of rules for desired class"""
