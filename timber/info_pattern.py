@@ -47,9 +47,9 @@ class InfoPattern(BasePattern):
         vector_dict['to'] = common.basic_rcpts_checker(score, self.msg.get_all('Received'), self.msg.get_all('To'))
 
         # DMARC checks
-        print('>>>'+str(common.basic_dmarc_checker(self.msg.items(), score)))
+        logger.debug('>>>'+str(common.basic_dmarc_checker(self.msg.items(), score)))
         dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
-        print(dmarc_dict_checks)
+        logger.debug(str(dmarc_dict_checks))
         vector_dict.update(dmarc_dict_checks)
         vector_dict['dmarc'] = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I),self.msg.keys()))
 
@@ -119,7 +119,7 @@ class InfoPattern(BasePattern):
             # take crc32 from the second half (first can vary cause of personalisation, etc.)
             subj_trace = tuple([w.encode('utf-8') for w in norm_words_list[len(norm_words_list)/2:]])
             subj_trace = ''.join(subj_trace[:])
-            print(subj_trace)
+            logger.debug(subj_trace)
             features_dict['subj_checksum'] = binascii.crc32(subj_trace)
 
         vector_dict.update(features_dict)
@@ -143,9 +143,9 @@ class InfoPattern(BasePattern):
 
         keys = tuple(filter(lambda k: self.msg.get(k), ['From','Sender','Reply-To','Delivered-To','To']))
         #addr_dict = dict([(k,common.get_addr_values(value)[1][0]) for k,value in zip(keys, tuple([self.msg.get(k) for k in keys]))])
-        print([ common.get_addr_values(self.msg.get(k)) for k in keys])
+        logger.debug(str([ common.get_addr_values(self.msg.get(k)) for k in keys]))
         addr_dict = dict([(k, (common.get_addr_values(self.msg.get(k))[1])[0]) for k in keys])
-        print('>>>>>'+str(addr_dict))
+        logger.debug('>>>>>'+str(addr_dict))
 
         if addr_dict.get('Sender') and addr_dict.get('Sender') != addr_dict.get('From'):
             list_features_dict['sender'] = 1
@@ -175,8 +175,8 @@ class InfoPattern(BasePattern):
 
         if self.msg.get('From'):
             from_values = common.get_addr_values(self.msg.get('From'))[0]
-            print(from_values)
-            print(type(from_values))
+            logger.debug(str(from_values))
+            logger.debug(str(type(from_values)))
 
             if from_values:
                 vector_dict['from'] = binascii.crc32((reduce(add,from_values)).strip())
@@ -194,9 +194,9 @@ class InfoPattern(BasePattern):
         ]
 
         mime_heads_vect = common.get_mime_info(self.msg)
-        print("")
-        logger.debug(str(mime_heads_vect))
-        print("")
+
+        logger.debug('\n'+str(mime_heads_vect)+'\n')
+
         count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
         vector_dict['att_count'] = count
         vector_dict['att_score'] = att_score
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     try:
         test = InfoPattern(env)
         vector = test.run()
-        logger.debug(vector)
+        logger.debug(str(vector))
 
 
     except Exception as details:

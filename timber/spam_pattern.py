@@ -30,7 +30,7 @@ class SpamPattern(BasePattern):
                             'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
                             ]
-        print(self.msg.items())
+        logger.debug(str(self.msg.items()))
         vector_dict.update(common.get_all_heads_crc(self.msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
@@ -222,9 +222,8 @@ class SpamPattern(BasePattern):
                             ]
 
             mime_skeleton = BasePattern.get_mime_struct(self)
-            print("")
-            logger.debug(str(mime_skeleton))
-            print("")
+            logger.debug('/n'+str(mime_skeleton)+'/n')
+
             '''''
             count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
             mime_dict['att_count'] = count
@@ -244,7 +243,7 @@ class SpamPattern(BasePattern):
         # 6. check urls
         logger.debug('>>>URL_CHECKS:')
         urls_list = BasePattern.get_url_list(self)
-        print ('URLS_LIST >>>>>'+str(urls_list))
+        logger.debug('URLS_LIST >>>>>'+str(urls_list))
         if urls_list:
             urls_features = ['score','distinct_domains','count']
             urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))

@@ -33,26 +33,26 @@ class BasePattern(object):
         while(True):
             try:
                 part = next(parts_iterator)
-                #print('TEXT PART:')
-                #print(part)
+                #logger.debug('TEXT PART:')
+                #logger.debug(part)
 
             except StopIteration as err:
                 break
 
             if part:
                 decoded_line = part.get_payload(decode=True)
-                #print('DEC LINE: '+str(decoded_line))
+                #logger.debug('DEC LINE: '+str(decoded_line))
 
-                print('CHARSET: ')
-                print(part.get_content_charset())
+                logger.debug('CHARSET: ')
+                logger.debug(part.get_content_charset())
 
 
                 #if part.get('Content-Transfer-Encoding') in encodings.keys():
                 #    f = encodings.get(part.get('Content-Transfer-Encoding'))
                 #    decoded_line = f(decoded_line)
 
-                #print('decoded_line: >'.upper()+str((decoded_line,))+'<')
-                print('Type of line >>>>>>>>>'+str(type(decoded_line)))
+                #logger.debug('decoded_line: >'.upper()+str((decoded_line,))+'<')
+                logger.debug('Type of line >>>>>>>>>'+str(type(decoded_line)))
 
                 charset_map = {'x-sjis': 'shift_jis'}
                 # Python2.7 => try to decode all lines from their particular charsets,
@@ -62,7 +62,7 @@ class BasePattern(object):
                         if charset in charset_map.keys():
                             charset =  charset_map.get(charset)
 
-                        print(charset)
+                        logger.debug(charset)
                         decoded_line = decoded_line.decode(charset, 'replace')
                         break
 
@@ -115,7 +115,7 @@ class BasePattern(object):
     def get_url_list(self):
 
         text_parts = self.get_text_parts()
-        #print('TEXT_PARTS: '+str(text_parts))
+        #logger.debug('TEXT_PARTS: '+str(text_parts))
         self.url_list = []
         url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
         for line, content_type in text_parts:
@@ -129,7 +129,7 @@ class BasePattern(object):
                 self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\n')]))
 
         for i in self.url_list:
-            print(i)
+            logger.debug(i)
 
         return(self.url_list)
 
@@ -138,7 +138,7 @@ class PatternFactory(object):
     """Factory for creating on the fly set of rules for desired class"""
 
     def New(self, msg, label):
-        #print(label)
+        #logger.debug(label)
         try:
 
             pattern = importlib.import_module(label + '_pattern')

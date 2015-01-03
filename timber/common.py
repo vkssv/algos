@@ -31,10 +31,10 @@ def get_all_heads_crc(header_value_list, excluded_list = None):
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
     values_vector = tuple([heads_dict.get(k) for k in heads_vector])
-    #print('values_vector'+str(values_vector))
+    #logger.debug('values_vector'+str(values_vector))
     # save the last word
     values_vector = tuple([value.split()[-1:] for value in values_vector[:]])
-    #print('values_vector --->'+str(values_vector))
+    #logger.debug('values_vector --->'+str(values_vector))
 
     vect['heads_crc'] = binascii.crc32(''.join(heads_vector))
     vect['values_crc'] = binascii.crc32(''.join(reduce(add,values_vector)))
@@ -43,11 +43,11 @@ def get_all_heads_crc(header_value_list, excluded_list = None):
 
 def get_trace_crc(rcvds_vect):
 
-    #print('rcvds_vect:'+str(rcvds_vect))
+    #logger.debug('rcvds_vect:'+str(rcvds_vect))
     traces_dict = {}
 
     for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
-        #print(rcvd_line)
+        #logger.debug(rcvd_line)
         trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
         trace = trace.strip().lower()
         trace = binascii.crc32(trace)
@@ -57,26 +57,25 @@ def get_trace_crc(rcvds_vect):
     return (traces_dict)
 
 def get_addr_values(head_value=''):
-    print('+++++>'+str(head_value))
+    logger.debug('+++++>'+str(head_value))
     for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9-]{1,63}(?:\.[\w]{2,4})+',re.I)
 
     h_value = tuple(decode_header(head_value))
-    print(h_value)
     # don't use encoding info for translations, so don't keep it
     h_value = tuple([pair[0] for pair in h_value])
-    print('+++++'+str(h_value))
+    logger.debug('+++++'+str(h_value))
     # crunch addreses and names
     addrs=[]
     names = []
     for part in h_value:
-        print('part  '+str(part))
+        logger.debug('part  '+str(part))
         part = re.sub(r'<|>','',part)
-        print(part)
+        logger.debug(str(part))
         addrs += for_crunch.findall(part)
-        print(addrs)
+        logger.debug(str(addrs))
         names.append(for_crunch.sub('',part))
 
-    #print('names: '+str(names))
+    #logger.debug('names: '+str(names))
 
     # keep order => use tuples, + cause function should works
     # either for To/CC/Bcc headers with many senders,
@@ -159,7 +158,7 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
 
     #regexes = [re.compile(exp) for exp in regexes]
     matched = filter(lambda r: r.search(line, re.I), regs)
-    print(matched)
+    logger.debug(str(matched))
     total_score += score*len(matched)
 
     words = [w for w in line.split()]
@@ -177,15 +176,15 @@ def basic_lists_checker(header_value_list, score):
     for_trace = re.compile(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+',re.M)
     for_body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
 
-    #print('\t=====>'+str(header_value_list))
+    #logger.debug('\t=====>'+str(header_value_list))
     heads_dict = dict(header_value_list)
 
     # try to get sender domain from RCVD headers,
     # use header_value_list to obtain
     # exactly the first rcvd header, order makes sense here
     h_name, value = (filter(lambda rcvd: re.match('Received', rcvd[0]), header_value_list))[-1:][0]
-    #print('h_name'+h_name)
-    #print('value'+value)
+    #logger.debug('h_name'+h_name)
+    #logger.debug('value'+value)
 
     sender_domain = ''
     if for_trace.search(value.partition(';')[0]):
@@ -227,7 +226,7 @@ def basic_dmarc_checker(header_value_list, score, required_heads_list=[]):
         required_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
 
     dmarc_dict = dict(map(lambda x,y: (x,y),required_heads,[INIT_SCORE]*len(required_heads)))
-    print(dmarc_dict)
+    logger.debug(str(dmarc_dict))
     dkim_domain = ''
     heads_dict = dict(header_value_list)
 
@@ -240,12 +239,12 @@ def basic_dmarc_checker(header_value_list, score, required_heads_list=[]):
         dkims = filter(lambda z: re.search(h, z), heads_dict.keys())
         total.extend(dkims)
 
-    print('TOTAL:'+str(total))
+    logger.debug('TOTAL:'+str(total))
 
     # (len(required_heads_list)+1, cause we can find DKIM-Signature and DomainKey-Signature in one doc
-    print('req_head:'+str(len(required_heads_list)+1))
-    #print('req_head:'+str(len(required_heads_list)+1))
-    print('found:'+str(len(set(total))*score))
+    logger.debug('req_head:'+str(len(required_heads_list)+1))
+    #logger.debug('req_head:'+str(len(required_heads_list)+1))
+    logger.debug('found:'+str(len(set(total))*score))
 
     basic_score = (len(required_heads_list)+1) - (len(set(total))*score)
 
@@ -258,12 +257,12 @@ def basic_dmarc_checker(header_value_list, score, required_heads_list=[]):
     from_domain = from_domain.strip('>').strip()
 
     dkim_domain=''
-    print('dkims'+str(dkims))
+    logger.debug('dkims'+str(dkims))
     valid_lines = filter(lambda f: re.search(from_domain,f), [heads_dict.get(h) for h in dkims])
     if len(valid_lines) == len(dkims):
         dmarc_dict['(DKIM|DomainKey)-Signature'] += score
         dkim_domain = from_domain
-        print('dkim_domain '+str(dkim_domain))
+        logger.debug('dkim_domain '+str(dkim_domain))
 
     return(dmarc_dict, dkim_domain)
 
@@ -275,13 +274,13 @@ def basic_rcpts_checker(score, traces_values_list, to_values_list):
     rcpt_score = INIT_SCORE
 
     to_values, to_addrs = get_addr_values(to_values_list)
-    print(">>to_addrs: "+str(to_addrs))
+    logger.debug(">>to_addrs: "+str(to_addrs))
     parsed_rcvds = [rcvd.partition(';')[0] for rcvd in traces_values_list]
     smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in parsed_rcvds]))
     if not smtp_to_list:
         return(rcpt_score)
 
-    print(">>smtp_to_list: "+str(smtp_to_list))
+    logger.debug(">>smtp_to_list: "+str(smtp_to_list))
     smtp_to = re.search(r'<(.*@.*)?>', smtp_to_list[0])
 
     if to_addrs and smtp_to and smtp_to.group(0) == to_addrs[0]:
@@ -303,7 +302,7 @@ def basic_mime_checker(mime_heads_vect,score):
         return(INIT_SCORE)
 
 def basic_url_checker(links_list, score):
-    print(links_list)
+    logger.debug(str(links_list))
 
     '''''
     links_list = [(link.replace('\r\n','')).replace('\t','') for link in links_list]

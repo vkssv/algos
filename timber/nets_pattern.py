@@ -120,7 +120,7 @@ class NetsPattern(BasePattern):
             # take crc32 only from words in lower case, cause Names and etc. are titled here
             norm_words_list = tuple(filter(lambda word: not word.istitle(), norm_words_list))
             subj_trace = ''.join(tuple([w.encode('utf-8') for w in norm_words_list]))
-            print('subj_trace--->'+subj_trace)
+            logger.debug('subj_trace--->'+subj_trace)
             if subj_trace:
                 features_dict['subj_checksum'] = binascii.crc32(subj_trace)
 
@@ -154,7 +154,7 @@ class NetsPattern(BasePattern):
         # in general nets are very personal, so check Delivered-To may be a feature
         keys = tuple(filter(lambda k: self.msg.get(k), ['Delivered-To','To']))
         addr_dict = dict([(k, (common.get_addr_values(self.msg.get(k))[1])[0]) for k in keys])
-        print('>>>>>'+str(addr_dict))
+        logger.debug('>>>>>'+str(addr_dict))
         if addr_dict.get('Delivered-To') and addr_dict.get('Delivered-To') != addr_dict.get('To'):
             list_features_dict['delivered'] = 1
 
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 	try:
 		test=NetsPattern(env)
 		vector = test.run()
-		logger.debug(vector)
+		logger.debug(str(vector))
 
 
 	except Exception as details:
