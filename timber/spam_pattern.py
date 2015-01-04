@@ -207,7 +207,7 @@ class SpamPattern(BasePattern):
                 logger.debug('\t----->'+str(vector_dict))
 
         # 5. Check MIME headers
-        logger.debug('>>>MIME_CHECKS:')
+        logger.debug('/n>>>MIME_CHECKS:')
         mime_features = ['mime_spammness', 'att_count','att_score','in_score','nest_level','checksum']
         mime_dict = dict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
@@ -222,17 +222,17 @@ class SpamPattern(BasePattern):
                             ]
 
             mime_skeleton = BasePattern.get_mime_struct(self)
-            logger.debug('/n'+str(mime_skeleton)+'/n')
+            logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
 
-            '''''
-            count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
+
+            count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
             mime_dict['in_score'] = in_score
-            if common.get_nest_level(mime_heads_vect) > 2:
+            if BasePattern.get_nest_level(self) > 2:
                 mime_dict['nest_level'] = 1
 
-            '''''
+
             mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
 
 
@@ -244,18 +244,18 @@ class SpamPattern(BasePattern):
         logger.debug('>>>URL_CHECKS:')
         urls_list = BasePattern.get_url_list(self)
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
+        '''
         if urls_list:
             urls_features = ['score','distinct_domains','count']
             urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
-            '''''
             urls_score, domains_list =  common.basic_url_checker(urls_list)
             urls_dict['score'] = urls_score
 
             urls_dict['distinct_domains'] = len(set(domains_list))
             urls_dict['count'] = len(domains_list)
-            '''''
 
+        '''
 
 
 

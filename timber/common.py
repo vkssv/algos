@@ -120,24 +120,24 @@ def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
 #def get_body_skeleton(msg):
 
 
-def basic_attach_checker(mime_heads, reg_list, score):
+def basic_attach_checker(mime_parts_list, reg_list, score):
 
+    # mime_parts_list - list with mime-parts dictionaries
     attach_score = INIT_SCORE
 
-    mime_heads = reduce(add, reduce(add,[dict.values() for dict in mime_heads[:]]))
-    attach_attrs = filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)?=.*;',name),mime_heads)
+    mime_values_list = reduce(add,[dict.values() for dict in mime_parts_list[:]])
+    attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), mime_values_list)
     attach_attrs = [(x.partition(';')[2]).strip('\r\n\x20') for x in attach_attrs]
     attach_count = len(attach_attrs)
 
-    attach_score += score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*;',name),attach_attrs))
+    attach_score += score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), attach_attrs))
 
 
     for exp in [re.compile(r,re.I) for r in reg_list]:
         x = filter(lambda value: exp.search(value,re.M), attach_attrs)
         score += score*len(x)
 
-    inline_pattern = r'inline\s*;'
-    inline_score = score*len(filter(lambda value: re.search(inline_pattern,value,re.I), mime_heads))
+    inline_score = score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), mime_values_list))
 
     return(attach_count, score, inline_score)
 

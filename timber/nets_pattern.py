@@ -22,6 +22,7 @@ class NetsPattern(BasePattern):
         vector_dict = OrderedDict()
 
         # 1. Received headers
+        logger.debug('>>> RCVD_CHECKS:')
 
         # get crc32 of only unique headers and their values
         excluded_heads = [
@@ -37,15 +38,17 @@ class NetsPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # some basic rcpts checks
+        logger.debug('>>> DESTINATOR CHECKS:')
         vector_dict['to'] = common.basic_rcpts_checker(score ,self.msg.get_all('Received'), self.msg.get_all('To'))
 
         # get crc32 from first N trace fields
         n_rcvds = 3
-        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds(n_rcvds)])
+        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds(self, n_rcvds)])
         logger.debug(rcvd_vect)
         vector_dict.update(common.get_trace_crc(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
 
+        logger.debug('>>> DMARC CHECKS:')
         # DMARC checks
         dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
         vector_dict.update(dmarc_dict_checks)
@@ -79,7 +82,7 @@ class NetsPattern(BasePattern):
         vector_dict['known_domain'] = len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), known_domains))
 
         # 2. Subject checks
-
+        logger.debug('>>> SUBJECT CHECKS:')
         features = ['style','score','encoding','checksum']
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
@@ -128,6 +131,7 @@ class NetsPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # 4. crc for From values
+        logger.debug('>>> ORIGINATOR CHECKS:')
         vector_dict['from']=0
         logger.debug('\t----->'+str(vector_dict))
 
@@ -139,7 +143,7 @@ class NetsPattern(BasePattern):
                 logger.debug('\t----->'+str(vector_dict))
 
         # 5. simple List fields checks
-
+        logger.debug('>>> LIST CHECKS:')
         list_features = ['basic_checks', 'delivered']
         list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
 
@@ -161,7 +165,6 @@ class NetsPattern(BasePattern):
         vector_dict.update(list_features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
-        '''
         # 5. Check MIME headers
 
         mime_checks = [(x,0) for x in ['mime_spammness', 'att_count','att_score','in_score','nest_level']]
@@ -177,13 +180,14 @@ class NetsPattern(BasePattern):
                             r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
                             ]
 
-            mime_heads_vect = common.get_mime_info(self.msg)
-            logger.debug(str(mime_heads_vect))
-            count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
+            mime_skeleton = BasePattern.get_mime_struct(self)
+
+            logger.debug(str(mime_skeleton))
+            count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
             mime_dict['in_score'] = in_score
-            if common.get_nest_level(mime_heads_vect) > 2:
+            if BasePattern.get_nest_level(self) > 2:
                 mime_dict['nest_level'] = 1
 
 
@@ -197,8 +201,10 @@ class NetsPattern(BasePattern):
 
         #vect_dict.update(common.get_body_skeleton(self.msg))
 
-        '''
 
+        logger.debug('>>>URL_CHECKS:')
+        urls_list = BasePattern.get_url_list(self)
+        '''
         if urls_list:
             urls_features = ['score','count','same_as_sender']
             urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
@@ -209,6 +215,7 @@ class NetsPattern(BasePattern):
             domain_matches = filter(lambda d: re.search(dkim_domain,d), domains_list)
             urls_dict['same_as_sender'] = len(domain_matches)
             urls_dict['count'] = len(domains_list)
+        '''
         return (vector_dict)
 
 

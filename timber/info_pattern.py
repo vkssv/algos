@@ -8,9 +8,10 @@ or crc32 value for each feature, otherwise - "0" """
 import os, sys, logging, common, re, binascii
 from operator import add
 from pattern_wrapper import BasePattern
+from collections import OrderedDict
+
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
-from collections import OrderedDict
 
 # formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
@@ -25,6 +26,7 @@ class InfoPattern(BasePattern):
 
         # 1. Received headers
 
+        logger.debug('>>>RCVD_CHECKS:')
         # get crc32 of only unique headers and their values
         excluded_heads = [
                             'Received', 'Subject', 'From', 'Date', 'Received-SPF', 'To', 'Content-Type',\
@@ -38,21 +40,23 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds()])
+        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds(self)])
         logger.debug(rcvd_vect)
         vector_dict.update(common.get_trace_crc(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
 
         # check that rcpt from trace field and To the same and the one (in general)
+        logger.debug('>>> DESTINATOR CHECKS:')
         vector_dict['to'] = common.basic_rcpts_checker(score, self.msg.get_all('Received'), self.msg.get_all('To'))
 
-        # DMARC checks
+        logger.debug('>>> DMARC checks:')
         logger.debug('>>>'+str(common.basic_dmarc_checker(self.msg.items(), score)))
         dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
         logger.debug(str(dmarc_dict_checks))
         vector_dict.update(dmarc_dict_checks)
         vector_dict['dmarc'] = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I),self.msg.keys()))
 
+        logger.debug('>>> Specific E-marketing fileds checks:')
         # Presense of X-EMID && X-EMMAIL
         em_names = ['X-EMID','X-EMMAIL']
         sc = 0
@@ -66,7 +70,7 @@ class InfoPattern(BasePattern):
         vector_dict.update(em_dict)
 
         # 2. Subject checks
-
+        logger.debug('>>>SUBJ_CHECKS:')
         features = ['len','style','score','checksum','encoding']
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
@@ -126,7 +130,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # 3. List checks and some other RFC 5322 compliences checks for headers
-
+        logger.debug('>>> LIST_CHECKS:')
         list_features = ['basic_checks', 'ext_checks','sender','precedence','typical_heads','reply-to','delivered']
         list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
 
@@ -170,6 +174,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # 4. crc for From values
+        logger.debug('>>> ORIGINATOR_CHECKS:')
         vector_dict['from'] = INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
 
@@ -183,27 +188,38 @@ class InfoPattern(BasePattern):
                 logger.debug('\t----->'+str(vector_dict))
 
 
-        logger.debug('\t----->'+str(vector_dict))
+        logger.debug('\t----->'+str(vector_dict)+'\n')
 
 
         # 5. Check MIME headers
+        logger.debug('>>> MIME CHECKS:')
+        mime_skeleton = BasePattern.get_mime_struct(self)
+        logger.debug('MIME STRUCT: '+str(mime_skeleton))
+
+        vector_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
+        logger.debug('\t----->'+str(vector_dict))
+
+
         attach_score =0
         attach_regs = [
                         r'image\/(png|gif)',
                         r'.*\.(html|js|jpeg|png|gif|cgi)',
         ]
 
-        mime_heads_vect = common.get_mime_info(self.msg)
-
-        logger.debug('\n'+str(mime_heads_vect)+'\n')
-
-        count, att_score, in_score = common.basic_attach_checker(mime_heads_vect,attach_regs,score)
+        count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
         vector_dict['att_count'] = count
         vector_dict['att_score'] = att_score
         vector_dict['in_score'] = in_score
-        vector_dict['nest_level'] = common.get_nest_level(mime_heads_vect)
+        vector_dict['nest_level'] = BasePattern.get_nest_level(self)
 
          # 6. check urls
+        logger.debug('>>>URL_CHECKS:')
+        urls_list = BasePattern.get_url_list(self)
+        logger.debug('URLS_LIST >>>>>'+str(urls_list))
+        if urls_list:
+            urls_features = ['score','distinct_domains','count']
+            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+        '''''
         if urls_list:
             urls_features = ['score','count','same_as_sender']
             urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
@@ -214,7 +230,7 @@ class InfoPattern(BasePattern):
             domain_matches = filter(lambda d: re.search(dkim_domain,d), domains_list)
             urls_dict['same_as_sender'] = len(domain_matches)
             urls_dict['count'] = len(domains_list)
-
+        '''''
 
         return (vector_dict)
 
