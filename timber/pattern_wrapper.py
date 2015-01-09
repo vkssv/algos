@@ -2,6 +2,7 @@
 
 import sys, os, importlib, logging, re
 from email import iterators, base64mime, quoprimime
+from urlparse import urlparse
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 
@@ -43,8 +44,8 @@ class BasePattern(object):
                 decoded_line = part.get_payload(decode=True)
                 #logger.debug('DEC LINE: '+str(decoded_line))
 
-                logger.debug('CHARSET: ')
-                logger.debug(part.get_content_charset())
+                #logger.debug('CHARSET: ')
+                #logger.debug(part.get_content_charset())
 
 
                 #if part.get('Content-Transfer-Encoding') in encodings.keys():
@@ -52,7 +53,7 @@ class BasePattern(object):
                 #    decoded_line = f(decoded_line)
 
                 #logger.debug('decoded_line: >'.upper()+str((decoded_line,))+'<')
-                logger.debug('Type of line >>>>>>>>>'+str(type(decoded_line)))
+                #logger.debug('Type of line >>>>>>>>>'+str(type(decoded_line)))
 
                 charset_map = {'x-sjis': 'shift_jis'}
                 # Python2.7 => try to decode all lines from their particular charsets,
@@ -62,7 +63,7 @@ class BasePattern(object):
                         if charset in charset_map.keys():
                             charset =  charset_map.get(charset)
 
-                        logger.debug(charset)
+                        #logger.debug(charset)
                         decoded_line = decoded_line.decode(charset, 'replace')
                         break
 
@@ -126,10 +127,22 @@ class BasePattern(object):
                     self.url_list.extend(soup.a)
             else:
 
-                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\n')]))
+                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
 
+        logger.debug("URL LIST:")
         for i in self.url_list:
+            logger.debug('-------------')
             logger.debug(i)
+        if self.url_list:
+            parsed_urls = []
+            for y in self.url_list:
+                try:
+                    parsed_urls.append(urlparse(y))
+                except Exception as err:
+                    logger.error(str(err))
+                    continue
+
+            self.url_list = parsed_urls
 
         return(self.url_list)
 

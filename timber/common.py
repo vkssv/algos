@@ -3,11 +3,12 @@
 shared module with common-used functions, will be class in future
 '''
 
-import email, os, sys, re, logging, binascii, unicodedata, urllib
+import email, os, sys, re, logging, binascii, unicodedata, urlparse
 
 from email.errors import MessageParseError
 from email.header import decode_header
 from operator import add, itemgetter
+from collections import Counter
 
 from pattern_wrapper import BasePattern
 INIT_SCORE = BasePattern.INIT_SCORE
@@ -15,6 +16,21 @@ MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
+
+# just for debugging new regexp on fly
+def get_regexp(regexp_list, compilation_flag=0):
+    compiled_list = []
+
+    for exp in regexp_list:
+        logger.debug(exp)
+        if compilation_flag:
+            exp = re.compile(exp, compilation_flag)
+        else:
+            exp = re.compile(exp)
+
+        compiled_list.append(exp)
+
+    return(compiled_list)
 
 # excluded_list=['Received', 'From', 'Date', 'X-.*']
 # header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items() - save the order of heads
@@ -83,6 +99,16 @@ def get_addr_values(head_value=''):
     # names are raw encoded strings
     return(tuple(names),tuple(addrs))
 
+def get_originator_domain(rcvd_value):
+# get sender domain from the first (by trace) RCVD-field, e.g. SMTP MAIL FROM: value
+    orig_domain=''
+
+    for_trace = re.compile(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+',re.M)
+    orig_domain = (for_trace.search(rcvd_value)).group(0)
+    orig_domain = orig_domain.strip('.').strip()
+
+    return(orig_domain)
+
 def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
 
     logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
@@ -117,9 +143,6 @@ def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
 
     return(unicodedata.normalize('NFC',subj), words_list, encodings_list)
 
-#def get_body_skeleton(msg):
-
-
 def basic_attach_checker(mime_parts_list, reg_list, score):
 
     # mime_parts_list - list with mime-parts dictionaries
@@ -149,12 +172,9 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
     logger.debug('line: '+line_in_unicode)
     line = re.sub(ur'[\\\|\/\*]', '', line_in_unicode)
     logger.debug('line after: '+line_in_unicode)
+
     # for debug purposes:
-    regs = []
-    for exp in regexes:
-        logger.debug(exp)
-        exp = re.compile(exp)
-        regs.append(exp)
+    regs = get_regexp(regexes)
 
     #regexes = [re.compile(exp) for exp in regexes]
     matched = filter(lambda r: r.search(line, re.I), regs)
@@ -168,30 +188,23 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
 
     return (total_score, upper_flag, title_flag)
 
-def basic_lists_checker(header_value_list, score):
+def basic_lists_checker(header_value_list, rcvd_value, score):
     # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
     # have to be checked with antiphishing service
     unsubscribe_score = INIT_SCORE
-
-    for_trace = re.compile(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+',re.M)
-    for_body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
+    body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
 
     #logger.debug('\t=====>'+str(header_value_list))
     heads_dict = dict(header_value_list)
 
     # try to get sender domain from RCVD headers,
     # use header_value_list to obtain
-    # exactly the first rcvd header, order makes sense here
-    h_name, value = (filter(lambda rcvd: re.match('Received', rcvd[0]), header_value_list))[-1:][0]
-    #logger.debug('h_name'+h_name)
-    #logger.debug('value'+value)
+    # exactly the first rcvd header,
+    # order makes sense here
 
-    sender_domain = ''
-    if for_trace.search(value.partition(';')[0]):
-        sender_domain = (for_trace.search(value.partition(';')[0])).group(0)
-        sender_domain = sender_domain.strip('.').strip()
-
-    elif for_body_from.search(heads_dict.get('From')):
+    sender_domain = get_originator_domain(rcvd_value)
+    if not sender_domain:
+        body_from.search(heads_dict.get('From'))
         # try to get it from From: header value
         sender_domain = (for_body_from.search(heads_dict.get('From'))).group(0)
         sender_domain = sender_domain.strip('@')
@@ -204,7 +217,7 @@ def basic_lists_checker(header_value_list, score):
     # check Reply-To only with infos, very controversial, here are only pure RFC 2369 checks
     # leave Errors-To cause all russian authorized email market players
     # rather put exactly Errors-To in their infos instead of List-Unsubscribe
-    rfc_heads = ['List-Unsubscribe','Errors-To', 'Sender']
+    rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
 
     presented = filter(lambda h: (heads_dict.keys()).count(h), rfc_heads)
     # doesn't support RFC 2369 in a proper way
@@ -301,50 +314,60 @@ def basic_mime_checker(mime_heads_vect,score):
     else:
         return(INIT_SCORE)
 
-def basic_url_checker(links_list, score):
-    logger.debug(str(links_list))
+def basic_url_checker(parsed_links_list, rcvd_value, score, count_threshold, domain_regs, regs):
+    logger.debug('our list: '+str(parsed_links_list))
 
-    '''''
-    links_list = [(link.replace('\r\n','')).replace('\t','') for link in links_list]
-    link_score = INIT_SCORE
-    domains_list=[]
+    basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
+    basic_features = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+    # AVG_URL_COUNT: AVG url count lies in certain boundaries for each type of email ));
+    # URL_SCORE: score, which will be earned during regexp-checks for different parts of parsed URLs;
+    # DISTINCT_COUNT: count of different domains from netlocation parts of URLs;
+    # SENDER_COUNT: count of domains/subdomains from netlocation parts of URLs,
+    # which are the same with sender domain from RCVD-headers.
 
-    link_regexes = [
-                    ur'(https?|ftp):\/\/\d{1,3}(\.\d{1,3}){3}(\/.*)?',
-                    ur'(https?|ftp):\/\/[\u0410-\u0451]{2,10}(-?[\u0410-\u0451]{2,10}){0,4}(\.[\u0410-\u0451]{2,5}){1,3}',
-                    ur'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|google\.ad)+',
-                    ur'(https?|ftp):\/\/[\w\d-]{2,63}\.(ro|ru|ua|in|id|ch)(\/[\w\d]){0,}',
-                    # more common for cyrillic, arabic, cjk, split in some expressions just to make it more readable
-                    ur'(https?|ftp):\/\/[\u0410-\u0451\d\.-]{2,252}\.[\u0410-\u0451]{2,5}(\/[-\w\d]){0,}', # cyrillic
-                    ur'(https?|ftp):\/\/[\u0000-\u024f\d\.-]{2,252}\.[\u0000-\u024f]{2,5}(\/[-\w\d]){0,}', # latin-1
-                    ur'(https?|ftp):\/\/[\u2e80-\u30ff\d\.-]{2,252}\.[\u2e80-\u30ff]{2,5}(\/[-\w\d]){0,}', # all CJK
-                    ur'(https?|ftp):\/\/[\ufb50-\ufdff\u0600-\u06ff\d\.-]{2,252}\.[\u0600-\u06ff\ufb50-\ufdff]{2,5}(\/[-\w\d]){0,}', # arabics
-                    ur'(https?|ftp):\/\/[\u0750-\u07ff\d\.-]{2,252}\.[\u0750-\u07ff]{2,5}(\/[-\w\d]){0,}', # one more arabic extended
-                    ur'(Click\s+Here|(<|>)+|Login|Update|verify|Go)',
-                    ur'(Клик\s+|жми\s+.*\s+сюда\s+|просмотреть\s+каталог|сайт)',
-                    ur'(новости|ссылке|идите|переход|услуги|цены|фото|страничка)',
-                    ur'([\u25a0-\u29ff]|)', # dingbats
+    # avg_url_count
+    if len(parsed_links_list) < count_threshold:
+        basic_features['avg_url_count'] = score
 
-    ]
+    netloc_list = []
+    for url in parsed_links_list:
+        if url.netloc:
+            netloc_list.append(url.netloc)
+            continue
+        elif url.path:
+            netloc_list.append(url.path.strip('www.'))
+            continue
 
-    for link in links_list:
-        match = filter(lambda exp: re.search(exp, link, re.I), link_regexes)
-        link_score += len(match)
+    netloc_list = filter(lambda d: d, netloc_list)
 
-        url_match = re.search(ur'(https?|ftp):\/\/[\w\d\.-]{2,252}(\.[\w]{2,4})', link, re.I)
-        if url_match:
-            url = domain_match.group(0)
-            only_tag_data = re.sub(url,'',link)
-            domain = re.sub(ur'(https?|ftp):\/\/','',url)
-            # number of dots in domain
-            link_score += len(re.findall(ur'\.',domain))
-            domains.append(domain)
+    sender_domain = get_originator_domain(rcvd_value)
+    pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
 
-            # check presense of <IMG> or <script> inside anchor
-            if re.search(ur'(<IMG|<script)', link, re.I):
-                link_score += score
-    '''''
-    return(links_list)
+    # url_score, distinct_count, sender_count
+    if netloc_list:
+        domain_regs = get_regexp(domain_regs, re.I)
+
+        for reg in domain_regs:
+            basic_features['url_score'] += len(filter(lambda netloc: reg.search(netloc), netloc_list))*score
+
+        basic_features['distinct_count'] += len(set([d.strip() for d in netloc_list]))
+        basic_features['sender_count'] += len(filter(lambda d: re.search(pattern, d, re.I), netloc_list))
+
+    # url_score
+    metainfo_list = []
+    for attr in ['path', 'query', 'fragment']:
+        metainfo_list.extend([i.__getattribute__(attr) for i in parsed_links_list])
+
+    if metainfo_list:
+        regs = get_regexp(regs, re.I)
+        for reg in regs:
+            basic_features['url_score'] += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*score
+
+    return(basic_features, netloc_list)
+
+
+
+
 
 
 

@@ -54,7 +54,7 @@ def headers_parser(head_string, email):
 def get_mime_info(msg,d_name):
 
     print(email.iterators._structure(msg))
-    print
+    logger.debug('\n')
     mime_heads = ['content-type','content-transfer-encoding','content-id','content-disposition']
     total =0
     for part in  msg.walk():
@@ -65,7 +65,7 @@ def get_mime_info(msg,d_name):
 
         total += all_heads.count('content-type')
 
-    print
+    logger.debug('\n')
     logger.debug('PAYLOAD( '+(d_name)+' ): ==> '+str(len(msg.get_payload())))
     logger.debug('MIME_PARTS_NUM( '+(d_name)+' ): ==> '+str(total))
 
@@ -96,13 +96,23 @@ def get_text_parts(msg):
 
         if part:
             decoded_line = part.get_payload()
+            charset_map = {'x-sjis': 'shift_jis'}
 
             if part.get('Content-Transfer-Encoding') in encodings.keys():
                 f = encodings.get(part.get('Content-Transfer-Encoding'))
                 decoded_line = f(decoded_line)
 
-            if isinstance(decoded_line, bytes):
-                decoded_line = decoded_line.decode(part.get_content_charset(),'replace')
+            charset = ''
+            for charset in (part.get_content_charset(), part.get_charset()):
+                if charset:
+                    if charset in charset_map.keys():
+                        charset =  charset_map.get(charset)
+
+            if isinstance(decoded_line, bytes) and charset:
+                decoded_line = decoded_line.decode(charset, 'replace')
+
+            elif isinstance(decoded_line, bytes):
+                decoded_line = decoded_line.decode('utf-8', 'replace')
 
             text_parts.append((decoded_line, part.get_content_charset(), part.get_content_type()))
 
@@ -123,8 +133,8 @@ def get_mime_struct(msg):
             if head == 'content-type':
 
                 part_key = part.get(head)
-                part_key = part_key.partition(';')[0].strip()
-                part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
+                part_key = str(part_key).partition(';')[0].strip()
+                part_dict[head] = re.sub(part_key+';','',str(part.get(head)),re.I)
 
             else:
                 part_dict[head] = part.get(head)
@@ -148,13 +158,15 @@ def get_url_list(msg):
     for line, encoding, content_type in text_parts:
 
         if 'html' in content_type:
-
             soup = BeautifulSoup(line)
             if soup.a:
                 url_list.extend(soup.a)
         else:
 
-            url_list.extend(list(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split('\n')])))
+            x = list(filter(lambda y: y, [l.strip() for l in line.split()]))
+
+            if x:
+                url_list.extend(list(filter(lambda url: re.search(url_regexp, url, re.I), x)))
 
     #logger.debug('URL LIST >>>> '+str(url_list))
     return(url_list)
@@ -191,6 +203,8 @@ if __name__ == "__main__":
                     pathes.append(os.path.join(path, d))
 
         common_heads_list = []
+        header_counts_list = []
+        urls_count_list = []
         for sample_path in pathes:
             with open(sample_path, 'rb') as f:
                 msg = parser.parse(f)
@@ -226,18 +240,30 @@ if __name__ == "__main__":
                 d = get_mime_struct(msg)
                 logger.debug('=====================================')
                 for k in d.keys():
-                    print('\t{0:25} {1:}'.format(k,str(d.get(k))))
+                    logger.debug('\t{0:25} {1:}'.format(k,str(d.get(k))))
 
                 logger.debug('=====================================')
 
             logger.debug('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
             logger.debug('==========URL_LIST==========')
             i = 0
-            for l in get_url_list(msg):
+            url_list = get_url_list(msg)
+            logger.debug('>> URL LIST '+str(url_list))
+            logger.debug('\n')
+
+            for l in url_list:
                 logger.debug('\t'+str(i)+'. >'+str(l)+'<')
                 i +=1
-
+            logger.debug('URL LIST LEN: '+str(len(url_list)))
+            urls_count_list.append(len(url_list))
             logger.debug('NEST LEVEL: '+str(get_nest_level(msg)))
+
+            header_counts_list.append(len(msg.keys()))
+
+
+        logger.debug('AVG URL LIST LEN: '+str(float(sum(urls_count_list))/float(len(urls_count_list))))
+        logger.debug('AVG HEADS COUNT: '+str(float(sum(header_counts_list))/float(len(header_counts_list))))
+
 
         if args.stat:
             logger.debug('\n============== heads stat ====================\n')
