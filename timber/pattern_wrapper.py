@@ -134,6 +134,8 @@ class BasePattern(object):
             logger.debug('-------------')
             logger.debug(i)
         if self.url_list:
+            self.url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(') for s in self.url_list[:] ]
+
             parsed_urls = []
             for y in self.url_list:
                 try:

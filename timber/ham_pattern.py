@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 "Set vectorising rules for hams."
 
-import os, sys, logging, common
+import os, sys, logging, common, math
 from pattern_wrapper import BasePattern
 from collections import OrderedDict
 
@@ -17,24 +17,28 @@ logger.setLevel(logging.DEBUG)
 
 class HamPattern(BasePattern):
 
+    MAX_SUBJ_LEN = 5
+    MIN_SUBJ_LEN = 60
+    URL_MAX_COUNT = 5.0
+    URL_MIN_COUNT = 0.0
+    URL_LEN_THRESHOLD = 60.0
+
 
 	def run(self, score):
         vector_dict = OrderedDict()
 
-        vector_dict.update(common.get_body_skeleton())
-        logger.debug(vector_dict)
+        # 1. "Subject:" Header
+        logger.debug('>>> 1. SUBJECT CHECKS:')
 
-
-        # Subject checks
         features = ['len','style','score']
-        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [BasePattern.INIT_SCORE]*len(features)))
+        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
         if self.msg.get('Subject'):
 
-            total_score = BasePattern.INIT_SCORE
+            total_score = INIT_SCORE
             unicode_subj, norm_words_list = common.get_subject(self.msg("Subject"))
 
-            if 5 < len(unicode_subj) < 60:
+            if self.MIN_SUBJ_LEN < len(unicode_subj) < self.MAX_SUBJ_LEN:
                 features_dict['subj_len'] = 1
 
             hams_patterns = [
@@ -42,7 +46,6 @@ class HamPattern(BasePattern):
                                 ur'(support|help|participate|registration|electronic|answer|from|update|undelivered)',
                                 ur'(от\s+([\w-\.]{3,10})\s+|счет|отчет|выписка|электронный\s+(билет)?)'
                             ]
-
 
 
             subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_rule, score)
@@ -55,16 +58,49 @@ class HamPattern(BasePattern):
         vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
+        # 8. check urls
+        logger.debug('>>> 2. URL_CHECKS:')
+
+        urls_list = BasePattern.get_url_list(self)
+
         if urls_list:
-            urls_features = ['score','count']
-            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+            logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-            urls_score, domains_list =  common.basic_url_checker(urls_list)
-            urls_dict['score'] = urls_score
+            domain_regs = [
+                                ur'(www\.)?(registration|account|payment|confirmation|password|intranet|emarket)',
+                                ur'(www\.)?(tickets+|anywayanyday|profile|job|my\.|email|blog|support)',
+                                ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',
+                                ur'(www\.)?(linkedin\.com|facebook\.com|linternaute\.com|blablacar\.com)',
+                                ur'(www\.)?(youtube\.com|plus\.google\.com|twitter\.com|pinterest\.com|tumblr\.com)',
+                                ur'(www\.)?(instagram\.com|flickr\.com|vine\.com|tagged\.com|ask\.fm|meetme\.com)',
+                                ur'(www\.)?classmates'
+            ]
 
+            regs = [
+                                ur'(users?\/|id|sign[_\s]{0,1}(in|up)|e?ticket|kassa|account|payment|confirm(ation)?|password',
+                                ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
+                    ]
 
-            urls_dict['count'] = len(domains_list)
+            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, \
+                                        (self.URL_MIN_COUNT, self.URL_MAX_COUNT), domain_regs, regs)
 
+            urls_features = ['avg_length', 'query_absence']
+            urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+
+            queries_count = float(len(filter(lambda line: line, [ u.query for u in urls_list ])))
+            if math.floor(queries_count/float(len(urls_list))) == 0.0:
+                urls_features['query_absence'] = score
+
+            short_urls_count = len(filter(lambda url: len(url) >= self.URL_LEN_THRESHOLD, [ obj.geturl() for obj in urls_list ]))
+            if math.floor(float(short_urls_count)/float(len(urls_list))) == 0.0:
+                urls_features['avg_length'] = score
+
+        else:
+            basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
+            basic_features_dict = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+
+        vector_dict.update(basic_features_dict)
+        vector_dict.update(urls_dict)
 
 		return(vector_dict)
 

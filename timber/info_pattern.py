@@ -5,7 +5,7 @@ If doc(email) is very similar to this pattern
 its vector will be filled by "1" or score value > 0
 or crc32 value for each feature, otherwise - "0" """
 
-import os, sys, logging, common, re, binascii
+import os, sys, logging, common, re, binascii, math
 from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict
@@ -19,14 +19,18 @@ logger.setLevel(logging.DEBUG)
 
 
 class InfoPattern(BasePattern):
+    MAX_SUBJ_LEN = 2
+    MIN_SUBJ_LEN = 7
+    URL_MAX_COUNT = 10.0
+    URL_MIN_COUNT = 4.0
 
     def run(self, score):
 
         vector_dict = OrderedDict()
 
-        # 1. Received headers
+        # 1. "Received:" Headers
+        logger.debug('>>> 1. RCVD_CHECKS:')
 
-        logger.debug('>>>RCVD_CHECKS:')
         # get crc32 of only unique headers and their values
         excluded_heads = [
                             'Received', 'Subject', 'From', 'Date', 'Received-SPF', 'To', 'Content-Type',\
@@ -45,39 +49,44 @@ class InfoPattern(BasePattern):
         vector_dict.update(common.get_trace_crc(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
 
+
+        # 2. "To:", "SMTP RCPT TO:" Headers
+        logger.debug('>>> 2. DESTINATOR CHECKS:')
+
         # check that rcpt from trace field and To the same and the one (in general)
-        logger.debug('>>> DESTINATOR CHECKS:')
         vector_dict['to'] = common.basic_rcpts_checker(score, self.msg.get_all('Received'), self.msg.get_all('To'))
 
-        logger.debug('>>> DMARC checks:')
+
+        logger.debug('>>> 3. SPF/DKIM_CHECKS:')
         logger.debug('>>>'+str(common.basic_dmarc_checker(self.msg.items(), score)))
         dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
         logger.debug(str(dmarc_dict_checks))
         vector_dict.update(dmarc_dict_checks)
         vector_dict['dmarc'] = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I),self.msg.keys()))
 
-        logger.debug('>>> Specific E-marketing fileds checks:')
-        # Presense of X-EMID && X-EMMAIL
-        em_names = ['X-EMID','X-EMMAIL']
-        sc = 0
-        pat = '^X-EM(ID|MAIL)$'
 
-        if len(set(filter(lambda xx: re.match(pat,xx,re.I),self.msg.keys()))) == len(em_names):
-            if self.msg.get('X-EMMAIL') == self.msg.get('To'):
-                sc = 1
+        # 4. Presense of X-EMID && X-EMMAIL, etc
+        logger.debug('>>> 4. Specific E-marketing fields checks:')
 
-        em_dict = dict(map(lambda x,y: (x,y),em_names,[sc]*len(em_names)))
-        vector_dict.update(em_dict)
+        em_feauture_dict = {'em_count': INIT_SCORE}
+        pat = '^X-EM(ID|MAIL|V-.*)$'
 
-        # 2. Subject checks
-        logger.debug('>>>SUBJ_CHECKS:')
+        emarket_heads_count = set(filter(lambda header: re.match(pat, header, re.I), self.msg.keys()))
+        if emarket_heads_count:
+            em_feauture_dict['em_count'] = len(emarket_heads_count)
+
+        vector_dict.update(em_feauture_dict)
+
+
+        # 4. Subject checks
+        logger.debug('>>> 4. SUBJ CHECKS:')
+
         features = ['len','style','score','checksum','encoding']
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
         if self.msg.get('Subject'):
 
             total_score = INIT_SCORE
-
             unicode_subj, norm_words_list, encodings = common.get_subject(self.msg.get("Subject"))
 
             subject_regs = [
@@ -111,12 +120,12 @@ class InfoPattern(BasePattern):
                 features_dict['subj_style'] = 1
 
             # un mine d'or for infos  http://emailmarketing.comm100.com/email-marketing-tutorial/
-            if 2 < len(norm_words_list) < 7:
+            if self.MIN_SUBJ_LEN < len(norm_words_list) < self.MAX_SUBJ_LEN:
                 features_dict['subj_len'] = 1
 
             features_dict['subj_score'] = total_score + subj_score
 
-            # infos statistically have subj lines in utf-8 or pure ascii
+            # infos generally have subj lines in utf-8 or pure ascii
             if len(set(encodings)) == 1 and set(encodings).issubset(['utf-8','ascii']):
                 features_dict['encoding'] = 1
 
@@ -129,8 +138,8 @@ class InfoPattern(BasePattern):
         vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
-        # 3. List checks and some other RFC 5322 compliences checks for headers
-        logger.debug('>>> LIST_CHECKS:')
+        # 5. List checks and some other RFC 5322 compliences checks for headers
+        logger.debug('>>> 5. LIST_CHECKS:')
         list_features = ['basic_checks', 'ext_checks','sender','precedence','typical_heads','reply-to','delivered']
         list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
 
@@ -174,7 +183,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # 4. crc for From values
-        logger.debug('>>> ORIGINATOR_CHECKS:')
+        logger.debug('>>> 6. ORIGINATOR_CHECKS:')
         vector_dict['from'] = INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
 
@@ -191,8 +200,8 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict)+'\n')
 
 
-        # 5. Check MIME headers
-        logger.debug('>>> MIME CHECKS:')
+        # 7. Check MIME headers
+        logger.debug('>>> 7. MIME CHECKS:')
         mime_skeleton = BasePattern.get_mime_struct(self)
         logger.debug('MIME STRUCT: '+str(mime_skeleton))
 
@@ -212,25 +221,66 @@ class InfoPattern(BasePattern):
         vector_dict['in_score'] = in_score
         vector_dict['nest_level'] = BasePattern.get_nest_level(self)
 
-         # 6. check urls
-        logger.debug('>>>URL_CHECKS:')
+        # 8. check urls
+        logger.debug('>>> 8. URL_CHECKS:')
+
         urls_list = BasePattern.get_url_list(self)
-        logger.debug('URLS_LIST >>>>>'+str(urls_list))
-        if urls_list:
-            urls_features = ['score','distinct_domains','count']
-            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
-        '''''
-        if urls_list:
-            urls_features = ['score','count','same_as_sender']
-            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
-            urls_score, domains_list =  common.basic_url_checker(urls_list)
-            urls_dict['score'] = urls_score
+        if urls_list:
+            logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-            domain_matches = filter(lambda d: re.search(dkim_domain,d), domains_list)
-            urls_dict['same_as_sender'] = len(domain_matches)
-            urls_dict['count'] = len(domains_list)
-        '''''
+            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, \
+                                        (self.URL_MIN_COUNT, self.URL_MAX_COUNT), domain_regs, regs)
+
+
+            urls_features = ['query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii']
+            urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+
+
+            domain_regs = [
+                                ur'(news(letter)?|trip|sales+|offer|journal|event|post|asseccories|rasprodaga)',
+                                ur'(global|response|click|shop|sale|flight|hotel|cit(y|ies)|campaign|bouquet)',
+                                ur'(celebration|friday|binus|magazin|cheap|subscibe|manage|feed|list|blog)',
+                                ur'(programm|online|create|amazon|meetup|book|flowers|app|connect|emea|habrahabr|media)',
+                                ur'(citilink|ulmart|lamoda|nero-|vip|ideel|quora|yves-rocher|fagms.de|wix.com|papers)',
+                                ur'(opportunity|whites+|chance|email|practice|yr-ru|us\d-|stanford|brands+|labels+)',
+                                ur'(look-at-media|digest|the-village|ozon.ru|enter.ru)'
+            ]
+
+            regs = [
+                                ur'(cheap.*|prices+|clothes+|action|shoes+|women|label|brand|zhensk|odezhd)',
+                                ur'(campaign|rasprodaga|requirements|choice|personal|track|click|customer|product)',
+                                ur'(meetup|facebook|twitter|pinterest|vk|odnoklassinki|google)_footer',
+                                ur'(training|mailing|modify|unsub|newsletter|catalog|mdeia|graphics|announcement)',
+                                ur'(utm_medium=|utm_source=|utm_term=|utm_campaign=|applications+|upn=|aspx\?)',
+                                ur'(shop|magazin|collections+|lam|(mail_link_)?track(er)?|EMID=|EMV=|genders)'
+                    ]
+
+
+
+            print('NETLOC_LIST >>>'+str(netloc_list))
+            print('DICT >>>'+str(basic_features_dict))
+
+            url_lines = [ ''.join(u._asdict().values()) for u in urls_list ]
+            if filter(lambda x: x in string.printable, [line for line in url_lines]):
+                urls_dict['ascii'] = score
+
+            for attr in ['path','query']:
+                obj_list = [url.__getattribute__(attr) for url in urls_list]
+
+                lengthes_list = [len(line) for line in obj_list]
+                urls_dict['avg_'+attr+'_len'] = sum(lengthes_list)/len(obj_list)
+
+                if math.ceil(float(len(set(obj_list)))/float(len(urls_list))) < 1.0:
+                    urls_dict[attr+'_sim'] = score
+
+
+        else:
+            basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
+            basic_features_dict = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+
+        vector_dict.update(basic_features_dict)
+        vector_dict.update(urls_dict)
 
         return (vector_dict)
 

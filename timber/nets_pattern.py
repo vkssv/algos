@@ -16,13 +16,16 @@ logger.setLevel(logging.DEBUG)
 
 
 class NetsPattern(BasePattern):
+    URL_MAX_COUNT = 8.0
+    URL_MIN_COUNT = 4.0
+    URL_LEN_THRESHOLD = 110.0
 
     def run(self, score):
 
         vector_dict = OrderedDict()
 
-        # 1. Received headers
-        logger.debug('>>> RCVD_CHECKS:')
+        # 1. "Received:" Headers
+        logger.debug('>>> 1. RCVD_CHECKS:')
 
         # get crc32 of only unique headers and their values
         excluded_heads = [
@@ -37,8 +40,9 @@ class NetsPattern(BasePattern):
         vector_dict ["traces_num"] = self.msg.keys().count('Received')
         logger.debug('\t----->'+str(vector_dict))
 
-        # some basic rcpts checks
-        logger.debug('>>> DESTINATOR CHECKS:')
+
+        # 2. "To:", "SMTP RCPT TO:" Headers
+        logger.debug('>>> 2. DESTINATOR CHECKS:')
         vector_dict['to'] = common.basic_rcpts_checker(score ,self.msg.get_all('Received'), self.msg.get_all('To'))
 
         # get crc32 from first N trace fields
@@ -48,8 +52,10 @@ class NetsPattern(BasePattern):
         vector_dict.update(common.get_trace_crc(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
 
-        logger.debug('>>> DMARC CHECKS:')
-        # DMARC checks
+
+        # 3. DMARC checks
+        logger.debug('>>> 3. SPF/DKIM_CHECKS:')
+
         dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
         vector_dict.update(dmarc_dict_checks)
 
@@ -81,8 +87,8 @@ class NetsPattern(BasePattern):
 
         vector_dict['known_domain'] = len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), known_domains))
 
-        # 2. Subject checks
-        logger.debug('>>> SUBJECT CHECKS:')
+        # 4. Subject checks
+        logger.debug('>>> 4. SUBJECT CHECKS:')
         features = ['style','score','encoding','checksum']
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
@@ -130,8 +136,8 @@ class NetsPattern(BasePattern):
         vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
-        # 4. crc for From values
-        logger.debug('>>> ORIGINATOR CHECKS:')
+        # 5. crc for From values
+        logger.debug('>>> 5. ORIGINATOR CHECKS:')
         vector_dict['from']=0
         logger.debug('\t----->'+str(vector_dict))
 
@@ -142,15 +148,15 @@ class NetsPattern(BasePattern):
                 vector_dict['from'] = binascii.crc32(reduce(add,from_values))
                 logger.debug('\t----->'+str(vector_dict))
 
-        # 5. simple List fields checks
-        logger.debug('>>> LIST CHECKS:')
+        # 6. simple List fields checks
+        logger.debug('>>> 6. LIST CHECKS:')
         list_features = ['basic_checks', 'delivered']
         list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
 
         logger.debug('\t----->'+str(list_features_dict))
 
         if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self.msg.keys()):
-            # well, this unique spam author respects RFC 2369, his creation deservs more attentive check
+
             list_features_dict['basic_checks'] = common.basic_lists_checker(self.msg.items(), score)
             logger.debug('\t----->'+str(list_features_dict))
 
@@ -165,8 +171,8 @@ class NetsPattern(BasePattern):
         vector_dict.update(list_features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
-        # 5. Check MIME headers
-
+        # 7. Check MIME headers
+        logger.debug('>>> 7. MIME CHECKS:')
         mime_checks = [(x,0) for x in ['mime_spammness', 'att_count','att_score','in_score','nest_level']]
         mime_dict = dict(mime_checks)
 
@@ -194,28 +200,62 @@ class NetsPattern(BasePattern):
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
 
-
-
-
         # analyse attachements extensions
 
         #vect_dict.update(common.get_body_skeleton(self.msg))
 
+        logger.debug('>>> 8. URL_CHECKS:')
 
-        logger.debug('>>>URL_CHECKS:')
         urls_list = BasePattern.get_url_list(self)
-        '''
+        logger.debug('URLS_LIST >>>>>'+str(urls_list))
         if urls_list:
-            urls_features = ['score','count','same_as_sender']
-            urls_dict = dict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
-            urls_score, domains_list =  common.basic_url_checker(urls_list)
-            urls_dict['score'] = urls_score
+            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, \
+                                        (self.URL_MIN_COUNT, self.URL_MAX_COUNT), domain_regs, regs)
 
-            domain_matches = filter(lambda d: re.search(dkim_domain,d), domains_list)
-            urls_dict['same_as_sender'] = len(domain_matches)
-            urls_dict['count'] = len(domains_list)
-        '''
+
+
+            domain_regs = [
+                                ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',
+                                ur'(www\.)?(linkedin\.com|facebook\.com|linternaute\.com|blablacar\.com)',
+                                ur'(www\.)?(youtube\.com|plus\.google\.com|twitter\.com|pinterest\.com|tumblr\.com)',
+                                ur'(www\.)?(instagram\.com|flickr\.com|vine\.com|tagged\.com|ask\.fm|meetme\.com)',
+                                ur'((www\.)?classmates'
+                            ]
+
+            regs =  [
+                                ur'\?(find-friends|learn-more|home\.php|submit|simpleredirect)',
+                                ur'loc=(facepile|profile_pic|cta|reminder|tracking|email|validate_e?mail\?)',
+                                ur'(formlink|jobs|events|btn|teaser|profile|logo_|userpic)',
+                                ur'(eml-skills_endorsements-btn-0-new_teaser_add|grp_email_subscribe_new_posts)'
+
+                    ]
+
+            urls_features = ['path_sim', 'ascii', 'avg_length']
+            urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+
+            url_lines = [ ''.join(u._asdict().values()) for u in urls_list ]
+            if filter(lambda x: x in string.printable, [line for line in url_lines]):
+                urls_dict['ascii'] = score
+
+            urls_count = len(filter(lambda url: len(url) >= self.URL_LEN_THRESHOLD, [ obj.geturl() for obj in urls_list ]))
+            if math.floor(float(urls_count)/float(len(urls_list))) == 0.0:
+                urls_features['avg_length'] = score
+
+            obj_list = [url.__getattribute__('path') for url in urls_list]
+            if math.ceil(float(len(set(obj_list)))/float(len(urls_list))) < 1.0:
+                urls_dict['path_sim'] = score
+
+
+        else:
+            basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
+            basic_features_dict = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+
+        vector_dict.update(basic_features_dict)
+        vector_dict.update(urls_dict)
+
+
+
         return (vector_dict)
 
 

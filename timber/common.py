@@ -99,14 +99,20 @@ def get_addr_values(head_value=''):
     # names are raw encoded strings
     return(tuple(names),tuple(addrs))
 
-def get_originator_domain(rcvd_value):
+def get_originator_domain(rcvds):
 # get sender domain from the first (by trace) RCVD-field, e.g. SMTP MAIL FROM: value
     orig_domain=''
 
-    for_trace = re.compile(r'\.[a-z0-9]{1,63}\.[a-z]{2,4}\s+',re.M)
-    orig_domain = (for_trace.search(rcvd_value)).group(0)
-    orig_domain = orig_domain.strip('.').strip()
+    regexp = re.compile(r'(@|\.)[a-z0-9]{1,63}\.[a-z]{2,4}',re.M)
+    for value in rcvds:
 
+        logger.debug('>>>> RCVD value:'+value+'<')
+        orig_domain = regexp.search(value)
+        if orig_domain:
+            orig_domain = orig_domain.group(0)
+            orig_domain = orig_domain.strip('.').strip('@').strip()
+            break
+    print(orig_domain.upper())
     return(orig_domain)
 
 def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
@@ -188,7 +194,7 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
 
     return (total_score, upper_flag, title_flag)
 
-def basic_lists_checker(header_value_list, rcvd_value, score):
+def basic_lists_checker(header_value_list, rcvds, score):
     # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
     # have to be checked with antiphishing service
     unsubscribe_score = INIT_SCORE
@@ -202,7 +208,7 @@ def basic_lists_checker(header_value_list, rcvd_value, score):
     # exactly the first rcvd header,
     # order makes sense here
 
-    sender_domain = get_originator_domain(rcvd_value)
+    sender_domain = get_originator_domain(rcvds)
     if not sender_domain:
         body_from.search(heads_dict.get('From'))
         # try to get it from From: header value
@@ -314,7 +320,7 @@ def basic_mime_checker(mime_heads_vect,score):
     else:
         return(INIT_SCORE)
 
-def basic_url_checker(parsed_links_list, rcvd_value, score, count_threshold, domain_regs, regs):
+def basic_url_checker(parsed_links_list, rcvds, score, count_bounds, domain_regs, regs):
     logger.debug('our list: '+str(parsed_links_list))
 
     basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
@@ -326,7 +332,8 @@ def basic_url_checker(parsed_links_list, rcvd_value, score, count_threshold, dom
     # which are the same with sender domain from RCVD-headers.
 
     # avg_url_count
-    if len(parsed_links_list) < count_threshold:
+    min, max = count_bounds
+    if min < len(parsed_links_list) < max:
         basic_features['avg_url_count'] = score
 
     netloc_list = []
@@ -339,8 +346,16 @@ def basic_url_checker(parsed_links_list, rcvd_value, score, count_threshold, dom
             continue
 
     netloc_list = filter(lambda d: d, netloc_list)
+    only_str_obj = filter(lambda i: type(i) is str, netloc_list)
 
-    sender_domain = get_originator_domain(rcvd_value)
+    if only_str_obj:
+        only_str_obj  = [i.decode('utf8') for i in only_str_obj]
+        netloc_list = only_str_obj + filter(lambda i: type(i) is unicode, netloc_list)
+
+    print("NETLOC: >>>>>"+str(netloc_list))
+
+
+    sender_domain = get_originator_domain(rcvds)
     pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
 
     # url_score, distinct_count, sender_count

@@ -205,6 +205,7 @@ if __name__ == "__main__":
         common_heads_list = []
         header_counts_list = []
         urls_count_list = []
+        urls_lens = []
         for sample_path in pathes:
             with open(sample_path, 'rb') as f:
                 msg = parser.parse(f)
@@ -254,14 +255,17 @@ if __name__ == "__main__":
             for l in url_list:
                 logger.debug('\t'+str(i)+'. >'+str(l)+'<')
                 i +=1
+                urls_lens.append(len(l))
             logger.debug('URL LIST LEN: '+str(len(url_list)))
             urls_count_list.append(len(url_list))
+
             logger.debug('NEST LEVEL: '+str(get_nest_level(msg)))
 
             header_counts_list.append(len(msg.keys()))
 
 
         logger.debug('AVG URL LIST LEN: '+str(float(sum(urls_count_list))/float(len(urls_count_list))))
+        logger.debug('AVG URL LEN: '+str(float(sum(urls_lens))/float(len(urls_lens))))
         logger.debug('AVG HEADS COUNT: '+str(float(sum(header_counts_list))/float(len(header_counts_list))))
 
 

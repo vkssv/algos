@@ -17,7 +17,8 @@ class SpamPattern(BasePattern):
 
     MAX_SUBJ_LEN = 5
     MIN_SUBJ_LEN = 70
-    URL_COUNT_THRESHOLD = 4.0
+    URL_MAX_COUNT = 4.0
+    URL_MIN_COUNT = 0.0
 
     def run(self, score):
 
@@ -51,6 +52,7 @@ class SpamPattern(BasePattern):
 
         n_rcvds = 2
         rcvds = BasePattern.get_rcvds(self,n_rcvds)
+        print('TYPE:'+str(type(rcvds)))
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
         for rule in rcvd_rules:
             if filter(lambda l: re.search(rule, l), rcvds):
@@ -179,7 +181,7 @@ class SpamPattern(BasePattern):
 
         if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.msg.keys()):
             # this unique spam author respects RFC 2369, his creation deservs more attentive check
-            list_features_dict['list'] = common.basic_lists_checker(self.msg.items(), rcvds[0], score)
+            list_features_dict['list'] = common.basic_lists_checker(self.msg.items(), rcvds, score)
             logger.debug('\t----->'+str(list_features_dict))
 
         elif (self.msg.keys().count('Sender') and self.msg.keys().count('From')):
@@ -261,9 +263,9 @@ class SpamPattern(BasePattern):
 
         urls_list = BasePattern.get_url_list(self)
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
-        urls_features = ['url_upper', 'repetitions', 'punicode', 'domain_name_level']
 
-        urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+        features = ['url_upper', 'repetitions', 'punicode', 'domain_name_level']
+        features_dict = OrderedDict(map(lambda x,y: (x,y), features, [INIT_SCORE]*len(features)))
 
         if urls_list:
 
@@ -301,27 +303,35 @@ class SpamPattern(BasePattern):
                                 ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
                     ]
 
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds[0], score, self.URL_COUNT_THRESHOLD, domain_regs, regs)
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds, score, \
+                                        (self.URL_MIN_COUNT, self.URL_MAX_COUNT), domain_regs, regs)
+
+            print('NETLOC_LIST >>>'+str(netloc_list))
+            print('DICT >>>'+str(basic_features_dict))
 
             if netloc_list:
-                for met in [unicode.isupper, unicode.istitle]:
-                    urls_dict['url_upper'] += len(filter(lambda s: met(s), netloc_list))*score
+                for met in [ unicode.isupper, unicode.istitle ]:
+                #for met in [unicode.isupper, unicode.istitle]:
+                    features_dict['url_upper'] += len(filter(lambda s: met(s), netloc_list))*score
 
                 puni_regex = ur'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
-                urls_dict['punicode'] = len(filter(lambda u: re.search(puni_regex,u,re.I), netloc_list))*score
+                features_dict['punicode'] = len(filter(lambda u: re.search(puni_regex,u,re.I), netloc_list))*score
 
-                urls_dict['domain_name_level'] = len(filter(lambda n: n>=2, [s.count('.') for s in netloc_list]))*score
+                features_dict['domain_name_level'] = len(filter(lambda n: n>=2, [s.count('.') for s in netloc_list]))*score
 
 
             repet_regex = ur'(https?:\/\/|www\.)\w{1,61}(\.\w{2,10}){1,5}'
             urls = [x.geturl() for x in urls_list]
 
             if filter(lambda l: len(l)>1, map(lambda url: re.findall(repet_regex,url,re.I), urls)):
-                urls_dict['repetitions'] = 1
+                features_dict['repetitions'] = 1
 
-            urls_dict.update(basic_features_dict)
+        else:
+            basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
+            basic_features_dict = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
 
-        vector_dict.update(urls_dict)
+        vector_dict.update(basic_features_dict)
+        vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
 
