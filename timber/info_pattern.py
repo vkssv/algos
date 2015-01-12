@@ -8,7 +8,7 @@ or crc32 value for each feature, otherwise - "0" """
 import os, sys, logging, common, re, binascii, math
 from operator import add
 from pattern_wrapper import BasePattern
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
@@ -21,8 +21,6 @@ logger.setLevel(logging.DEBUG)
 class InfoPattern(BasePattern):
     MAX_SUBJ_LEN = 2
     MIN_SUBJ_LEN = 7
-    URL_MAX_COUNT = 10.0
-    URL_MIN_COUNT = 4.0
 
     def run(self, score):
 
@@ -229,9 +227,7 @@ class InfoPattern(BasePattern):
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, \
-                                        (self.URL_MIN_COUNT, self.URL_MAX_COUNT), domain_regs, regs)
-
+            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
 
             urls_features = ['query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii']
             urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
@@ -276,8 +272,8 @@ class InfoPattern(BasePattern):
 
 
         else:
-            basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
-            basic_features_dict = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+            basics = ['url_count', 'url_score', 'distinct_count', 'sender_count']
+            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
         vector_dict.update(urls_dict)

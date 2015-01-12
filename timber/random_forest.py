@@ -11,7 +11,7 @@ using different presets of loaded heuristics
 
 import sys, os, logging, re, email, argparse, stat, tempfile
 from email.parser import Parser
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from pattern_wrapper import MetaPattern
 
@@ -25,7 +25,7 @@ logger.setLevel(logging.DEBUG)
 def vectorize(doc_path, label, score):
 
     logger.debug("\n\nStart processing: " + doc_path + ' from "' + label + '" set')
-    vect_dict = {}
+    vect_dict = OrderedDict()
 
     parser = Parser()
     with open(doc_path, 'rb') as f:
@@ -33,7 +33,7 @@ def vectorize(doc_path, label, score):
 
 
     # size
-    vect_dict ['size'] = float((os.stat(doc_path).st_size)/1024)
+    vect_dict['size'] = float((os.stat(doc_path).st_size)/1024)
     logger.debug('----->'+str(vect_dict))
 
     try:

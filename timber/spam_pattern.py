@@ -5,7 +5,8 @@
 import os, sys, logging, re, common, binascii, urllib
 from operator import add
 from pattern_wrapper import BasePattern
-from collections import OrderedDict
+from collections import OrderedDict, Counter
+
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
 
@@ -17,8 +18,6 @@ class SpamPattern(BasePattern):
 
     MAX_SUBJ_LEN = 5
     MIN_SUBJ_LEN = 70
-    URL_MAX_COUNT = 4.0
-    URL_MIN_COUNT = 0.0
 
     def run(self, score):
 
@@ -303,8 +302,9 @@ class SpamPattern(BasePattern):
                                 ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
                     ]
 
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds, score, \
-                                        (self.URL_MIN_COUNT, self.URL_MAX_COUNT), domain_regs, regs)
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
+            basic_features_dict.pop('url_count') # for spams url count may be totally different
+
 
             print('NETLOC_LIST >>>'+str(netloc_list))
             print('DICT >>>'+str(basic_features_dict))
@@ -327,8 +327,8 @@ class SpamPattern(BasePattern):
                 features_dict['repetitions'] = 1
 
         else:
-            basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
-            basic_features_dict = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+            basics = ['url_score', 'distinct_count', 'sender_count']
+            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
         vector_dict.update(features_dict)

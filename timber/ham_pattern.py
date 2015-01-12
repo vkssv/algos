@@ -4,7 +4,7 @@
 
 import os, sys, logging, common, math
 from pattern_wrapper import BasePattern
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
@@ -19,10 +19,6 @@ class HamPattern(BasePattern):
 
     MAX_SUBJ_LEN = 5
     MIN_SUBJ_LEN = 60
-    URL_MAX_COUNT = 5.0
-    URL_MIN_COUNT = 0.0
-    URL_LEN_THRESHOLD = 60.0
-
 
 	def run(self, score):
         vector_dict = OrderedDict()
@@ -81,8 +77,8 @@ class HamPattern(BasePattern):
                                 ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
                     ]
 
-            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, \
-                                        (self.URL_MIN_COUNT, self.URL_MAX_COUNT), domain_regs, regs)
+            d, * = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
+            basic_features_dict['url_score'] = d.get('url_score')
 
             urls_features = ['avg_length', 'query_absence']
             urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
@@ -91,13 +87,11 @@ class HamPattern(BasePattern):
             if math.floor(queries_count/float(len(urls_list))) == 0.0:
                 urls_features['query_absence'] = score
 
-            short_urls_count = len(filter(lambda url: len(url) >= self.URL_LEN_THRESHOLD, [ obj.geturl() for obj in urls_list ]))
-            if math.floor(float(short_urls_count)/float(len(urls_list))) == 0.0:
-                urls_features['avg_length'] = score
+            urls_dict['avg_length'] = math.ceil((float(sum([ len(url) for url in [ obj.geturl() for obj in urls_list ]])))/float(len(urls_list)))
 
         else:
-            basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
-            basic_features_dict = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+
+            basic_features_dict = dict({'url_score': INIT_SCORE})
 
         vector_dict.update(basic_features_dict)
         vector_dict.update(urls_dict)

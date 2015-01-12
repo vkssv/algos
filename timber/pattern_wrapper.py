@@ -124,7 +124,7 @@ class BasePattern(object):
             if 'html' in content_type:
                 soup = BeautifulSoup(line)
                 if soup.a:
-                    self.url_list.extend(soup.a)
+                    self.url_list.extend([unicode(x) for x in soup.a])
             else:
 
                 self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
@@ -134,7 +134,7 @@ class BasePattern(object):
             logger.debug('-------------')
             logger.debug(i)
         if self.url_list:
-            self.url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(') for s in self.url_list[:] ]
+            self.url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(') for s in self.url_list ]
 
             parsed_urls = []
             for y in self.url_list:

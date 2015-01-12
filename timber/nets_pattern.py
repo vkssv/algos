@@ -5,7 +5,7 @@
 import os, sys, logging, common, re, binascii
 from operator import add
 from pattern_wrapper import BasePattern
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
@@ -16,9 +16,6 @@ logger.setLevel(logging.DEBUG)
 
 
 class NetsPattern(BasePattern):
-    URL_MAX_COUNT = 8.0
-    URL_MIN_COUNT = 4.0
-    URL_LEN_THRESHOLD = 110.0
 
     def run(self, score):
 
@@ -210,10 +207,7 @@ class NetsPattern(BasePattern):
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
         if urls_list:
 
-            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, \
-                                        (self.URL_MIN_COUNT, self.URL_MAX_COUNT), domain_regs, regs)
-
-
+            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
 
             domain_regs = [
                                 ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',
@@ -238,9 +232,8 @@ class NetsPattern(BasePattern):
             if filter(lambda x: x in string.printable, [line for line in url_lines]):
                 urls_dict['ascii'] = score
 
-            urls_count = len(filter(lambda url: len(url) >= self.URL_LEN_THRESHOLD, [ obj.geturl() for obj in urls_list ]))
-            if math.floor(float(urls_count)/float(len(urls_list))) == 0.0:
-                urls_features['avg_length'] = score
+
+            urls_features['avg_length'] = math.ceil((float(sum([ len(url) for url in [ obj.geturl() for obj in urls_list ]])))/float(len(urls_list)))
 
             obj_list = [url.__getattribute__('path') for url in urls_list]
             if math.ceil(float(len(set(obj_list)))/float(len(urls_list))) < 1.0:
@@ -248,8 +241,8 @@ class NetsPattern(BasePattern):
 
 
         else:
-            basics = ['avg_url_count', 'url_score', 'distinct_count', 'sender_count']
-            basic_features_dict = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+            basics = ['url_count', 'url_score', 'distinct_count', 'sender_count']
+            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
         vector_dict.update(urls_dict)
