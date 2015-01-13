@@ -8,7 +8,7 @@ import email, os, sys, re, logging, binascii, unicodedata, urlparse
 from email.errors import MessageParseError
 from email.header import decode_header
 from operator import add, itemgetter
-from collections import Counter
+from collections import Counter, OrderedDict
 
 from pattern_wrapper import BasePattern
 INIT_SCORE = BasePattern.INIT_SCORE
@@ -99,32 +99,22 @@ def get_addr_values(head_value=''):
     # names are raw encoded strings
     return(tuple(names),tuple(addrs))
 
-def get_originator_domain(rcvds):
+def get_smtp_domain(rcvds):
 # get sender domain from the first (by trace) RCVD-field, e.g. SMTP MAIL FROM: value
 
-    regs = {
-                'domain'    : re.compile(r'(@|\.)[a-z0-9]{1,63}(\.[a-z]{2,4}){0,3}',re.M),
-                'ip_literal': re.compile(r'([0-9]{1,3}\.){3}[0-9]{1,3}',re.M)
-            }
 
-    for k in regs.iterkeys():
-        orig_domain = reduce(add,(filter(lambda value: k.search(value), rcvds)
+    regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
+    orig_domain = ''
 
-    for value in rcvds:
-        # match ip_literal first, cause it presense in MAIL FROM: is still good spam metric
+    l = filter(lambda value: regexp.search(value), rcvds)
+    if l:
+        orig_domain = reduce(add,l)
+        print('+++++++++++++++++++++++++++++++++++++++')
+        print((orig_domain,))
+        orig_domain = (regexp.search(orig_domain)).group(0)
+        orig_domain = orig_domain.strip('.').strip('@').strip('=').strip()
+        print('ORIG_DOMAINS: '+str(orig_domain))
 
-        orig_domain = reduce(add,(filter(lambda reg: reg.search(value), (ip_literal, domain))))
-        if orig_domain:
-
-            logger.debug('>>>> RCVD value:'+value+'<')
-
-            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>: '+str(orig_domain))
-            orig_domain = orig_domain.group(0)
-            orig_domain = orig_domain.strip('.').strip('@').strip()
-            break
-        else:
-            orig_domain=''
-    print('ORIG_DOMAINS: '+str(orig_domain))
     return(orig_domain)
 
 def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
@@ -140,7 +130,7 @@ def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
         logger.debug('enc:'+str(encoding))
         logger.debug(line)
         if encoding:
-            line = line.decode(encoding)
+            line = line.decode(encoding,'replace')
             encodings_list.append(encoding)
         else:
             try:
@@ -201,10 +191,10 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
 
     words = [w for w in line.split()]
 
-    upper_flag = len(filter(lambda w: w.isupper(),words))
-    title_flag = len(filter(lambda w: w.isupper(),words))
+    upper_words_count = len(filter(lambda w: w.isupper(),words))
+    title_words_count = len(filter(lambda w: w.isupper(),words))
 
-    return (total_score, upper_flag, title_flag)
+    return (total_score, upper_words_count, title_words_count)
 
 def basic_lists_checker(header_value_list, rcvds, score):
     # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
@@ -220,7 +210,7 @@ def basic_lists_checker(header_value_list, rcvds, score):
     # exactly the first rcvd header,
     # order makes sense here
 
-    sender_domain = get_originator_domain(rcvds)
+    sender_domain = get_smtp_domain(rcvds)
     if not sender_domain:
         body_from.search(heads_dict.get('From'))
         # try to get it from From: header value
@@ -366,7 +356,7 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
     print("NETLOC: >>>>>"+str(netloc_list))
 
 
-    sender_domain = get_originator_domain(rcvds)
+    sender_domain = get_smtp_domain(rcvds)
     pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
 
     # url_score, distinct_count, sender_count

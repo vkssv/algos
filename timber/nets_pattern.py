@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for nets."""
 
-import os, sys, logging, common, re, binascii
+import os, sys, logging, common, re, binascii, string, math
 from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
@@ -154,7 +154,7 @@ class NetsPattern(BasePattern):
 
         if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self.msg.keys()):
 
-            list_features_dict['basic_checks'] = common.basic_lists_checker(self.msg.items(), score)
+            list_features_dict['basic_checks'] = common.basic_lists_checker(self.msg.items(), rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
 
 
@@ -207,14 +207,12 @@ class NetsPattern(BasePattern):
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
         if urls_list:
 
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
-
             domain_regs = [
                                 ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',
                                 ur'(www\.)?(linkedin\.com|facebook\.com|linternaute\.com|blablacar\.com)',
                                 ur'(www\.)?(youtube\.com|plus\.google\.com|twitter\.com|pinterest\.com|tumblr\.com)',
                                 ur'(www\.)?(instagram\.com|flickr\.com|vine\.com|tagged\.com|ask\.fm|meetme\.com)',
-                                ur'((www\.)?classmates'
+                                ur'(www\.)?classmates'
                             ]
 
             regs =  [
@@ -225,6 +223,8 @@ class NetsPattern(BasePattern):
 
                     ]
 
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
+
             urls_features = ['path_sim', 'ascii', 'avg_length']
             urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
@@ -232,8 +232,8 @@ class NetsPattern(BasePattern):
             if filter(lambda x: x in string.printable, [line for line in url_lines]):
                 urls_dict['ascii'] = score
 
-
-            urls_features['avg_length'] = math.ceil((float(sum([ len(url) for url in [ obj.geturl() for obj in urls_list ]])))/float(len(urls_list)))
+            length_list = [ len(url) for url in [ obj.geturl() for obj in urls_list ]]
+            urls_dict['avg_length'] = math.ceil((float(sum(length_list)))/float(len(urls_list)))
 
             obj_list = [url.__getattribute__('path') for url in urls_list]
             if math.ceil(float(len(set(obj_list)))/float(len(urls_list))) < 1.0:
