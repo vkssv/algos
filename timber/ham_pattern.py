@@ -77,7 +77,7 @@ class HamPattern(BasePattern):
                                 ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
                     ]
 
-            d, * = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
+            d, netloc_list = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
             basic_features_dict['url_score'] = d.get('url_score')
 
             urls_features = ['avg_length', 'query_absence']

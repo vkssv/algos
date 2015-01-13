@@ -174,7 +174,7 @@ class SpamPattern(BasePattern):
         # 4. Assert the absence of "List-*:" headers + some RFC 5322 compliences checks for other common headers
         logger.debug('>>> 4. LIST_CHECKS + ORIGINATOR_CHECKS:')
 
-        list_features = ['list', 'sender', 'preamble', 'disp-notification']
+        list_features = ['list', 'sender', 'preamble', 'disp-notification', 'sender_domain']
         list_features_dict = dict(map(lambda x,y: (x,y), list_features, [BasePattern.INIT_SCORE]*len(list_features)))
         logger.debug('\t----->'+str(list_features_dict))
 
@@ -200,6 +200,9 @@ class SpamPattern(BasePattern):
         if (self.msg.keys()).count('Disposition-Notification-To'):
             vector_dict ['disp-notification'] = 1
             logger.debug('\t----->'+str(vector_dict))
+
+        orig_domain = common.get_originator_domain(rcvds)
+
 
 
         # 5. assert the absence of "Received-SPF:", "Authentication-Results:" and "DKIM-*" headers,

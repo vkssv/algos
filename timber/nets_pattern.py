@@ -207,7 +207,7 @@ class NetsPattern(BasePattern):
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
         if urls_list:
 
-            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
 
             domain_regs = [
                                 ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',

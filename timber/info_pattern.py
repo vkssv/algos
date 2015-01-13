@@ -227,7 +227,7 @@ class InfoPattern(BasePattern):
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-            basic_features_dict, * = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
 
             urls_features = ['query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii']
             urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))

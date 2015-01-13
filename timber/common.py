@@ -101,18 +101,29 @@ def get_addr_values(head_value=''):
 
 def get_originator_domain(rcvds):
 # get sender domain from the first (by trace) RCVD-field, e.g. SMTP MAIL FROM: value
-    orig_domain=''
 
-    regexp = re.compile(r'(@|\.)[a-z0-9]{1,63}\.[a-z]{2,4}',re.M)
+    regs = {
+                'domain'    : re.compile(r'(@|\.)[a-z0-9]{1,63}(\.[a-z]{2,4}){0,3}',re.M),
+                'ip_literal': re.compile(r'([0-9]{1,3}\.){3}[0-9]{1,3}',re.M)
+            }
+
+    for k in regs.iterkeys():
+        orig_domain = reduce(add,(filter(lambda value: k.search(value), rcvds)
+
     for value in rcvds:
+        # match ip_literal first, cause it presense in MAIL FROM: is still good spam metric
 
-        logger.debug('>>>> RCVD value:'+value+'<')
-        orig_domain = regexp.search(value)
+        orig_domain = reduce(add,(filter(lambda reg: reg.search(value), (ip_literal, domain))))
         if orig_domain:
+
+            logger.debug('>>>> RCVD value:'+value+'<')
+
             print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>: '+str(orig_domain))
             orig_domain = orig_domain.group(0)
             orig_domain = orig_domain.strip('.').strip('@').strip()
             break
+        else:
+            orig_domain=''
     print('ORIG_DOMAINS: '+str(orig_domain))
     return(orig_domain)
 
