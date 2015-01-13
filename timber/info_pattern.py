@@ -5,7 +5,7 @@ If doc(email) is very similar to this pattern
 its vector will be filled by "1" or score value > 0
 or crc32 value for each feature, otherwise - "0" """
 
-import os, sys, logging, common, re, binascii, math
+import os, sys, logging, common, re, binascii, math, string
 from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
@@ -137,7 +137,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # 5. List checks and some other RFC 5322 compliences checks for headers
-        logger.debug('>>> 5. LIST_CHECKS:')
+        logger.debug('>>> 5. LIST CHECKS:')
         list_features = ['basic_checks', 'ext_checks','sender','precedence','typical_heads','reply-to','delivered']
         list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
 
@@ -145,7 +145,7 @@ class InfoPattern(BasePattern):
 
         if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self.msg.keys()):
             # well, this unique spam author respects RFC 2369, his creation deservs more attentive check
-            list_features_dict['basic_checks'] = common.basic_lists_checker(self.msg.items(), score)
+            list_features_dict['basic_checks'] = common.basic_lists_checker(self.msg.items(), rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
 
         # for old-school style emailings
@@ -227,12 +227,6 @@ class InfoPattern(BasePattern):
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
-
-            urls_features = ['query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii']
-            urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
-
-
             domain_regs = [
                                 ur'(news(letter)?|trip|sales+|offer|journal|event|post|asseccories|rasprodaga)',
                                 ur'(global|response|click|shop|sale|flight|hotel|cit(y|ies)|campaign|bouquet)',
@@ -252,7 +246,10 @@ class InfoPattern(BasePattern):
                                 ur'(shop|magazin|collections+|lam|(mail_link_)?track(er)?|EMID=|EMV=|genders)'
                     ]
 
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
 
+            urls_features = ['query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii']
+            urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
             print('NETLOC_LIST >>>'+str(netloc_list))
             print('DICT >>>'+str(basic_features_dict))
@@ -269,7 +266,6 @@ class InfoPattern(BasePattern):
 
                 if math.ceil(float(len(set(obj_list)))/float(len(urls_list))) < 1.0:
                     urls_dict[attr+'_sim'] = score
-
 
         else:
             basics = ['url_count', 'url_score', 'distinct_count', 'sender_count']

@@ -174,36 +174,32 @@ class SpamPattern(BasePattern):
         # 4. Assert the absence of "List-*:" headers + some RFC 5322 compliences checks for other common headers
         logger.debug('>>> 4. LIST_CHECKS + ORIGINATOR_CHECKS:')
 
-        list_features = ['list', 'sender', 'preamble', 'disp-notification', 'sender_domain']
+        list_features = ['list', 'sender', 'preamble', 'disp-notification']
         list_features_dict = dict(map(lambda x,y: (x,y), list_features, [BasePattern.INIT_SCORE]*len(list_features)))
         logger.debug('\t----->'+str(list_features_dict))
 
         if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.msg.keys()):
             # this unique spam author respects RFC 2369, his creation deservs more attentive check
-            list_features_dict['list'] = common.basic_lists_checker(self.msg.items(), rcvds, score)
+            list_features_dict['list'] = common.basic_lists_checker(self.msg.items(), rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
 
         elif (self.msg.keys().count('Sender') and self.msg.keys().count('From')):
             # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
             # MUA didn't generate Sender field cause of redundancy
-            list_features_dict ['sender'] = 1
+            list_features_dict ['sender'] = score
             logger.debug('\t----->'+str(list_features_dict))
 
         if self.msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self.msg.preamble,re.I):
 
-            list_features_dict ['preamble'] = 1
+            list_features_dict ['preamble'] = score
             logger.debug('\t----->'+str(list_features_dict))
 
         vector_dict.update(list_features_dict)
         logger.debug('\t----->'+str(list_features_dict))
 
         if (self.msg.keys()).count('Disposition-Notification-To'):
-            vector_dict ['disp-notification'] = 1
+            vector_dict ['disp-notification'] = score
             logger.debug('\t----->'+str(vector_dict))
-
-        orig_domain = common.get_originator_domain(rcvds)
-
-
 
         # 5. assert the absence of "Received-SPF:", "Authentication-Results:" and "DKIM-*" headers,
         # that's very typically for unconditional spam
@@ -239,8 +235,8 @@ class SpamPattern(BasePattern):
         elif self.msg.is_multipart():
 
             attach_regs = [
-                            r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
-                            r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+                                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
+                                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
                             ]
 
             mime_skeleton = BasePattern.get_mime_struct(self)
@@ -305,7 +301,7 @@ class SpamPattern(BasePattern):
                                 ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
                     ]
 
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvds, score, domain_regs, regs)
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
             basic_features_dict.pop('url_count') # for spams url count may be totally different
 
 
