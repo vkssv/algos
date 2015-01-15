@@ -168,6 +168,7 @@ class NetsPattern(BasePattern):
         vector_dict.update(list_features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
+
         # 7. Check MIME headers
         logger.debug('>>> 7. MIME CHECKS:')
         mime_checks = [(x,0) for x in ['mime_spammness', 'att_count','att_score','in_score','nest_level']]
@@ -179,8 +180,8 @@ class NetsPattern(BasePattern):
         elif self.msg.is_multipart():
 
             attach_regs = [
-                            r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
-                            r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+                                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
+                                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
                             ]
 
             mime_skeleton = BasePattern.get_mime_struct(self)
@@ -197,9 +198,6 @@ class NetsPattern(BasePattern):
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
 
-        # analyse attachements extensions
-
-        #vect_dict.update(common.get_body_skeleton(self.msg))
 
         logger.debug('>>> 8. URL_CHECKS:')
 

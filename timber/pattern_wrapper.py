@@ -77,7 +77,6 @@ class BasePattern(object):
     def get_rcvds(self, rcvds_num=0):
         # parse all RCVD headers by default if rcvds_num wasn't defined
         self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received')])[ -1*rcvds_num : ]
-
         return (self.parsed_rcvds)
 
     def get_mime_struct(self):

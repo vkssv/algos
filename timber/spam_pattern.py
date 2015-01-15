@@ -18,6 +18,7 @@ class SpamPattern(BasePattern):
 
     MAX_SUBJ_LEN = 5
     MIN_SUBJ_LEN = 70
+    NEST_LEVEL_THRESHOLD = 2
 
     def run(self, score):
 
@@ -226,7 +227,7 @@ class SpamPattern(BasePattern):
         # 7. MIME-headers checks
         logger.debug('>>> 7. MIME_CHECKS:')
 
-        mime_features = ['mime_spammness', 'att_count','att_score','in_score','nest_level','checksum']
+        mime_features = [ 'mime_spammness', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score' ]
         mime_dict = dict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         if self.msg.get('MIME-Version') and not self.msg.is_multipart():
@@ -243,18 +244,20 @@ class SpamPattern(BasePattern):
             logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
 
 
+
             count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
+            # defines by count of inline attachements
             mime_dict['in_score'] = in_score
-            if BasePattern.get_nest_level(self) > 2:
-                mime_dict['nest_level'] = 1
+
+            if BasePattern.get_nest_level(self) > self.NEST_LEVEL_THRESHOLD:
+                mime_dict['nest_level'] = score
 
             mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
 
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
-
 
         # 8. URL-checks
         logger.debug('>>> 8. URL_CHECKS:')

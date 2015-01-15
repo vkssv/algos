@@ -200,24 +200,35 @@ class InfoPattern(BasePattern):
 
         # 7. Check MIME headers
         logger.debug('>>> 7. MIME CHECKS:')
-        mime_skeleton = BasePattern.get_mime_struct(self)
-        logger.debug('MIME STRUCT: '+str(mime_skeleton))
 
-        vector_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
+        mime_features = [ 'mime', 'checksum', 'att_count', 'att_score', 'in_score' ]
+        mime_dict = dict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
+
+        if self.msg.is_multipart():
+            mime_dict['mime'] = score
+
+            mime_skeleton = BasePattern.get_mime_struct(self)
+            logger.debug('MIME STRUCT: '+str(mime_skeleton))
+
+            # presence of typical mime-parts for infos
+            if set(['multipart/alternative','text/plain','text/html']) < set(mime_skeleton.keys()):
+                mime_dict['mime'] += score
+
+            mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
+            logger.debug('\t----->'+str(vector_dict))
+
+            attach_regs = [
+                                r'image\/(png|gif)',
+                                r'.*\.(html|js|jpeg|png|gif|cgi)',
+            ]
+
+            count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
+            mime_dict['att_count'] = count
+            mime_dict['att_score'] = att_score
+            mime_dict['in_score'] = in_score
+
+        vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
-
-
-        attach_score =0
-        attach_regs = [
-                        r'image\/(png|gif)',
-                        r'.*\.(html|js|jpeg|png|gif|cgi)',
-        ]
-
-        count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
-        vector_dict['att_count'] = count
-        vector_dict['att_score'] = att_score
-        vector_dict['in_score'] = in_score
-        vector_dict['nest_level'] = BasePattern.get_nest_level(self)
 
         # 8. check urls
         logger.debug('>>> 8. URL_CHECKS:')
