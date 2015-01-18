@@ -56,20 +56,6 @@ class NetsPattern(BasePattern):
         dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
         vector_dict.update(dmarc_dict_checks)
 
-        # special headers checks
-        typical = ['LinkedIn(-.*)?','FACEBOOK(-.*)?','MEETUP(-.*)*','CRITSEND-ID','Auto-Response-Suppress']
-        matched_list=[]
-        for r in typical:
-            matched_list = filter(lambda h: re.match(r'(X-)?'+r,h,re.I), self.msg.keys())
-
-        vector_dict['social'] = len(matched_list)
-
-
-        # in general sender's clients names are the same
-        vector_dict['mailer'] = INIT_SCORE
-        if self.msg.keys().count('X-Mailer'):
-            vector_dict['mailer'] = binascii.crc32((self.msg.get('X-Mailer')).strip())
-
         # take the name from DKIM heads, it's very expensive for spammers to sign their bulk
         known_domains = [
                             r'.*\.vk\.com',\
@@ -84,8 +70,20 @@ class NetsPattern(BasePattern):
 
         vector_dict['known_domain'] = len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), known_domains))
 
-        # 4. Subject checks
-        logger.debug('>>> 4. SUBJECT CHECKS:')
+        # 4. special headers checks
+        logger.debug('>>> 4. Specific SN-headers checks:')
+
+        heads_pattern = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|Auto-Response-Suppress)$'
+        known_senders = [r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', 'GreenArrow']
+
+        heads_score, known_mailer_flag = common.basic_headers_cheker(heads_pattern, known_senders, self.msg.items(), score)
+
+        vector_dict['emarket_heads_score'] = heads_score
+        vector_dict['known_sender'] = known_mailer_flag
+
+
+        # 5. Subject checks
+        logger.debug('>>> 5. SUBJECT CHECKS:')
         features = ['style','score','encoding','checksum']
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
@@ -133,8 +131,8 @@ class NetsPattern(BasePattern):
         vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
-        # 5. crc for From values
-        logger.debug('>>> 5. ORIGINATOR CHECKS:')
+        # 6. crc for From values
+        logger.debug('>>> 6. ORIGINATOR CHECKS:')
         vector_dict['from']=0
         logger.debug('\t----->'+str(vector_dict))
 
@@ -145,8 +143,8 @@ class NetsPattern(BasePattern):
                 vector_dict['from'] = binascii.crc32(reduce(add,from_values))
                 logger.debug('\t----->'+str(vector_dict))
 
-        # 6. simple List fields checks
-        logger.debug('>>> 6. LIST CHECKS:')
+        # 7. simple List fields checks
+        logger.debug('>>> 7. LIST CHECKS:')
         list_features = ['basic_checks', 'delivered']
         list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
 
@@ -169,37 +167,42 @@ class NetsPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
 
-        # 7. Check MIME headers
-        logger.debug('>>> 7. MIME CHECKS:')
-        mime_checks = [(x,0) for x in ['mime_spammness', 'att_count','att_score','in_score','nest_level']]
-        mime_dict = dict(mime_checks)
+        # 8. Check MIME headers
+        logger.debug('>>> 8. MIME CHECKS:')
 
-        if self.msg.get('MIME-Version') and not self.msg.is_multipart():
-            mime_dict['mime_spammness'] = score
+        mime_features = [ 'mime_score', 'checksum', 'att_score', 'att_count']
+        mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
-        elif self.msg.is_multipart():
+        if self.msg.is_multipart():
+            mime_dict['mime_score'] = score
+
+            mime_skeleton = BasePattern.get_mime_struct(self)
+            # presence of typical mime-parts for infos
+            frequent_struct = set(['multipart/alternative','text/plain','text/html'])
+            current = set(mime_skeleton.keys())
+            if frequent_struct == current:
+                mime_dict['mime_score'] += score
 
             attach_regs = [
                                 r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
                                 r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
                             ]
 
-            mime_skeleton = BasePattern.get_mime_struct(self)
-
             logger.debug(str(mime_skeleton))
             count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
-            mime_dict['in_score'] = in_score
-            if BasePattern.get_nest_level(self) > 2:
-                mime_dict['nest_level'] = 1
+            mime_dict['checksum'] = common.get_mime_crc(mime_skeleton)
+
+
+
 
 
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
 
 
-        logger.debug('>>> 8. URL_CHECKS:')
+        logger.debug('>>> 9. URL_CHECKS:')
 
         urls_list = BasePattern.get_url_list(self)
         logger.debug('URLS_LIST >>>>>'+str(urls_list))

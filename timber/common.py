@@ -9,6 +9,7 @@ from email.errors import MessageParseError
 from email.header import decode_header
 from operator import add, itemgetter
 from collections import Counter, OrderedDict
+from itertools import ifilterfalse
 
 from pattern_wrapper import BasePattern
 INIT_SCORE = BasePattern.INIT_SCORE
@@ -56,6 +57,22 @@ def get_all_heads_crc(header_value_list, excluded_list = None):
     vect['values_crc'] = binascii.crc32(''.join(reduce(add,values_vector)))
 
     return (vect)
+
+def get_mime_crc(mime_skeleton_dict, excluded_args_list=['boundary=','charset=']):
+
+    checksum = 0
+    logger.debug('EXL:'+str(excluded_args_list))
+
+    items = mime_skeleton_dict.items()
+
+    for prefix in excluded_args_list:
+        items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in items]
+
+    if items:
+        items = reduce(add,items)
+        checksum = binascii.crc32(''.join([''.join(i) for i in items]))
+
+    return(checksum)
 
 def get_trace_crc(rcvds_vect):
 
@@ -151,12 +168,31 @@ def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
 
     return(unicodedata.normalize('NFC',subj), words_list, encodings_list)
 
+def basic_headers_cheker(head_pattern, known_mailers, header_value_list, score):
+
+    typical_heads_score = INIT_SCORE
+    known_mailer_flag = INIT_SCORE
+    headers_list = [i[0] for i in header_value_list]
+
+    emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), headers_list))
+    typical_heads_score += len(emarket_heads)*score
+
+    mailer_header = ''.join(filter(lambda h: re.match(r'^x-mailer$', h, re.I), headers_list))
+
+
+    if dict(header_value_list).get(mailer_header):
+        x_mailer =  dict(header_value_list).get(mailer_header)
+        if filter(lambda reg: re.search(reg, x_mailer, re.I), known_mailers):
+            known_mailer_flag = score
+
+    return(typical_heads_score, known_mailer_flag)
+
 def basic_attach_checker(mime_parts_list, reg_list, score):
 
     # mime_parts_list - list with mime-parts dictionaries
     attach_score = INIT_SCORE
 
-    mime_values_list = reduce(add,[dict.values() for dict in mime_parts_list[:]])
+    mime_values_list = reduce(add, mime_parts_list)
     attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), mime_values_list)
     attach_attrs = [(x.partition(';')[2]).strip('\r\n\x20') for x in attach_attrs]
     attach_count = len(attach_attrs)
@@ -192,7 +228,7 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
     words = [w for w in line.split()]
 
     upper_words_count = len(filter(lambda w: w.isupper(),words))
-    title_words_count = len(filter(lambda w: w.isupper(),words))
+    title_words_count = len(filter(lambda w: w.istitle(),words))
 
     return (total_score, upper_words_count, title_words_count)
 
@@ -310,18 +346,6 @@ def basic_rcpts_checker(score, traces_values_list, to_values_list):
 
     return(rcpt_score)
 
-def basic_mime_checker(mime_heads_vect,score):
-
-    all_content_types = [mime_dict.get('content-type') for d in mime_heads_vect]
-
-    html_parts =  len(filter(lambda t: re.match('text/html\s*;',value),reduce(add,all_content_types)))
-    plain_parts = len(filter(lambda t: re.match('text/plain\s*;',t,re.I),reduce(add,all_content_types)))
-
-    if html_parts != plain_parts:
-        return(score)
-    else:
-        return(INIT_SCORE)
-
 def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
     logger.debug('our list: '+str(parsed_links_list))
 
@@ -380,6 +404,12 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
             basic_features['url_score'] += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*score
 
     return(dict(basic_features), netloc_list)
+
+def basic_html_checker():
+    pass
+
+def basic_body_checker():
+    pass
 
 
 

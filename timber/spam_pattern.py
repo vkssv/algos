@@ -227,11 +227,11 @@ class SpamPattern(BasePattern):
         # 7. MIME-headers checks
         logger.debug('>>> 7. MIME_CHECKS:')
 
-        mime_features = [ 'mime_spammness', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score' ]
+        mime_features = [ 'mime_score', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score' ]
         mime_dict = dict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         if self.msg.get('MIME-Version') and not self.msg.is_multipart():
-            mime_dict['mime_spammness'] = score
+            mime_dict['mime_score'] = score
 
         elif self.msg.is_multipart():
 

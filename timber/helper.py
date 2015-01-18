@@ -218,7 +218,7 @@ if __name__ == "__main__":
                 #logger.debug('\n============== common garden parser ====================\n')
                 #headers_parser(cut_header_from_body(sample_path)[0], sample_path)
 
-                logger.debug('\n============== parser from STL email ====================\n')
+                logger.debug('\n============== parser from STL qemail ====================\n')
                 for k in msg.keys():
                     if k == 'Subject':
 

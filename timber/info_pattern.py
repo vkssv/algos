@@ -10,6 +10,7 @@ from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
 
+
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
 
@@ -64,17 +65,15 @@ class InfoPattern(BasePattern):
 
 
         # 4. Presense of X-EMID && X-EMMAIL, etc
-        logger.debug('>>> 4. Specific E-marketing fields checks:')
+        logger.debug('>>> 4. Specific E-marketing headers checks:')
 
-        em_feauture_dict = {'em_count': INIT_SCORE}
-        pat = '^X-EM(ID|MAIL|V-.*)$'
+        heads_pattern = r'^X-(EM(ID|MAIL|V-.*)|SG-.*|(rp)?campaign(id)?)$'
+        known_senders = [r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver']
 
-        emarket_heads_count = set(filter(lambda header: re.match(pat, header, re.I), self.msg.keys()))
-        if emarket_heads_count:
-            em_feauture_dict['em_count'] = len(emarket_heads_count)
+        heads_score, known_mailer_flag = common.basic_headers_cheker(heads_pattern, known_senders, self.msg.items(), score)
 
-        vector_dict.update(em_feauture_dict)
-
+        vector_dict['emarket_heads_score'] = heads_score
+        vector_dict['known_sender'] = known_mailer_flag
 
         # 4. Subject checks
         logger.debug('>>> 4. SUBJ CHECKS:')
@@ -201,20 +200,17 @@ class InfoPattern(BasePattern):
         # 7. Check MIME headers
         logger.debug('>>> 7. MIME CHECKS:')
 
-        mime_features = [ 'mime', 'checksum', 'att_count', 'att_score', 'in_score' ]
-        mime_dict = dict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
+        mime_features = [ 'mime_score', 'checksum', 'att_count', 'att_score', 'in_score' ]
+        mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         if self.msg.is_multipart():
-            mime_dict['mime'] = score
+            mime_dict['mime_score'] = score
 
             mime_skeleton = BasePattern.get_mime_struct(self)
             logger.debug('MIME STRUCT: '+str(mime_skeleton))
 
-            # presence of typical mime-parts for infos
-            if set(['multipart/alternative','text/plain','text/html']) < set(mime_skeleton.keys()):
-                mime_dict['mime'] += score
+            mime_dict['checksum'] = common.get_mime_crc(mime_skeleton)
 
-            mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
             logger.debug('\t----->'+str(vector_dict))
 
             attach_regs = [
@@ -260,6 +256,9 @@ class InfoPattern(BasePattern):
             basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
 
             urls_features = ['query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii']
+            # initialize OrderedDict exactly by this way cause of
+            # http://stackoverflow.com/questions/16553506/python-ordereddict-iteration
+            # and vector of metrics is wanted, so order is important
             urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
             print('NETLOC_LIST >>>'+str(netloc_list))
