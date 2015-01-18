@@ -405,10 +405,11 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 
     return(dict(basic_features), netloc_list)
 
-def basic_html_checker():
-    pass
+#def basic_html_checker():
+
 
 def basic_body_checker():
+    # THE LAST!!!!!!!!!!!
     pass
 
 
