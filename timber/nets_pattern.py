@@ -177,15 +177,23 @@ class NetsPattern(BasePattern):
             mime_dict['mime_score'] = score
 
             mime_skeleton = BasePattern.get_mime_struct(self)
+
+            # some particular rules for SN emails
             # presence of typical mime-parts for infos
             frequent_struct = set(['multipart/alternative','text/plain','text/html'])
-            current = set(mime_skeleton.keys())
-            if frequent_struct == current:
+            current_struct = set(mime_skeleton.keys())
+            if frequent_struct == current_struct:
+                mime_dict['mime_score'] += score
+                for mime_type in filter(lambda k: k.startswith('text'), frequent_struct):
+                    if filter(lambda item: re.match(r'(text|html)-body', item, re.I), mime_skeleton.get(mime_type)):
+                        mime_dict['mime_score'] += score
+
+            # weak metric probably
+            if filter(lambda marker_head: list(current_struct).count(marker_head), ['text/calendar','application/isc']):
                 mime_dict['mime_score'] += score
 
             attach_regs = [
-                                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
-                                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+                                r'(method\s?=|format\s?=\s?flowed\s?;\s?delsp\s?=\s/yes)'
                             ]
 
             logger.debug(str(mime_skeleton))

@@ -203,19 +203,24 @@ class InfoPattern(BasePattern):
         mime_features = [ 'mime_score', 'checksum', 'att_count', 'att_score', 'in_score' ]
         mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
+        logger.debug('IS MULTI >>>>>> '+str(self.msg.is_multipart()))
         if self.msg.is_multipart():
             mime_dict['mime_score'] = score
 
             mime_skeleton = BasePattern.get_mime_struct(self)
+
             logger.debug('MIME STRUCT: '+str(mime_skeleton))
+
+            # some particular rules for infos
+            if (mime_skeleton.keys()).count('text/html') and 'inline' in mime_skeleton.get('text/html'):
+                mime_dict['mime_score'] += score
 
             mime_dict['checksum'] = common.get_mime_crc(mime_skeleton)
 
             logger.debug('\t----->'+str(vector_dict))
 
             attach_regs = [
-                                r'image\/(png|gif)',
-                                r'.*\.(html|js|jpeg|png|gif|cgi)',
+                                r'format\s?=\s?.fixed.'
             ]
 
             count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
