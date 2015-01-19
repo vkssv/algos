@@ -15,6 +15,7 @@ class BasePattern(object):
     Provides access to some pre-parsed attributes of msg"""
     INIT_SCORE = 0
     MIN_TOKEN_LEN = 3
+    NEST_LEVEL_THRESHOLD = 2
  
     def __init__(self, msg):
         self.msg = msg
@@ -58,7 +59,7 @@ class BasePattern(object):
 
                 charset_map = {'x-sjis': 'shift_jis'}
                 # Python2.7 => try to decode all lines from their particular charsets,
-                # add U+FFFD, 'REPLACEMENT CHARACTER' if will be faced with UnicodeDecodeError
+                # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
                 for charset in (part.get_content_charset(), part.get_charset()):
                     if charset:
                         if charset in charset_map.keys():

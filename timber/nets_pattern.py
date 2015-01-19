@@ -70,6 +70,7 @@ class NetsPattern(BasePattern):
 
         vector_dict['known_domain'] = len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), known_domains))
 
+
         # 4. special headers checks
         logger.debug('>>> 4. Specific SN-headers checks:')
 
@@ -131,6 +132,7 @@ class NetsPattern(BasePattern):
         vector_dict.update(features_dict)
         logger.debug('\t----->'+str(vector_dict))
 
+
         # 6. crc for From values
         logger.debug('>>> 6. ORIGINATOR CHECKS:')
         vector_dict['from']=0
@@ -143,6 +145,7 @@ class NetsPattern(BasePattern):
                 vector_dict['from'] = binascii.crc32(reduce(add,from_values))
                 logger.debug('\t----->'+str(vector_dict))
 
+
         # 7. simple List fields checks
         logger.debug('>>> 7. LIST CHECKS:')
         list_features = ['basic_checks', 'delivered']
@@ -154,7 +157,6 @@ class NetsPattern(BasePattern):
 
             list_features_dict['basic_checks'] = common.basic_lists_checker(self.msg.items(), rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
-
 
         # in general nets are very personal, so check Delivered-To may be a feature
         keys = tuple(filter(lambda k: self.msg.get(k), ['Delivered-To','To']))
@@ -170,7 +172,7 @@ class NetsPattern(BasePattern):
         # 8. Check MIME headers
         logger.debug('>>> 8. MIME CHECKS:')
 
-        mime_features = [ 'mime_score', 'checksum', 'att_score', 'att_count']
+        mime_features = [ 'mime_score', 'checksum', 'att_score', 'att_count', 'nest_level']
         mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         if self.msg.is_multipart():
@@ -202,14 +204,16 @@ class NetsPattern(BasePattern):
             mime_dict['att_score'] = att_score
             mime_dict['checksum'] = common.get_mime_crc(mime_skeleton)
 
-
-
+            # helps to outline difference between spams, which were made very similar to nets
+            if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
+                mime_dict['nest_level'] = score
 
 
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
 
 
+        # 9. URL CHECKS
         logger.debug('>>> 9. URL_CHECKS:')
 
         urls_list = BasePattern.get_url_list(self)
@@ -257,6 +261,30 @@ class NetsPattern(BasePattern):
         vector_dict.update(urls_dict)
 
 
+        # 10. check body
+        logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
+
+        body_features = [ 'regexp_score', 'html_score', 'body_checksum' ]
+        body_dict = Counter(dict(map(lambda x,y: (x,y), body_features, [INIT_SCORE]*len(body_features))))
+
+        text_parts = self.get_text_parts()
+        logger.debug('TEXT_PARTS: '+str(text_parts))
+
+        html_text = ''
+        for line, content_type in text_parts:
+            # parse by lines
+            if 'html' in content_type:
+                soup = BeautifulSoup(line)
+                body_dict['html_score'] += common.basic_html_checker(soup)
+                html_content = common.get_content(soup)
+                if html_content:
+                    body_dict['regexp_score'] += common.basic_text_checker(html_content)
+
+            else:
+                body_dict['regexp_score'] += common.basic_text_checker(line)
+
+
+        vector_dict.update(body_dict)
 
         return (vector_dict)
 
