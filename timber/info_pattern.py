@@ -200,7 +200,7 @@ class InfoPattern(BasePattern):
         # 7. Check MIME headers
         logger.debug('>>> 7. MIME CHECKS:')
 
-        mime_features = [ 'mime_score', 'checksum', 'att_count', 'att_score', 'in_score' ]
+        mime_features = [ 'mime_score', 'checksum', 'att_count', 'att_score', 'in_score', 'nest_level']
         mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         logger.debug('IS MULTI >>>>>> '+str(self.msg.is_multipart()))
@@ -227,6 +227,10 @@ class InfoPattern(BasePattern):
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
             mime_dict['in_score'] = in_score
+
+            # helps to outline difference between spams, which were made very similar to infos
+            if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
+                mime_dict['nest_level'] = score
 
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
@@ -288,6 +292,31 @@ class InfoPattern(BasePattern):
 
         vector_dict.update(basic_features_dict)
         vector_dict.update(urls_dict)
+
+        # 9. check body
+        logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
+
+        body_features = [ 'regexp_score', 'html_score', 'body_checksum' ]
+        body_dict = Counter(dict(map(lambda x,y: (x,y), body_features, [INIT_SCORE]*len(body_features))))
+
+        text_parts = self.get_text_parts()
+        logger.debug('TEXT_PARTS: '+str(text_parts))
+
+        html_text = ''
+        for line, content_type in text_parts:
+            # parse by lines
+            if 'html' in content_type:
+                soup = BeautifulSoup(line)
+                body_dict['html_score'] += common.basic_html_checker(soup)
+                html_content = common.get_content(soup)
+                if html_content:
+                    body_dict['regexp_score'] += common.basic_text_checker(html_content)
+
+            else:
+                body_dict['regexp_score'] += common.basic_text_checker(line)
+
+
+        vector_dict.update(body_dict)
 
         return (vector_dict)
 

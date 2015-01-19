@@ -9,6 +9,7 @@ from collections import OrderedDict, Counter
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
 
 # formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
@@ -18,7 +19,6 @@ class SpamPattern(BasePattern):
 
     MAX_SUBJ_LEN = 5
     MIN_SUBJ_LEN = 70
-    NEST_LEVEL_THRESHOLD = 2
 
     def run(self, score):
 
@@ -251,7 +251,7 @@ class SpamPattern(BasePattern):
             # defines by count of inline attachements
             mime_dict['in_score'] = in_score
 
-            if BasePattern.get_nest_level(self) > self.NEST_LEVEL_THRESHOLD:
+            if BasePattern.get_nest_level(self) > NEST_LEVEL_THRESHOLD:
                 mime_dict['nest_level'] = score
 
             mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
@@ -337,10 +337,28 @@ class SpamPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
 
-        # 9. analyse attachements extensions
+        # 9. check body
+        logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
-        #vect_dict.update(common.get_body_skeleton(self.msg))
+        body_features = [ 'regexp_score', 'body_checksum' ]
+        body_dict = Counter(dict(map(lambda x,y: (x,y), body_features, [INIT_SCORE]*len(body_features))))
 
+        text_parts = self.get_text_parts()
+        logger.debug('TEXT_PARTS: '+str(text_parts))
+
+        html_text = ''
+        for line, content_type in text_parts:
+            # parse by lines
+            if 'html' in content_type:
+                soup = BeautifulSoup(line)
+                html_content = common.get_content(soup)
+                if html_content:
+                    body_dict['regexp_score'] += common.basic_text_checker(html_content)
+
+            else:
+                body_dict['regexp_score'] += common.basic_text_checker(line)
+
+        vector_dict.update(body_dict)
 
         return (vector_dict)
 

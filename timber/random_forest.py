@@ -9,7 +9,7 @@ using different presets of loaded heuristics
 (or "test" label if not defined) in numpy array type
 """
 
-import sys, os, logging, re, email, argparse, stat, tempfile
+import sys, os, logging, re, email, argparse, stat, tempfile, math
 from email.parser import Parser
 from collections import defaultdict, OrderedDict
 
@@ -33,7 +33,8 @@ def vectorize(doc_path, label, score):
 
 
     # size
-    vect_dict['size'] = float((os.stat(doc_path).st_size)/1024)
+    # maybe it's better to define size interval for each pattern, distribution law ?
+    vect_dict['size'] = math.ceil(float((os.stat(doc_path).st_size)/1024))
     logger.debug('----->'+str(vect_dict))
 
     try:

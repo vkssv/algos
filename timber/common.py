@@ -405,12 +405,16 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 
     return(dict(basic_features), netloc_list)
 
-#def basic_html_checker():
-
-
-def basic_body_checker():
-    # THE LAST!!!!!!!!!!!
+def basic_html_checker(bs_object):
+    # check common html-emails makeups trics
+    # http://thesiteslinger.com/blog/10-tips-for-designing-html-emails/
     pass
+    return(INIT_SCORE)
+
+def basic_text_checker(utf_line,regexp_list):
+    pass
+    return(INIT_SCORE)
+
 
 
 
