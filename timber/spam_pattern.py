@@ -346,8 +346,11 @@ class SpamPattern(BasePattern):
         text_parts = self.get_text_parts()
         logger.debug('TEXT_PARTS: '+str(text_parts))
 
+<<<<<<< HEAD
         regexp_list = ['vrnonspam']
 
+=======
+>>>>>>> 67a7a874ac1d00d74bfa6dad1ca18e8d7683f199
         html_text = ''
         for line, content_type in text_parts:
             # parse by lines
@@ -358,7 +361,11 @@ class SpamPattern(BasePattern):
                     body_dict['regexp_score'] += common.basic_text_checker(html_content)
 
             else:
+<<<<<<< HEAD
                 body_dict['regexp_score'] += common.basic_text_checker(line, regexp_list)
+=======
+                body_dict['regexp_score'] += common.basic_text_checker(line)
+>>>>>>> 67a7a874ac1d00d74bfa6dad1ca18e8d7683f199
 
         vector_dict.update(body_dict)
 
