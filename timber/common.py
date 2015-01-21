@@ -408,6 +408,7 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 def basic_html_checker(bs_object):
     # check common html-emails makeups trics
     # http://thesiteslinger.com/blog/10-tips-for-designing-html-emails/
+    # now it's not so cheap for russian spammers to perform old-school html-email makeup
     pass
     return(INIT_SCORE)
 

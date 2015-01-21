@@ -1,11 +1,12 @@
 #! /usr/bin/env python3
 
-import sys, os, logging, re, email, argparse, time
+import sys, os, logging, re, email, argparse, time, math
 from email.parser import BytesParser
 from email.header import decode_header
 from email import iterators, base64mime, quoprimime
 from bs4 import BeautifulSoup
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict, Counter
+from itertools import repeat
 
 
 # define needed functions
@@ -150,10 +151,11 @@ def get_nest_level(msg):
 
     return(level)
 
-def get_url_list(msg):
+def get_url_list(msg, d_name, tags_list):
 
     text_parts = get_text_parts(msg)
     url_list = []
+    tags_stat = defaultdict(list)
     url_regexp= r'(((https?|ftps?):\/\/)|www:).*'
     for line, encoding, content_type in text_parts:
 
@@ -161,6 +163,25 @@ def get_url_list(msg):
             soup = BeautifulSoup(line)
             if soup.a:
                 url_list.extend(soup.a)
+
+            # ugly code just for searching regularities
+            logger.debug('===================HTML BODY PART====================')
+
+            object_list=list()
+            for tag in tags_list:
+                object_list = soup.find_all(tag)
+
+                if object_list:
+                    tags_stat[tag].append(len(object_list))
+                    logger.debug(tag.upper()+" ( "+d_name+" ) : tag count: "+str(len(object_list)))
+                    logger.debug("All "+tag.upper()+" attributes: ")
+                    for obj in object_list:
+                        logger.debug('\t'+str(obj.attrs))
+
+
+                else:
+                    logger.debug(tag.upper()+" ( "+d_name+" ) NONE ")
+
         else:
 
             x = list(filter(lambda y: y, [l.strip() for l in line.split()]))
@@ -169,14 +190,14 @@ def get_url_list(msg):
                 url_list.extend(list(filter(lambda url: re.search(url_regexp, url, re.I), x)))
 
     #logger.debug('URL LIST >>>> '+str(url_list))
-    return(url_list)
+    return(url_list, tags_stat)
 
 
 if __name__ == "__main__":
     usage = "usage: %prog [ training_directory | file ] -b"
     parser = argparse.ArgumentParser(prog='helper')
     parser.add_argument("PATH", type=str, help="path to collection dir or to email")
-    parser.add_argument("-b", action = "store_true", default=False, help="show only bodies MIME structures")
+    parser.add_argument("-b", action = "store_true", default=False, help="show only bodies MIME structures and URL, HTML parsed info")
     parser.add_argument("-stat", action = "store_true", default=False, help="print headers stat")
     args = parser.parse_args()
 
@@ -206,6 +227,10 @@ if __name__ == "__main__":
         header_counts_list = []
         urls_count_list = []
         urls_lens = []
+        tags_list = ['table', 'tr', 'td', 'img', 'p', 'lu','li','div','span','style','script','a']
+        d = [[] for i in repeat(None, len(tags_list))]
+        tags = Counter(dict(zip(tags_list,d)))
+
         for sample_path in pathes:
             with open(sample_path, 'rb') as f:
                 msg = parser.parse(f)
@@ -248,9 +273,14 @@ if __name__ == "__main__":
             logger.debug('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
             logger.debug('==========URL_LIST==========')
             i = 0
-            url_list = get_url_list(msg)
+            url_list, tags_dict = get_url_list(msg, filename, tags_list)
             logger.debug('>> URL LIST '+str(url_list))
             logger.debug('\n')
+            if tags_dict:
+                tags_dict = dict(tags_dict.items())
+
+                logger.debug('>> CURRENT TAGS COUNTS '+str(tags_dict))
+                tags.update(tags_dict)
 
             for l in url_list:
                 logger.debug('\t'+str(i)+'. >'+str(l)+'<')
@@ -263,11 +293,16 @@ if __name__ == "__main__":
 
             header_counts_list.append(len(msg.keys()))
 
-
         logger.debug('AVG URL LIST LEN: '+str(float(sum(urls_count_list))/float(len(urls_count_list))))
         logger.debug('AVG URL LEN: '+str(float(sum(urls_lens))/float(len(urls_lens))))
         logger.debug('AVG HEADS COUNT: '+str(float(sum(header_counts_list))/float(len(header_counts_list))))
-
+        logger.debug('================ TAGS STAT ================= ')
+        for t in tags.keys():
+            appears = len(tags.get(t))
+            if appears == 0:
+                appears = 1 # :-)
+            total_count = sum(tags.get(t))
+            logger.debug('AVG '+t.upper()+' count '+str(math.ceil(float(total_count/appears))))
 
         if args.stat:
             logger.debug('\n============== heads stat ====================\n')
@@ -286,4 +321,3 @@ if __name__ == "__main__":
         logger.error(str(details))
         raise
 
-#TODO: analayze boundaries multipart/mixed;\n boundary="----_=_NextPart_27088_00010285.00024182 (consequences)
