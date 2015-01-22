@@ -307,7 +307,48 @@ class InfoPattern(BasePattern):
             # parse by lines
             if 'html' in content_type:
                 soup = BeautifulSoup(line)
-                body_dict['html_score'] += common.basic_html_checker(soup)
+
+                if soup.table:
+                    if len(filter(lambda i: i.name == 'table', [i for i in soup.table.descendants])) > self.NEST_TAB_THRESHOLD:
+                        body_dict['html_score'] += score
+
+                    tab_mandatory_attr = {
+                                            r'width$'                  : r'100%$',
+                                            r'id$'                     : r'^.*Table$',
+                                            r'(bg|background-)color$'  : '#[0-9A-F]{6}'
+                    }
+
+                    img_mandatory_attr = {
+                                            'alt':  r'.*',
+                                            'style': r'.*vertical-align\:(middle|bottom|top);.*border\:\d;.*text-decoration\:.*;.*',
+                                            'width': r'\d{2,3}',
+                                            'height': r'\d{2,3}',
+                                            'title' : r'.*'
+                    }
+
+                    table_attr = list()
+                    for k in patterns_attr.iterkeys():
+                        attr = filter(lambda attr: re.match(k,attr,re.I), soup.table.attrs.keys())
+                        if attr and re.match(patterns_attr.get(k), soup.table.attr, re.I):
+                            body_dict['html_score'] += score
+
+                    if soup.img:
+                        all_img_attrs = [i.attrs for i in soup.find_all('img')]
+                        for k in img_mandatory_attr.iterkeys():
+                            for d in all_img_attrs:
+                                attr = filter(lambda attr: re.match(k,attr,re.I), [d.keys() for d in all_img_attrs])
+                            if attr and re.match(patterns_attr.get(k), soup.table.attr, re.I):
+                            body_dict['html_score'] += score
+
+                    
+
+
+
+
+
+
+
+
                 html_content = common.get_content(soup)
                 if html_content:
                     body_dict['regexp_score'] += common.basic_text_checker(html_content)

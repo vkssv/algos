@@ -333,6 +333,7 @@ def basic_rcpts_checker(score, traces_values_list, to_values_list):
     to_values, to_addrs = get_addr_values(to_values_list)
     logger.debug(">>to_addrs: "+str(to_addrs))
     parsed_rcvds = [rcvd.partition(';')[0] for rcvd in traces_values_list]
+    # todo: check - maybe not need list
     smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in parsed_rcvds]))
     if not smtp_to_list:
         return(rcpt_score)
@@ -408,7 +409,9 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 def basic_html_checker(bs_object):
     # check common html-emails makeups trics
     # http://thesiteslinger.com/blog/10-tips-for-designing-html-emails/
-    # now it's not so cheap for russian spammers to perform old-school html-email makeup
+    # now it's not so cheap for russian spammers to perform old-school html-email makeup by patterns
+
+
 
     pass
     return(INIT_SCORE)
