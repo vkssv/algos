@@ -1,0 +1,8 @@
+<application>
+  <component name="UISettings">
+    <option name="SHOW_EDITOR_TOOLTIP" value="false" />
+    <option name="SHOW_MAIN_TOOLBAR" value="true" />
+    <option name="MARK_MODIFIED_TABS_WITH_ASTERISK" value="true" />
+    <option name="SHOW_TABS_TOOLTIPS" value="false" />
+  </component>
+</application>

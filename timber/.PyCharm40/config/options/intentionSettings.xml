@@ -1,0 +1,11 @@
+<application>
+  <component name="IntentionManagerSettings">
+    <ignoreAction name="Language Injection/Edit Injected Fragment" />
+    <ignoreAction name="XML/Add Xsi Schema Location for External Resource" />
+    <ignoreAction name="XML/Choose Color" />
+    <ignoreAction name="XML/Insert Namespace Prefix" />
+    <ignoreAction name="XML/Manually Setup External Resource" />
+    <ignoreAction name="XML/Set Namespace Prefix to Empty" />
+    <ignoreAction name="XML/Split current tag" />
+  </component>
+</application>

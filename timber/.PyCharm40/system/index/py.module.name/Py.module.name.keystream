@@ -1,0 +1,671 @@
+knncommonham_patterninfo_patternnets_patternspam_patternrandom_forestpattern_wrapperrenamerlauncher1355849983318216390primeparser1parser2	producingdomregminidomdom
+NodeFilter
+minicompat
+xmlbuilderexpatbuildersaxutils	xmlreader_exceptionsexpatreaderetreeElementPathElementTreecElementTreeexpatparsersxmldecoderencoderscannerjsonpystonetestregrtesttest_supportdbobjdbreciodbutilsbsddbdbshelvedbtablesmimenonmultipartutilsheadercharsetemailencoders	generator	iterators
+_parseaddr
+base64mime
+feedparser
+quoprimimeuubdbcgicsv_endianctypeswintypeshas_keytextpadcursesdisTixttkFixTkTkdndCanvastkFontturtleTkinter
+FileDialogTkconstantsScrolledTextSimpleDialogtkFileDialogtkMessageBoxtkColorChoosertkCommonDialogtkSimpleDialogmd5newpdbptyshasrettyaifccodecopyglobgzipstatsstoneshotshotfix_nefix_mapfix_zipfixesfix_dictfix_execfix_longfix_nextfix_repr	fix_apply	fix_input	fix_paren	fix_print	fix_raise	fix_throw	fix_types
+fix_buffer
+fix_except
+fix_filter
+fix_future
+fix_idioms
+fix_import
+fix_intern
+fix_reduce
+fix_urllib
+fix_xrangefix_getcwdufix_has_keyfix_importsfix_nonzerofix_renamesfix_sys_excfix_unicodefix_callablefix_execfilefix_exitfuncfix_imports2fix_operatorfix_ws_commafix_funcattrsfix_itertoolsfix_metaclassfix_raw_inputfix_basestringfix_isinstancefix_xreadlinesfix_methodattrsfix_numliteralsfix_set_literalfix_tuple_paramsfix_standarderrorfix_itertools_importsconvpgenpgen2literalspygrampytreepatcomplib2to3refactor	btm_utils
+fixer_base
+fixer_utilbtm_matcherreprsetssitedbapi2statthisuseruuidwaveheaderswsgirefsimple_serverQueue_pyiocgitbmiscfuturesyntaxpyassemsymbolsvisitor	pycodegentransformerheapqmhlibmutexnetrcpipespydocrexecrunpyschedshlexsmtpdsunautracesignalsCookieanydbmatexitbase64binhexbisectcodecscodeopdbhashbdistcheckupload	bdist_msi
+bdist_dumb
+build_clibinstall_databuild_scriptsinstall_headersspawnversion	distutilsdep_utildir_utilfilelist	ccompiler	file_util	text_filebcppcompileremxccompilerfancy_getoptmsvccompilermsvc9compilerunixccompilercygwinccompilerversionpredicatehzgbkbig5idnambcscp037cp424cp437cp500cp720cp737cp775cp850cp852cp855cp856cp857cp858cp860cp861cp862cp863cp864cp865cp866cp869cp874cp875cp932cp949cp950johabutf_7utf_8cp1006cp1026cp1140cp1250cp1251cp1252cp1253cp1254cp1255cp1256cp1257cp1258euc_jpeuc_krgb2312koi8_rkoi8_upalmosrot_13utf_16utf_32aliasescharmapgb18030latin_1ptcp154tis_620	encodingspunycodeuu_codec	big5hkscs	bz2_codec	hex_codec	hp_roman8	iso8859_1	iso8859_2	iso8859_3	iso8859_4	iso8859_5	iso8859_6	iso8859_7	iso8859_8	iso8859_9	mac_farsi	mac_greek	mac_roman	shift_jis	undefined	utf_16_be	utf_16_le	utf_32_be	utf_32_le	utf_8_sig
+iso2022_jp
+iso2022_kr
+iso8859_10
+iso8859_11
+iso8859_13
+iso8859_14
+iso8859_15
+iso8859_16
+mac_arabic
+mac_latin2
+zlib_codecmac_icelandmac_turkishbase64_codeceuc_jis_2004euc_jisx0213iso2022_jp_1iso2022_jp_2iso2022_jp_3mac_centeuromac_croatianmac_cyrillicmac_romanianquopri_codecstring_escapeiso2022_jp_extshift_jis_2004shift_jisx0213unicode_escapeiso2022_jp_2004unicode_internalraw_unicode_escapeftplibgetoptihooksimghdr	importlibmimifyntpathopcodepopen2poplibpprintpstatspyclbrquoprirfc822shelvesndhdrsocketstringsymboltimeittoaiffurllibxdrlibxmllibBastion_abcolldifflibdoctestdumbdbmfilecmpfnmatchgetpassgettexthtmllibhttplibimaplibimputilinspectkeywordmacpathmailboxmailcapnntplibnumberspkgutilprofiletopics
+pydoc_datasgmllibsmtplibstatvfsurllib2weakrefwhichdbzipfileUserDictUserListargparseasynchatasyncoreaudiodevcProfilecalendarcolorsyscopy_regdircachefpformatoptparseplatformplistlibsunaudiosymtabletabnannytempfiletextwrapurlparsewarnings	_strptime	cookielib	fileinput	formatter	fractions	linecache	mimetools	mimetypes	multifile	posixfile	posixpath	sre_parse	stringold	telnetlib	threading	traceback	xmlrpclib
+MimeWriter
+UserString
+__future__
+compileall
+contextlib_gobject_errormoduleDeeGdkGioGtkGLibIBusPangoUnitySignonGObjectAccounts	overridesGIMarshallingTests_option
+repository	docstring
+_constantspygtkcompat_signalhelper_propertyhelperTarIO_binaryExifTagsFontFileImageCmsPyAccessTiffTagsPIL	ImageMode	ImageShow	OleFileIO
+ImageDraw2
+ImageMorphBdfFontFileContainerIOGdImageFileJpegPresetsPaletteFilePcfFontFileWalImageFileImImagePluginBmpImagePluginCurImagePluginDcxImagePluginEpsImagePluginFliImagePluginFpxImagePluginGbrImagePluginGifImagePluginIcoImagePluginImageTransformImtImagePluginMicImagePluginMpoImagePluginMspImagePluginPcdImagePluginPcxImagePluginPdfImagePluginPpmImagePluginPsdImagePluginSgiImagePluginSunImagePluginTgaImagePluginWmfImagePluginXbmImagePluginXpmImagePluginGimpPaletteFileIcnsImagePluginIptcImagePluginJpegImagePluginMpegImagePluginPalmImagePluginTiffImagePluginWebPImagePluginGimpGradientFilePixarImagePluginJpeg2KImagePluginMcIdasImagePluginSpiderImagePluginXVThumbImagePluginBufrStubImagePluginFitsStubImagePluginGribStubImagePluginHdf5StubImagePlugincdromgtk2packageaptindexeraxigitbazaarvcs	mercurial
+subversionreqziplistshowunzipbundlefreeze	uninstall
+completionpipdownload	locations
+baseparser
+cmdoptionsbackwardcompatbasecommandMimeLocaleIniFilexdg
+ExceptionsRecentFilesDesktopEntryBaseDirectoryMozo
+MainWindowrandrshapextestxinerama	compositeXXKrdbconnectvms_connectunix_connecticccmcursorxobjectcolormapdrawablefontableXatomXutilrqstructsxauthaplxkbthaixf86greekarabichebrewkoreanlatin1latin2latin3latin4xk3270special	keysymdefcyrillickatakana	technical
+miscellany
+publishingXlibthreadedXcursorfontgsresumable_upload_handlerprefixkeyfiletaggingwebsites3multideletedeletemarkerbucketloggingresumable_download_handlerelbloadbalancerinstancestatelimits	autoscaleactivity	scheduledlaunchconfigalarmmetric
+cloudwatch	datapoint	dimensionkeypairec2snapshot	ec2objectinstanceinfoinstancetypevolumestatusbundleinstancebuyreservationinstancestatusplacementgroupnetworkinterfacereservedinstancespotpricehistoryblockdevicemappinglaunchspecificationspotinstancerequestspotdatafeedsubscriptionecsstepemr	emrobjectinstance_groupbootstrap_actionfpsiam
+summarymapmwsrds
+dbinstance
+dbsnapshot
+statusinfooptiongroupdbsubnetgroupparametergroupdbsecuritygroupvpcsecuritygroupmembershipblob
+sdbmanager
+xmlmanagerquerytest_dbpropertysdbqueryresultsetsessnsqueuesqs
+bigmessagejsonmessagebatchresultsmessageattributesstsswflayer1_decisionssubnet
+networkacl
+routetable
+vpngatewaydhcpoptionsvpnconnectioncustomergatewayinternetgatewayfilesimpleresultsetrds2pricemturkquestionlayoutparamqualificationcopybotebstracmysqlapacheubuntu	installer
+installersstartuppyami	bootstrap
+helloworld
+launch_ami
+scriptbasepropgetmanagecmdshelltest_managerobotoawsqueryrequestawsqueryservicecacerts
+ymlmessagejobvaultwriterglacier
+concurrentkinesisorderiobjectmashupsinteractivestatusroute53
+hostedzonebatchdynamodb	conditionopsworksredshiftbssubmitsonofmmm
+servicedef	beanstalkitemsresults	dynamodb2objectoriginsigners
+cloudfrontidentitydistributioninvalidation
+cloudtrailbotocloudsearchsourceattributeelasticacheprovidercloudsearch2datapipeline	resultset
+requestlogstackcloudformationstorage_uriauth_handlerjsonresponseelastictranscoderhttps_connectioncurlbus_dbusmainloopproxiesdbuslowlevel
+gi_servicegobject_service_expat_introspect_parseroptiondiffformfill	_setmixin
+soupparserElementSoup_diffcommand_html5builderincludes	cssselectisoschematron_elementpathpyclasslookupdoctestcomparerom1m2oddifooidummy
+ifoo_othertest_advicetest_verifytest_adaptertest_elementtest_sortingtest_documenttest_registrytest_interfacetest_exceptionstest_interfacesadvisory_testingtest_declarationstest_odd_declarationsbasemappingtest_idatetimetest_import_interfaces	idatetimeadviceverifyadapterdeclarationsLoaderinvokeport_v2	as_string	string_io
+proxy_baseascii_upperload_pluginCompilerindenter	qtproxiesproxy_metaclasspyuicuicuiparser
+icon_cache
+objcreator
+propertiesphononqtwebkit
+qscintillaqaxcontainerqtdeclarativePyQt4
+pyqtconfigsambarerpcechotestrpc
+rpc_tallocdocsndrdumpblackboxsamba_tool_drssourcetimecmd
+samba_toolstringsposixacl	samba3samunicodenamesupgradeprovisionupgradeprovisionneeddcdrsspnfsmorodcdsacldbcheckldapcmpvampiretestparm
+delegationjoinsambadns
+web_serversd_utilstdb_util	dbchecker	drs_utils	kcc_utils	ms_schema
+descriptorupgradehelpersms_display_specifiers
+simpledistcomplexdistimagedblogginghandlercleanElementIncludecompilerdrivertool
+pep425tagsrandomdebfileservicesindexmetadatakeysymspathsdirectconnect_utilwrapper_flattentest_ssl
+test_pathsunittesthashliblogfiletest_tcptest_udp	test_unixssltaskdeferaddressprotocol
+test_basicftpbasicportforward_versiontest_internetapplication	test_nmeacontribpackagesfieldspulldomsaxhtml5parserpxsshstatus_codesPSDrawImageQtImageOpsImageWin	ImageDraw	ImageFile	ImageFont	ImageGrab	ImageMath	ImagePath	ImageStat
+ImageChops
+ImageColorImageFileIOImageFilterImageEnhanceImagePaletteImageSequencePngImagePluginworkerdeb822staticpexpecttarfilemanifest	testutilsscreensdistinstallcommandbuild_pyregister	bdist_rpm	build_extinstall_libbdist_wininstinstall_scriptsinstall_egg_infodist	extensionarchive_utilcacheabcndrdumpjukeboxoptionslockfiledefsvalidate	fdpexpecteasy_install	pyopensslbackendsrunnerlocaleloggerconsts
+validatorsbackendpypanelpoliciesnotificationgraphicsbuildpluginglobalsdummyprocessappmappingdemotemplatechunkparsetexttokenizegrammar
+decorators
+downloaderextcasedebugpluginsproxysuiteloaderresultfailureimportercolorsscriptslockclientsoauth2iri2urihttplib2vimeo	multiparturlhttpAEShmaccodechelperpreferencesospathiorepickleshutilstructdecimalsqlite3StringIO	functools
+subprocesscollectionsmanagersmultiprocessinggiwxFileunixgioAdapteraudiovideogstMenuTableActionDialogSocket	IconTheme	StateType
+StatusIconMountOperationgdkgtkErrorResolver
+HTMLParser
+ParseErrorlxmlzopecairoItemStyleLayoutWarningWrapMode	Alignment	Direction
+statisticsidmapsearchtypesConfigmanholeerrortelnetprogressenumsmarkerssockslistener	selectiongridscanvashtmlcharthelpcompatapiclientyoutubemanagercore	RectangleImagesrvsvcbase	dnsserversecuritylibresourcelibsmb_samba_internaldsdbgensecpolicysamba	messagingCryptosysxapianOpenSSL_sslActionGroupgobjectmathmodeltimepythontwisted_glibposixpynotify	duplicity	reportlabsyslogdatetime	cStringIO	itertools__builtin__StringStructMessage_collectionsheadersdist	test_keys	test_tooltest_tagopttest_installtest_rankingtest_wheelfiletest_signaturesarchivepkginfokeysdjbec
+signatures	ed25519py	decorator	egg2wheelbdist_wheelwininst2wheelMD2MD4MD5SHAHMACRIPEMDSHA224SHA256SHA384SHA512hashalgoasn1numberCounterRFC1751randpool	py3compat	winrandom
+py21compat_number_newDESXORARC2ARC4CASTDES3Blowfish	blockalgo
+PKCS1_OAEPntfallbackrng_baseSHAd256FortunaGeneratorFortunaAccumulator_UserFriendlyRNGKDFChaffingAllOrNothingtest_MD2test_MD4test_MD5test_SHA	test_HMACtest_RIPEMDtest_SHA224test_SHA256test_SHA384test_SHA512	test_asn1test_numbertest_Countertest_AEStest_DEStest_XOR	test_ARC2	test_ARC4	test_CAST	test_DES3test_Blowfishtest_pkcs1_oaeptest_nt
+test_posixtest_generictest_fallbacktest_SHAd256test_FortunaGeneratortest_FortunaAccumulatortest_randomtest_rpoolcompattest__UserFriendlyRNGtest_KDFtest_rfc1751test_chaffingtest_AllOrNothingtest_DSAtest_RSAtest_ElGamaltest_importKeytest_pkcs1_pssSelfTest	st_commonDSARSA_DSA_RSApubkeyElGamal	_slowmath	PKCS1_PSSpct_warningsarfiledebtagsdebian	changelogdebian_supportmltcharunivtagmapusefultypenamedval	namedtype
+constrainteoobercerderoctetspyasn1six	test_randtest_cryptotsafePluginDialogManagerMenuManagerStatsManagerToolbarManagerDeviceListManagerDeviceMenuManagerProgressbarCommonUigui	Animation
+DeviceListGenericListGsmSettingsMessageAreaPixbufTableGtkAnimationNotificationNstBluetoothDeviceSelectorListDeviceSelectorDialogDeviceSelectorWidgetCellRendererPixbufTableOdsBaseods	OdsServer
+OdsManager
+OdsSessionOdsServerSession
+BluezAgentNetConf	Mechanism	SpeedCalc
+FakeDeviceBluezConfigDbusServiceKillSwitchNGAppletServicePPPConnectionPluginManagerSignalTrackerPulseAudioUtilsAgentManagerbluezBaseInterfaceBlueZInterfaceServiceInterfaceLibSdpHeadsetExitItemNetUsage	AuthAgent
+KillSwitch
+Networking
+PPPSupport
+PulseAudioDBusServiceRecentConnsAppIndicatorDiscvManagerNMDUNSupportNMPANSupportPowerManagerSerialManagerShowConnectedStandardItemsTransferServiceGconfServicesPulseAudioProfileAudioPppRfKill	mechanism
+BasePluginAppletPluginConfigPluginManagerPluginServicePluginMechanismPluginConfigurablePlugininiiniparseblueman	Constants	FunctionsDeviceClassescsmjpcntxmbcssmjisfreqchardetbig5freq	escprober	euckrfreq	euctwfreq
+big5prober
+chardetect
+gb2312freq
+sjisprober
+utf8probercp949probereucjpprobereuckrprobereuctwprobergb2312proberhebrewproberlatin1probercharsetproberlangthaimodellanggreekmodellanghebrewmodelmbcharsetprobermbcsgroupprobersbcharsetprobersbcsgroupproberchardistributionlangcyrillicmodeluniversaldetectorcharsetgroupprobercodingstatemachinelangbulgarianmodellanghungarianmodelbasedirdirspec	_backportdistlibdatabaselocators	resourcespropertyhelper
+_lazyutilsdsextrashostsoneconfTestUbuntudistributornetworksync	netstatus
+ssohandlerinfraclient_fakefake_webcatalog_siloinfraclient_pristinedbusconnectpackagesethandlerpshtest_cgitest_taptest_webtest_xml	test_http	test_soap	test_stan	test_wsgi
+test_agent
+test_proxy
+test_vhosttest_statictest_xmlrpctest_distribtest_flattenrequesthelpertest_httpauthtest_resourcetest_templatetest_newclienttest_webclienttest_domhelperstest_http_headersdigest_authsuxiwebsoapwsgi_stanguardtwcgivhostscriptxmlrpcdistribrewriteweb_elementmicrodom
+_newclient
+_responses
+domhelpershttp_headersportal_digestpamauthstrcredcredcheckersiosimtest_pbtest_amptest_doctest_ftptest_htbtest_pcptest_siptest_sob	_preamble	test_dict	test_hook	test_task	test_text
+test_defer
+test_fdesc
+test_ident
+test_iosim
+test_jelly
+test_roots
+test_setup
+test_socks
+test_usageprocess_fdsprocess_ttyssl_helperstest_adbapitest_bananatest_compattest_defgentest_dirdbmtest_fingertest_iutilstest_monkeytest_plugintest_tpfiletest_twistdmyrebuilder1myrebuilder2plugin_basictest_contexttest_failuretest_logfiletest_manholetest_modulestest_newcredtest_postfixtest_rebuildtest_reflecttest_strcredtest_twistedplugin_extra1plugin_extra2proto_helperstest_lockfiletest_loopbacktest_memcachetest_policiestest_shortcuttest_statefultest_strerrortest_strportsprocess_echoerprocess_lingerprocess_readerprocess_signalprocess_testertest_factoriestest_pbfailuretest_persistedtest_protocolstest_randbytestest_sslverifyprocess_cmdlineprocess_twistedtest_cooperatortest_digestauthtest_formmethodtest_threadabletest_threadpoolcrash_test_dummystdio_test_writetest_applicationtest_ftp_optionsmock_win32processreflect_helper_IEreflect_helper_VEreflect_helper_ZDEtest_tcp_internalsprocess_stdinreaderstdio_test_consumerstdio_test_hostpeerstdio_test_loseconnstdio_test_producerstdio_test_writeseqstdio_test_halfclosestdio_test_lastwritetest_stringtransportweirdnovarssampledetestsskipping	erroneous
+moduleself
+moduletest
+ordertests
+scripttest
+test_testsmockdoctestsuppressiontest_loadertest_outputtest_runnertest_doctesttest_pluginstest_warningtest_deferredtest_keyboardtest_reportertest_testcasemockcustomsuitetest_assertionsmockcustomsuite2mockcustomsuite3test_suppressiontest_pyunitcompattest_asyncassertionstest_workertest_optionstest_disttrialtest_workertrialtest_distreportertest_workerreporter_dist	disttrialworkertrialdistreporterworkercommandsworkerreportermanagercommandsitrialreporter	_synctest
+_asynctest_asyncrunnerpullpipe	test_dist
+test_dist3
+test_win32test_syslogtest_fakepwdtest_hashlibtest_releasetest_runtimetest_sendmsgtest_systemdtest_urlpathtest_zippathtest_htmlizertest_versionstest_constantstest_deprecatetest_shellcomptest_zipstreammodules_helperstest_componentstest_textattributesdeprecatedattributeshookdist3rootsusagemonkeycontextfakepwdmodulesrebuildreflectreleaseruntimesystemdurlpathzippath_inotify_releasefilepathfinalizeshortcutversions	deprecate	procutils	randbytes	zipstream
+_shellcomp
+components
+formmethod
+threadable
+threadpool_textattributestktreetkutilgtk2utilpbjellybananaflavorspublishspreadtest_gtk2manholegtk2manholeexplorer
+_inspectrogladereactor	cred_file	cred_unixcred_memorytwisted_ftptwisted_webcred_sshkeystwisted_coretwisted_inettwisted_sockstwisted_trialcred_anonymoustwisted_qtstubtwisted_telnettwisted_manholetwisted_reactorstwisted_portforwardtest_scriptstest_tap2debtest_tap2rpmtwistd_twistwtap2debtap2rpmtkunzip
+tapconvert_twistd_unix	test_core	test_iocp	test_main	test_time
+test_fdsettest_newtlstest_socket_posixifaces_win32ifacesfakeendpointtest_addresstest_defaulttest_sigchldmodulehelpersreactormixinstest_glibbasetest_inlinecbtest_protocolprocess_helpertest_endpointstest_gireactortest_posixbasetest_qtreactortest_gtkreactortest_serialportconnectionmixinstest_baseprocesstest_pollingfiletest_win32eventstest_epollreactortest_posixprocesstest_udp_internalstest_filedescriptorprocess_gireactornocompatfdescstdio_newtlsdefaultinotifythreads_signalsconstiocpreactor	_glibbase	cfreactor	gireactor	kqreactor	posixbase	qtreactor	tksupport	wxreactor	wxsupport
+_sslverify
+gtkreactor
+serialport_posixstdio_win32stdiogtk2reactorgtk3reactorpollreactorpyuisupport_baseprocess_pollingfileepollreactorglib2reactorselectreactor_dumbwin32proc_threadedselect_posixserialport_win32serialportwin32eventreactortest_stylesaotsobdirdbm	persistedcrefutilgpsrockwellmicemousemanamphtbpcpsiptlsdictwireidentfingerpostfix	protocolsloopbackmemcachestateful	shoutcastadbapi
+enterprisereactorsstrportsreceivertest_sentencepositioning	_sentenceipositioning	copyrightssl_timeoutntlmpoolordered_dicturllib3filepostpoolmanagerconnectionpoolvboxapiVirtualBox_constantsansiwintermcolorama
+initialiseansitowin32sourcesextendleveller	pygobject
+discovererdatrietrielintfilters
+whitespaceoptionaltagsinject_meta_charsetalphabeticalattributes
+serializerhtmlserializerhtml5libihatexmltreewalkers	lxmletreegenshistream	tokenizertreeadapterstreebuilders
+etree_lxmlinputstreamaccess_tokenrequest_tokenrfc5849	signatureoauth1web_applicationlegacy_applicationmobile_applicationbackend_application
+revocationtokensrfc6749grant_typesimplicitrefresh_tokenauthorization_codeclient_credentials#resource_owner_password_credentialsoauthliburi_validatepygstpygtkcertshooksmodelscookiesrequestsadapterssessions
+structuresImageGLImageTkImageCrackCodepkworker	aptworkerloopcrashconsole	aptdaemon
+networking
+policykit1gtk3widgetsopengl	detectorsgpglazy	_cf_pyrax	cfbackend	u1backend
+ftpbackend
+giobackend
+hsibackend
+sshbackend_boto_multibotobackenddpbxbackendftpsbackendimapbackendmegabackend_boto_single_ssh_pexpectgdocsbackendlocalbackendrsyncbackendswiftbackendtahoebackend_ssh_paramikowebdavbackend_cf_cloudfilesrobustdiffdirtempdircompilecdup_tempdup_timelibrsyncpatchdir
+cached_opscommandlinefile_namingfilechunkiogpginterfaceurlparse_2_5dup_threadingasyncschedulerabagcorpyamlarcivfontsunitsattrmapset_opsboxstuffrl_accel	PyFontify	extformat	geomutils	pagesizes	rparsexml	sequencer	textsplit
+codecharts
+fontfinder
+formatters
+normalDate
+pdfencrypt
+randomtext
+rltempfilepygments2xprepdfgeompdfgen	pdfimages
+pathobject
+textobjectpdfdocpdfformttfontspdfbasecidfontspdfutils	_fontdata	rl_codecs
+pdfmetrics
+pdfpattern_cidfontdata_can_cmap_data_fontdata_enc_pdfdoc_fontdata_enc_symbol_fontdata_enc_winansi_fontdata_enc_macroman_fontdata_enc_standard_fontdata_enc_macexpert_fontdata_widths_symbol_fontdata_widths_courier_fontdata_enc_zapfdingbats_fontdata_widths_helvetica_fontdata_widths_timesbold_fontdata_widths_timesroman_fontdata_widths_courierbold_fontdata_widths_timesitalic_fontdata_widths_zapfdingbats_fontdata_widths_helveticabold_fontdata_widths_courieroblique _fontdata_widths_timesbolditalic!_fontdata_widths_helveticaoblique#_fontdata_widths_courierboldoblique%_fontdata_widths_helveticaboldobliqueaxesareasdotboxspiderlegendsutils3dchartsdoughnutslidebox	barcharts	lineplots	piecharts
+linecharts
+textlabelsqrltouspseanbccode39code93usps4scode128barcode	fourstateradarbubblerunallscattersamples
+line_chart
+simple_pieexcelcolorsstacked_barexploded_piefilled_radarclustered_barscatter_linesstacked_columnclustered_columnscatter_lines_markerslinechart_with_markersflagseventcalsignsandsymbolsshapesrenderPMrenderPS	renderPDF	renderSVG
+renderbase
+testshapes
+widgetbasetestdrawingsparaframestablesfiguresplatypus	flowables	paragraph
+paraparserdoctemplatexpreformattedtableofcontents	rl_configrl_settings
+_markerlibdistro
+aptsourcesdistinfosourceslistfjson
+cloudfiles	containerauthenticationstorage_objectlibxml2test_svn	test_test
+test_sdistenvironmenttest_developtest_sandboxtest_egg_infotest_bdist_eggtest_build_exttest_dist_infotest_markerlibtest_resourcesscript-with-bomtest_integrationtest_upload_docstest_easy_installtest_packageindextest_find_packagesaliasrotatesetoptdevelopegg_infosaveopts	bdist_eggupload_docsdependssandbox
+setuptools	svn_utils
+lib2to3_ex
+py27compat
+py31compat
+site-patchssl_supportpackage_indexunicode_utilsaesbrm6vkaolardbpbc56cbscmtcnndfbfazfc2igninaiviku6la7lrtmdrmitmlbmtvnbanbcnfbnflnhlnponrkntvorfpbsrairtssbstedtf1tlctmztvpubuvh1vrtwatwdrzdfartebeegbildcnetdaumdbtvdrtvehoweitbexfmfktvharkimdbjovekeekmuzundtvnocortbfrtveruhdrutvsaposexusinasohusyfytasstutvveohvevovgtvvicevikivinevubewimpxbefxnxxynetbyutvcspanglideglobogolemheisehypeminfoqlyndamgoonmporanavernuvidro220rtlnlsnotrspacespikesteamtoutvtube8tudouturboudemyurortvbox7veehdvestividmevidzivpornwallaweiboxtubeyahooyoukuanysexaparatblinkxbliptvcloudyclubicdeezerdotsubelpaisexpotvflickriprimakankanmailrumiteleooyalaplayedplayfmpornhdringtvroxwelrtlnowrutubesciveesharedsmotrisport5sztvhutapelytelembthisavtumblrtuneintvigletvplaytwitchvimplevuclipwistiawrzutaxminusanitubebbccoukcanalc2cbsnewscrackeddefensedreisatdropboxdrtuberellentvempflixepornerfirsttvfivemingameonegenericgodtubegoshgayhowcastmofosexmonikermyspacemyspassmyvideoninegagnovamovnownessnytimespatreonphoenixplayvidpornhubpornoxopyvideoredtubespiegeltenplaytesturlthvideotinypictnaflixtoypicstrutubeunistraustreamviddlervideottvulturexvideosyoujizzyoupornzingmp3	extractoraddanimeallocineauenginebambuserbandcampbilibilibreakcombuzzfeedchannel9clipfishengadgetescapistfacebookfourtubefrancetvgamespotgamestargdcvaulthelsinkihuffpostizlesenekrasviewlaola1tvlifenewsliveleakmetacafemixcloudmoevideomojvideomoosharemovsharenewstubeniconiconosvideonowvideoquickvidsavefromsharesixslutloadsportboxstreamczsunpornoteamcocotheonionvideobamxhamster	adultswim	audiomack	bloomberg	canal13cl	canalplus	condenast	criterion	discovery	divxstage	einthusan	firedrive	firstpost	freesound	freevideo	gamekings	hornbunny	instagram	jeuxvideo	kontrtube	moviezine	podomatic	pornotube	rbmaradio	sexykarma	sockshare	soundgasm	southpark	spankwire	spiegeltv	subtitles	techtalks	telecinco	trilulilu	videofyme	videomega	videoweed	vodlocker	xboxclips
+archiveorg
+behindkink
+brightcove
+cliphunter
+freespeech
+funnyordie
+googleplus
+gorillavid
+jpopsukitv
+keezmovies
+livestream
+malemotion
+metacritic
+motherless
+motorsport
+movieclips
+muenchentv
+musicvault
+newgrounds
+promptfile
+screencast
+servingsys
+slideshare
+soundcloud
+stanfordoc
+tagesschau
+youruploadaftonbladetcrunchyrolldailymotionebaumsworldeighttracksextremetubefolketingetfranceintergroovesharkhostingbulkiconosquarekhanacademykickstartermorningstarmusicplayonnormalbootsphotobucketplanetaplayradiofrancesrmediathekstreamcloudteachertubetheplatformthesixtyonechilloutzonecinemassacrecollegehumorgametrailersgooglesearchhentaistigmahotnewhiphopmacgamestoreministrygridreverbnationswrmediathekvideopremiumacademicearthappletrailersceskatelevizeclipsyndicatecomedycentralfranceculturehowstuffworksoktoberfesttvprosiebensat1telebruxellestraileraddictjadorecettepubrottentomatoesvideodetectivewashingtonpostwayofthemastergoldenmoustacheteachingchannelworldstarhiphopeveryonesmixtapeparliamentliveuksportdeutschlandvideolecturesnetinternetvideoarchiveupdatef4mhlsrtmpmplayer
+youtube_dljsinterp	YoutubeDL	swfinterpffmpegxattrpppostprocessoratomicparsleyexecafterdownloadaboutquotesmate_invest
+currenciesnetworkmanagergenerictreemodel	configobj	sipconfig	wxversiondebian_bundledrv_libxml2lsb_releasepempkcs12rfc1155rfc1157rfc1901rfc1902rfc1905rfc2251rfc2314rfc2315rfc2437rfc2459rfc2511rfc2560rfc3412rfc3414rfc3447rfc4210rfc5208pyasn1_modulessipconfig_ndpkg_resources_commonservice_identityaptdsynapticsessioninstallergstinstallercharacteristicssl_dialog_uierror_message_uisetup_account_uiloadingoverlay_uireset_password_uisuccess_message_uinetwork_detection_uiemail_verification_uiforgotten_password_uicurrent_user_sign_in_uiproxy_credentials_dialog_uiarrowexpander
+error_page
+ssl_dialogproxy_dialogsuccess_pageloadingoverlaysso_wizard_pageubuntu_sso_wizardenhanced_check_boxsetup_account_pagereset_password_pagenetwork_detection_pageemail_verification_pageforgotten_password_pagecurrent_user_sign_in_pageperspective_brokeripctxtxweblibsouprestful	webclient	gsettings	qtnetwork	timestampqtwisted	txsecretstranslationtcpactivationkeyring	pykeyringaccount
+ubuntu_ssonetworkstatenetworkstatestest_indicator_keyboardindicator_keyboardpiston_mini_clientserializersfailhandlersUbuntuSystemServicecrustframemagicPyWrapbufferpseudoPyCrustPyShellfillingPySlices	PyAlaMode	PyFilling
+PyAlaCarte
+dispatcher
+editwindow
+introspect
+sliceshellcrustslicesinterpreterPyAlaModeTestPySlicesShellauibartabarttabmdiauibookdockartframemanageraui_constantsaui_utilitiesaui_switcherdialogbarpageart_auiart_mswcontrolgallerytoolbarribbon	buttonbarart_defaultart_internalpersistpersist_handlerspersist_constantspersistencemanagerpiectrlpygaugezoombaragwflatmenuknobctrl	floatspin	labelbook	peakmeter	rulerctrl
+aquabutton
+artmanager
+balloontip
+pybusyinfo
+pyprogress
+speedmeter
+toasterboxfmresourcesshapedbuttonsupertooltiphypertreelistthumbnailctrladvancedsplashfmcustomizedlggradientbuttonmultidirdialogfourwaysplittercubecolourdialogultimatelistctrlpycollapsiblepanegenericmessagedialogflagartimg2pyartprov_basic_drawn_lines_canvasogl_diagram_divided_oglmisc	_bmpshape	_compositctrlnumctrlmaskedcomboboxtextctrl
+ipaddrctrl	treemixingridlabelrendererarg1kwargsdatamsgtopicexctopicmgrtopicobj	callables
+topicutils
+treeconfig
+weakmethodlistenerbasetopicargspecpublisherbasenotificationmgrvalidatedefnargstopicdefnprovidertopictreetraversernotificationmgr_oldexchandlingglobalsettingstopictreeprintertopictreevisitorsetupv1setupv2	setuparg1
+pubsubconfsetupkwargsautosetuppubsubv1pdfwintickerdocviewexpandostatbmpwxcairo	lib_setup
+fontselectbuttontreectrlpanelhelpersflashwinGUIBBoxColorsBBoxTest	UtilitiesGUIMode	NavCanvas	Resources
+ScreenShotFloatCanvasgesturesmsgpanelplatebtnrpcMixinsplitterwordwrap	iewin_old	pydocview
+eventStack
+pdfwin_old
+ticker_xrccolourutilsitemspickercombotreeboxdragscrollereventwatcherflashwin_oldlanglistctrlresizewidgetdelayedresultembeddedimagesized_controlsbuild_optionsmetawxlib_bitmapscontrolsxh_wxlib	xh_gizmosundoviewxrcedparamsTestWinXMLTreeXRCed	attribute	component	presenterXMLTreeMenuimages_32x32AttributePanelencode_bitmapspywxrcgenaxmodulecomborichtext__version__
+maskedctrlErrorDialogsPythonBitmapsmaskednumctrlErrorDialogs_wdr_wxwxPythonhtmlhelptest_characteristicsoftwarecenter_aptd_pluginsadd_license_key_plugin
+markupbase
+nturl2path
+os2emxpath
+py_compile
+stringprep
+webbrowser_weakrefsetantigravitygenericpathmacurl2pathpickletoolsrlcompleterrobotparsersre_compileConfigParserSocketServer_osx_supportdummy_threadmodulefinderheappoolqueuesforking	reductionsynchronizesharedctypesCGIHTTPServer_LWPCookieJarsitecustomizesre_constantsBaseHTTPServer__phello__.foo_sysconfigdatahtmlentitydefsDocXMLRPCServerdummy_threadingSimpleHTTPServer_threading_local_MozillaCookieJarSimpleXMLRPCServerINCDROMDLFCNTYPES_sysconfigdata_ndnemo_appwordnet_apprdparser_appsrparser_appwordfreq_appchartparser_appchunkparser_appconcordance_appcollocations_applexiconccg
+combinatordrtlfgglueholeboxerlogicchat80semevaluate	skolemize
+relextractlinearlogicdrt_glue_democooper_storagehmmtntbrillsennahunpos
+sequentialbrill_trainerbrill_trainer_origrulefeaturetblerroranalysiszenrudeelizaieshasuntsuchatcfgdraw
+dispersionsortchomsky	babelfish
+minimalset
+wordfinderisrirslpporterstemsnowball	lancasterunittest_hmmtest_tag	test_stemtest_corporatest_classifytest_2x_compattest_naivebayestest_collocationstest_corpus_views#test_seekable_unicode_stream_readerallruntests
+align_fixtcompat_fixtcorpus_fixtchildes_fixtwordnet_fixtclassify_fixtdiscourse_fixtinference_fixtsemantics_fixtprobability_fixtnonmonotonic_fixtsegmentation_fixtportuguese_en_fixtdoctest_nose_plugingluesemantics_malt_fixtbleugdfaibm1ibm2ibm3aligngale_churchphrase_basednamed_entitymaltpchartviterbiearleychartshiftreducefeaturechartdependencygraphrecursivedescentprojectivedependencyparsernonprojectivedependencyparserbnclinrteieerknbcudhrycoeconlltimitchasenindianipipanpl196xsemcortaggedalignedchildeschunkedcmudictnombankverbnetxmldocsreaderframenetnps_chatppattachpropbanksensevalwordlist	plaintext
+dependencyswitchboardsentiwordnetbracket_parsesinica_treebankstring_categorycorpuseuroparl_rawwsdbookemgaackmeansclusterpaicescoresmetricsdistancespearman	agreementassociationsegmentationconfusionmatrixsvmtadmwekamegammaxentclassify
+naivebayesscikitlearndecisiontreerte_classifypositivenaivebayespunktsexprsimpletreebank
+texttilingmaceprover9tableau	inference	discourse
+resolutionnonmonotonicnltkjsontags	internals
+featstruct
+lazyimportprobabilitycollocationstreetransformsdtcompattrivial
+nontrivialexcsphinx
+pluginoptsprofskipcoverxunitattribtestidbuiltincapturecollectisolatedoctests
+allmodules
+deprecated
+errorclass
+logcapture
+plugintestmultiprocessfailuredetailselector	inspector	pyversiontwistedtoolssnowearthblurglaretreesblindsdefocusexplodedissolvefly_by_1
+earth_real
+lens_flare
+magic_wand
+rotate_360neon_curvesglass_sliderhalo_zoom_outwireframe_textzoom_clapboardpicture_frames_4spacemovie_introfly_by_two_titlesslide_left_to_rightblenderclipinfofilesthemetrackeffectmarkerprojectclassesinputboxkeyframeprofilestimeline	sequences	thumbnail
+av_formats
+cli_render
+messagebox
+transitionopen_projectsave_projectrestore_statestate_projectimapsmtpoembedhttplib2wrapconveniencecomplete_hooksatom	http_core	mock_httptoken_storemock_servicehttp_interfacemock_http_coregeorsaoauthRC4RSAKeyrijndaelxmltools	TripleDES	dateFuncs
+ASN1Parser
+Python_AES
+Python_RC4
+cryptomath
+keyfactoryOpenSSL_AESOpenSSL_RC4Cryptlib_AESCryptlib_RC4PyCrypto_AESPyCrypto_RC4Python_RSAKeycipherfactoryjython_compatOpenSSL_RSAKeyPyCrypto_RSAKeyOpenSSL_TripleDESCryptlib_TripleDESPyCrypto_TripleDESX509BaseDBCheckerSessionmathtlstlslitePOP3_TLSSMTP_TLSintegration	IMAP4_TLSClientHelperXMLRPCTransportAsyncStateMachineHTTPTLSConnectionIntegrationHelperTLSSocketServerMixInTLSAsyncDispatcherMixInTLSTwistedProtocolWrappermessages
+FileObject
+VerifierDBSharedKeyDBSessionCacheTLSConnectionX509CertChainTLSRecordLayerHandshakeSettingsgauth
+opensearchgdataurlfetch	test_datasample_utiltest_configapps_propertyuploadsAboutTitlesMainGTKAddFilesProfiles	AddEffect	ExportXML	TreeFiles
+NewProjectExportVideoOpenProjectTreeBlenderTreeEffectsTreeHistoryUploadVideofontselectorAddToTimelineClipPropertiesFilePropertiesIcvTransitionsImportImageSeqBlenderGeneratorImportTransitionsSimpleGtkBuilderAppTransitionPropertieslanguageGenerate_POTLanguage_Initopenshot_renderUtilsyoutube_dl_gui
+LogManagerUpdateThreadYoutubeDLGUIOutputHandlerDownloadThreadOptionsHandlerYoutubeDLInterpreter
+multiarraynumpyeventsasyncioterrainlettucebehavepathlibbuiltinsBoxedArgInfoBaseInfoTypeTagEnumInfoInfoTypeTypeInfo_gi	ArrayType	CCallback	FieldInfo	ScopeType	UnionInfo	VFuncInfo	ValueInfo
+ObjectInfo
+Repository
+SignalInfo
+StructInfoCallableInfoCallbackInfoConstantInfoFunctionInfoPropertyInfoInterfaceInfoFieldInfoFlagsUnresolvedInfoVFuncInfoFlagsErrorDomainInfoRepositoryErrorFunctionInfoFlagsRegisteredTypeInfoPyGIDeprecationWarning	_gi_cairo_aui_stc_xrc_gdi__grid_html_combo_core__media_misc__gizmos_webkit_wizard_animate	_calendar	_glcanvas	_richtext	_windows_
+_controls_RoleTextLayerValueDocumentRelationStateSetatk	Component	CoordType	Hyperlink	Hypertext	Selection	TableCell
+NoOpObjectRelationSetEditableTextKeyEventTypeRelationTypeTextBoundaryTextClipTypeHyperlinkImplObjectFactoryTextAttributeImplementorIfaceGObjectAccessibleNoOpObjectFactoryStreamableContentHyperlinkStateFlagsVfsIconDriveMountEmblemVolumeAppInfoFileIconFileInfoFileTypeIOStreamInitableSeekable_gio	ErrorEnum	SrvTarget
+SocketType
+ThemedIconAsyncResultCancellableFileMonitorInetAddressInputStreamEmblemOriginEmblemedIconFileIOStreamLoadableIconOutputStreamPasswordSaveSocketClientSocketFamilyAsyncInitableFileCopyFlagsResolverErrorSocketAddressSocketServiceTcpConnectionVolumeMonitorConverterFlagsFileEnumeratorNetworkAddressNetworkServiceSocketListenerSocketMsgFlagsSocketProtocolConverterResultDataInputStreamDriveStartFlagsFileCreateFlagsFileInputStreamMountMountFlagsAskPasswordFlagsDataOutputStreamFileMonitorEventFileMonitorFlagsFileOutputStreamSocketConnectionFileAttributeInfoFileAttributeTypeFilterInputStreamInetSocketAddressMemoryInputStreamMountUnmountFlagsSimpleAsyncResultSocketConnectableAppInfoCreateFlagsDriveStartStopTypeFileQueryInfoFlagsFilterOutputStreamMemoryOutputStreamBufferedInputStreamDataStreamByteOrderFileAttributeStatusNativeVolumeMonitorBufferedOutputStreamFileAttributeMatcherMountOperationResultSocketControlMessageZlibCompressorFormatDataStreamNewlineTypeFilesystemPreviewTypeThreadedSocketServiceFileAttributeInfoFlagsOutputStreamSpliceFlagsSocketAddressEnumeratorBusPadXMLCapsDateRankTaskClockIndexQueryStateBufferFormatGErrorPluginPresetBaseSrcElementSegmentTagFlagTagListURITypeAddErrorBaseSinkBinFlagsBusFlagsDateTimeGhostPadIteratorPadFlagsPipelineSeekTypeTaskPoolTypeFind_gst	CapsFlags	CoreError	DPVersion	DataQueue	LinkError	QueryType	SeekFlags	Structure	TagSetter	TaskState
+AssocFlags
+BufferFlag
+BufferList
+ClockFlags
+Controller
+DebugLevel
+FlowReturn
+IndexEntry
+IndexFlags
+MiniObject
+ParseFlags
+QueryError
+SearchMode
+StaticCaps
+URIHandlerClockReturnCollectPadsLFOWaveformPadPresencePadTemplatePluginErrorPluginFlagsRemoveErrorStateChangeStreamErrorSystemClockActivateModeBusSyncReplyElementFlagsIndexFactoryIteratorItemLibraryErrorPadDirectionPadLinkCheckTagMergeModeBaseTransformBufferingModeControlSourcePadLinkReturnPipelineFlagsPluginFeatureResourceErrorBufferListItemClockEntryTypeElementFactoryEventTypeFlagsIndexCertaintyIndexEntryTypeIteratorResultNetClientClockAllocTraceFlagsBufferCopyFlagsDebugColorFlagsMiniObjectFlagsNetTimeProviderTypeFindFactoryLFOControlSourcePadTemplateFlagsStreamStatusTypeIndexLookupMethodStateChangeReturnStaticPadTemplateImplementsInterfaceIndexResolverMethodDebugGraphDetailsStructureChangeTypeTypeFindProbabilityElementNotFoundErrorPluginNotFoundErrorInterpolationControlSourcepbutils__init__BoxHSVHBoxListMiscPlugUnitVBoxArrowCListCTreeComboCurveEntryFixedFrameLabelPanedRangeRulerScaleBorderButtonHPanedHRulerHScaleVPanedVRulerVScaleWidgetBuilderIconSetInfoBarMenuBarPageSetPreviewRcFlagsRcStyleSpinnerTextTagToolbarTooltipAccelMapCTreePosCalendarArgFlagsCellViewCellTypeComboBoxEditableEventBoxExpanderIconSizeIconInfoListItemIconViewMenuItemNotebookPackTypePathTypeSettingsProgressSideTypeSortTypeSpinTypeTextIterTextMarkTextViewToolItemTooltipsTreeIterTreeViewViewport_gtk	ArrowType	Assistant	Buildable	ButtonBox	CTreeNode	Clipboard	Container	CurveType	DebugFlag	HandleBox	IMContext	ListStore	Invisible	MatchType	MenuShell	PageSetup	PaperSize	Separator	Scrollbar	SizeGroup	Statusbar	ToolShell	TreeStore	TreeModel
+AccelFlags	UIManager
+AccelGroup
+Accessible
+AccelLabel
+AnchorType
+Adjustment
+CellLayout
+DeleteType
+CornerType
+FontButton
+FileFilter
+HButtonBox
+GammaCurve
+HScrollbar
+IconSource
+LinkButton
+HSeparator
+MetricType
+OptionMenu
+Orientable
+PolicyType
+PrintError
+PrintPages
+RecentInfo
+ResizeMode
+ScrollStep
+ScrollType
+ShadowType
+SpinButton
+TextBuffer
+ToolButton
+UpdateType
+VButtonBox
+VScrollbar
+VSeparator
+VisibilityAboutDialogActivatableAspectFrameCheckButtonButtonsTypeColorButtonDialogFlagsDrawingAreaEntryBufferGdkAtomTypeFileChooserIconFactoryItemFactoryInputDialogNotebookTabOldEditableOrientationPreviewTypePrintDuplexPrintStatusProgressBarRadioActionRadioButtonRcTokenTypeReliefStyleRequisitionScaleButtonTargetFlagsToolPaletteWidgetFlagsWindowGroupBuilderErrorButtonActionCellEditableCellRendererDestDefaultsCListDragPosMovementStepPositionTypePrintContextPrintQualityPrivateFlagsRecentActionRecentFilterResponseTypeTextTagTableToggleActionToggleButtonToolbarStyleTreeDragDestTreeSortableTreeViewModeVolumeButtonAttachOptionsCheckMenuItemComboBoxEntryDirectionTypeExpanderStyleFileSelectionFontSelectionIMStatusStyleImageMenuItemJustificationMessageDialogPackDirectionPrintSettingsRadioMenuItemRecentChooserRecentManagerSelectionDataSelectionModeSizeGroupModeTextDirectionToolItemGroupTreeModelSortTreeSelectionButtonBoxStyleCTreeLineStyleColorSelectionIMMulticontextIMPreeditStyleIconThemeErrorMenuToolButtonNumberUpLayoutRecentSortTypeScrolledWindowTextAttributesTextWindowTypeTreeDragSourceTreeModelFlagsPrintOperationTreeViewColumnWidgetHelpTypeWindowPositionFileFilterFlagsIMContextSimpleIconLookupFlagsOffscreenWindowPageOrientationEntryCompletionSensitivityTypeRadioToolButtonTearoffMenuItemTextChildAnchorTextSearchFlagsTreeModelFilterCellRendererModeCellRendererTextFileChooserErrorGenericTreeModelCellRendererSpinProgressBarStylePathPriorityTypeSubmenuDirectionSubmenuPlacementToggleToolButtonToolbarChildTypeTreeRowReferenceCellRendererAccelAssistantPageTypeCellRendererComboEntryIconPositionCellRendererStateFileChooserActionFileChooserButtonFileChooserDialogFileChooserWidgetRecentChooserMenuMenuDirectionTypeRecentFilterFlagsSeparatorMenuItemSeparatorToolItemToolbarSpaceStyleTreeViewGridLinesUIManagerItemTypeCTreeExpanderStyleCTreeExpansionTypeCellRendererPixbufCellRendererToggleDeprecationWarningRecentChooserErrorRecentManagerErrorCellRendererSpinnerGenericCellRendererFontSelectionDialogRecentChooserDialogRecentChooserWidgetCellRendererProgressColorSelectionDialogIconViewDropPositionPrintOperationActionPrintOperationResultTextBufferTargetInfoTreeViewColumnSizingTreeViewDropPositionCellRendererAccelModePrintOperationPreviewCalendarDisplayOptionsProgressBarOrientationSpinButtonUpdatePolicyToolPaletteDragTargetsFileChooserConfirmationDTDXSLTCDATAXPathQNamePIBaseDocInfoETXPathRelaxNG_Attrib_Entity_IDDictxmlfileDTDErrorXInclude_Comment_Elementiterwalk	C14NError	LxmlError	XMLParser	XMLSchema	XSLTError	_Document	_ErrorLog	_LogEntry	iterparse
+EntityBase
+ErrorTypes
+PyErrorLog
+Schematron
+XPathError
+_ValidatorCommentBaseElementBaseErrorLevelsParserErrorTreeBuilder_FeedParserErrorDomainsRelaxNGError_ElementTreeDTDParseErrorXIncludeErrorXMLPullParserXSLTExtensionXSLTSaveError_BaseErrorLog_ListErrorLogHTMLPullParserXMLSchemaErrorXMLSyntaxErrorXMLTreeBuilderXPathEvalErrorXSLTApplyErrorXSLTParseErrorDocumentInvalidLxmlSyntaxErrorSchematronError_DomainErrorLog_XSLTResultTreeDTDValidateErrorSiblingsIteratorXPathResultErrorXPathSyntaxError_ElementIterator_SaxParserTargetAncestorsIteratorETCompatXMLParserLxmlRegistryErrorRelaxNGErrorTypesRelaxNGParseErrorXSLTAccessControl_RotatingErrorLogElementClassLookupSerialisationErrorXPathFunctionErrorXSLTExtensionError_ElementTagMatcherElementTextIteratorXMLSchemaParseError_TargetParserResult_XPathEvaluatorBaseElementChildIteratorRelaxNGValidateErrorSchematronParseError_ElementStringResultXPathElementEvaluator_ElementMatchIterator_ElementUnicodeResultNamespaceRegistryErrorXMLSchemaValidateErrorXPathDocumentEvaluator_ProcessingInstructionSchematronValidateErrorCustomElementClassLookupPythonElementClassLookupElementDefaultClassLookupElementDepthFirstIteratorFallbackElementClassLookup_XSLTProcessingInstructionElementNamespaceClassLookupParserBasedElementClassLookup AttributeBasedElementClassLookup	objectify_zope_interface_coptimizations_cairogcEngineMatrixScriptWeightContextFontMapFontsetStretchVariantAttrListAttrTypeFontFaceFontMaskLanguageRendererTabAlignTabArraypango	Underline
+EngineLang
+FontFamily
+LayoutIter
+LayoutLine
+RenderPartEngineShapeFontMetricsGlyphStringGravityHintCoverageLevelEllipsizeModeFontsetSimpleFontDescriptioncomInfo0Info1Info2Info3Info4Info5Info6Info7netdfsInfo100Info101Info102Info103Info104Info105Info106Info200Info300dfs
+EnumArray1
+EnumArray2
+EnumArray3
+EnumArray4
+EnumArray5
+EnumArray6
+EnumStructStorageInfoEnumArray200EnumArray300StorageInfo2UnknownStructTarget_PriorityLUIDSidPtrlsarpcQosInfoStringsDATA_BUFRightSetSidArraylsa	DATA_BUF2	PrivArray	PrivEntry
+DomainInfo
+DomainList
+ServerRoleAsciiStringStringLargeAuditLogInfoBinaryStringDATA_BUF_PTRDomainListExPrivilegeSetDnsDomainInfoDomainInfoEfsLUIDAttributePDAccountInfoRefDomainListTransSidArrayTranslatedSidRightAttributeTransNameArrayTransSidArray2TransSidArray3TranslatedNameTranslatedSid2TranslatedSid3AuditEventsInfoObjectAttributeTransNameArray2TranslatedName2AsciiStringLargeAuditFullSetInfoDefaultQuotaInfoModificationInfoForestTrustRecordReplicaSourceInfoAuditFullQueryInfoDomainInfoKerberosTrustDomainInfoNameTrustDomainInfoBasicForestTrustBinaryDataForestTrustDomainInfoTrustDomainInfoBufferTrustDomainInfoInfoExForestTrustInformationTrustDomainInfoAuthInfoTrustDomainInfoFullInfoTrustDomainInfoPasswordForestTrustCollisionInfoForestTrustCollisionRecordTrustDomainInfoControllersTrustDomainInfoPosixOffsetTrustDomainInfoInfoEx2InternalTrustDomainInfoAuthInfoInternalTrustDomainInfoFullInfoInternal TrustDomainInfoFullInfo2Internal TrustDomainInfoSupportedEncTypesnameres_recsockaddr
+rdata_dataname_packetstatus_namedgram_packetrdata_statusbrowse_packetdgram_messagename_questionrdata_addressrdata_netbiosdb_change_infosmb_trans_bodynetlogon_packetdgram_smb_packetNETLOGON_DB_CHANGEbrowse_reset_statenetlogon_response2browse_become_backupNETLOGON_LOGON_REQUESTnetlogon_query_for_pdcbrowse_election_requestbrowse_host_announcementNETLOGON_SAM_LOGON_REQUESTbrowse_backup_list_requestbrowse_domain_announcementbrowse_master_announcementnetlogon_response_from_pdcNETLOGON_SAM_LOGON_RESPONSEbrowse_announcement_requestbrowse_backup_list_responseNETLOGON_SAM_LOGON_RESPONSE_EX NETLOGON_SAM_LOGON_RESPONSE_NT40 browse_local_master_announcementIdsPwInfoDomInfo1DomInfo3DomInfo5DomInfo6DomInfo7DomInfo8DomInfo9PasswordSamArraySamEntry	DomInfo12	DomInfo13	UserInfo1	UserInfo2	UserInfo3	UserInfo4	UserInfo5	UserInfo6	UserInfo7	UserInfo8	UserInfo9
+LogonHours
+UserInfo10
+UserInfo11
+UserInfo12
+UserInfo13
+UserInfo14
+UserInfo16
+UserInfo17
+UserInfo18
+UserInfo20
+UserInfo21
+UserInfo23
+UserInfo24
+UserInfo25
+UserInfo26AliasInfoAllConnectInfo1DispInfoFullGroupInfoAllRidAttrArrayCryptPasswordDispEntryFullDispInfoAsciiDispEntryAsciiValidationBlobCryptPasswordExDispInfoGeneralDispEntryGeneralRidWithAttributeDomOEMInformationDispEntryFullGroupDispInfoFullGroupsGroupInfoAttributesGroupInfoDescriptionValidatePasswordInfoValidatePasswordReq1ValidatePasswordReq2ValidatePasswordReq3DomGeneralInformationRidWithAttributeArrayDomGeneralInformation2ValidatePasswordRepCtruserPwdChangeFailureInformation
+StatisticsNetConnCtr0NetConnCtr1NetDiskInfoNetFileCtr2NetFileCtr3NetSessCtr0NetSessCtr1NetSessCtr2NetConnInfo0NetConnInfo1NetDiskInfo0NetFileInfo2NetFileInfo3NetSessCtr10NetSessInfo0NetSessInfo1NetSessInfo2NetShareCtr0NetShareCtr1NetShareCtr2NetSessCtr502NetSessInfo10NetShareInfo0NetShareInfo1NetShareInfo2NetSrvInfo100NetSrvInfo101NetSrvInfo102NetSrvInfo402NetSrvInfo403NetSrvInfo502NetSrvInfo503NetSrvInfo599NetCharDevCtr0NetCharDevCtr1NetConnInfoCtrNetFileInfoCtrNetSessInfo502NetSessInfoCtrNetShareCtr501NetShareCtr502NetSrvInfo1005NetSrvInfo1010NetSrvInfo1016NetSrvInfo1017NetSrvInfo1018NetSrvInfo1107NetSrvInfo1501NetSrvInfo1502NetSrvInfo1503NetSrvInfo1506NetSrvInfo1509NetSrvInfo1510NetSrvInfo1511NetSrvInfo1512NetSrvInfo1513NetSrvInfo1514NetSrvInfo1515NetSrvInfo1516NetSrvInfo1518NetSrvInfo1520NetSrvInfo1521NetSrvInfo1522NetSrvInfo1523NetSrvInfo1524NetSrvInfo1525NetSrvInfo1528NetSrvInfo1529NetSrvInfo1530NetSrvInfo1533NetSrvInfo1534NetSrvInfo1535NetSrvInfo1536NetSrvInfo1537NetSrvInfo1538NetSrvInfo1539NetSrvInfo1540NetSrvInfo1541NetSrvInfo1542NetSrvInfo1543NetSrvInfo1544NetSrvInfo1545NetSrvInfo1546NetSrvInfo1547NetSrvInfo1548NetSrvInfo1549NetSrvInfo1550NetSrvInfo1552NetSrvInfo1553NetSrvInfo1554NetSrvInfo1555NetSrvInfo1556NetCharDevInfo0NetCharDevInfo1NetCharDevQCtr0NetCharDevQCtr1NetShareCtr1004NetShareCtr1005NetShareCtr1006NetShareCtr1007NetShareCtr1501NetShareInfo501NetShareInfo502NetShareInfoCtrNetCharDevQInfo0NetCharDevQInfo1NetRemoteTODInfoNetShareInfo1004NetShareInfo1005NetShareInfo1006NetShareInfo1007NetTransportCtr0NetTransportCtr1NetTransportCtr2NetTransportCtr3NetCharDevInfoCtrNetTransportInfo0NetTransportInfo1NetTransportInfo2NetTransportInfo3NetCharDevQInfoCtrNetTransportInfoCtrNetrUseInfo0NetrUseInfo1NetrUseInfo2NetrUseInfo3PasswordBufferNetWkstaInfo100NetWkstaInfo101NetWkstaInfo102NetWkstaInfo502NetrUseEnumCtr0NetrUseEnumCtr1NetrUseEnumCtr2NetrUseEnumInfoComputerNamesCtrNetWkstaInfo1010NetWkstaInfo1011NetWkstaInfo1012NetWkstaInfo1013NetWkstaInfo1018NetWkstaInfo1023NetWkstaInfo1027NetWkstaInfo1028NetWkstaInfo1032NetWkstaInfo1033NetWkstaInfo1041NetWkstaInfo1042NetWkstaInfo1043NetWkstaInfo1044NetWkstaInfo1045NetWkstaInfo1046NetWkstaInfo1047NetWkstaInfo1048NetWkstaInfo1049NetWkstaInfo1050NetWkstaInfo1051NetWkstaInfo1052NetWkstaInfo1053NetWkstaInfo1054NetWkstaInfo1055NetWkstaInfo1056NetWkstaInfo1057NetWkstaInfo1058NetWkstaInfo1059NetWkstaInfo1060NetWkstaInfo1061NetWkstaInfo1062NetrWkstaUserInfo0NetrWkstaUserInfo1NetWkstaEnumUsersCtr0NetWkstaEnumUsersCtr1NetWkstaEnumUsersInfoNetWkstaTransportCtr0NetWkstaTransportInfoNetrWkstaUserInfo1101NetWkstaTransportInfo0NetrWorkstationStatisticsdnsp	SecBuffer
+DsNameCtr1DsNameInfo1DsReplica06DsReplicaOpDsBindInfo24DsBindInfo28DsBindInfo48DsGetDCInfo1DsGetDCInfo2DsGetDCInfo3DsNameStringDsReplicaOIDNameResOp_V1DsBindInfoCtrDsExecuteKCC1SecBufferDescDsAddEntryCtr2DsAddEntryCtr3DsNameRequest1DsReplica06CtrDsReplicaOpCtrDsSiteCostInfoDsGetDCInfoCtr1DsGetDCInfoCtr2DsGetDCInfoCtr3DsReplicaCursorDsReplicaObjectDsAttributeValueDsReplicaCursor2DsReplicaCursor3DsReplicaMetaDataDsAddEntryRequest2DsAddEntryRequest3DsBindInfoFallBackDsGetNCChangesCtr1DsGetNCChangesCtr2DsGetNCChangesCtr6DsGetNCChangesCtr7DsReplicaAttributeDsReplicaCursorCtrDsReplicaNeighbourDsAttributeValueCtrDsGetDCConnection01DsGetDCInfoRequest1DsReplicaCursor2CtrDsReplicaCursor3CtrDsReplicaOIDMappingDsAddEntryErrorInfoXDsGetMembershipsCtr1DsGetNCChangesCtr1TSDsGetNCChangesCtr6TSDsReplicaAddRequest1DsReplicaAddRequest2DsReplicaCursorCtrExDsReplicaDelRequest1DsReplicaMetaDataCtrDsReplicaModRequest1DsReplicaObjMetaDataQuerySitesByCostCtr1DsAddEntry_AttrErr_V1DsAddEntry_ErrData_V1DsGetMemberships2Ctr1DsPartialAttributeSetDsReplicaAttributeCtrDsReplicaConnection04DsReplicaCursor2CtrExDsReplicaNeighbourCtrDsReplicaObjMetaData2DsReplicaSyncRequest1DsaAddressListItem_V1DsGetDCConnectionCtr01DsGetNCChangesRequest5DsGetNCChangesRequest8DsGetNT4ChangeLogInfo1DsReplicaHighWaterMarkDsReplicaKccDsaFailureDsGetNCChangesMSZIPCtr1DsGetNCChangesMSZIPCtr6DsGetNCChangesRequest10DsRemoveDSServerResult1DsReplicaOIDMapping_CtrDsReplicaObjMetaDataCtrDsReplicaObjectListItemDsGetMembershipsRequest1DsGetNCChangesXPRESSCtr1DsGetNCChangesXPRESSCtr6DsRemoveDSServerRequest1DsReplicaAttrValMetaDataDsReplicaConnection04CtrDsReplicaGetInfoRequest1DsReplicaGetInfoRequest2DsReplicaLinkedAttributeDsReplicaObjMetaData2CtrDsWriteAccountSpnResult1QuerySitesByCostRequest1DsGetMemberships2Request1DsGetNT4ChangeLogRequest1DsReplicaAttrValMetaData2DsReplicaObjectIdentifierDsReplicaObjectListItemExDsWriteAccountSpnRequest1DsReplicaKccDsaFailuresCtrDsReplicaObjectIdentifier2DsReplicaObjectIdentifier3DsAddEntryErrorInfo_Attr_V1DsAddEntryErrorInfo_Name_V1DsReplicaAttrValMetaDataCtrDsReplicaUpdateRefsRequest1DsAddEntry_RefErrListItem_V1DsReplicaAttrValMetaData2CtrDsAddEntryErrorInfo_Referr_V1DsAddEntry_AttrErrListItem_V1 DsReplicaObjectIdentifier3BinaryechoirpcmgmtatsvcschedulerepsFromTo1repsFromTo2AuthInfoNoneAuthInfoClearprefixMapBlobscheduleSlotsAuthInfoNT4OwfrepsFromToBlobscheduleHeaderschemaInfoBlobAuthInfoVersionForestTrustInfoDsCompressedChunkExtendedErrorBlobExtendedErrorInfoForestTrustStringExtendedErrorParamtrustAuthInOutBlobExtendedErrorAStringExtendedErrorInfoPtrExtendedErrorUStringpackage_PackagesBlobrepsFromTo1OtherInforepsFromTo2OtherInfotrustDomainPasswordsForestTrustInfoRecordreplPropertyMetaData1ldapControlDirSyncBlobreplUpToDateVectorBlobreplUpToDateVectorCtr1replUpToDateVectorCtr2drsuapi_MSPrefixMap_CtrpartialAttributeSetBlobpartialAttributeSetCtr1ldapControlDirSyncCookiereplPropertyMetaDataBlobreplPropertyMetaDataCtr1AuthenticationInformationExtendedErrorComputerNameForestTrustDataBinaryDataForestTrustDataDomainInfodrsuapi_MSPrefixMap_EntryForestTrustInfoRecordArmorpackage_PrimaryWDigestBlobpackage_PrimaryWDigestHashpackage_PrimaryKerberosBlobpackage_PrimaryKerberosCtr3package_PrimaryKerberosCtr4package_PrimaryKerberosKey3package_PrimaryKerberosKey4supplementalCredentialsBlobpackage_PrimaryCLEARTEXTBlobpackage_PrimaryKerberosStringAuthenticationInformationArraysupplementalCredentialsPackagesupplementalCredentialsSubBlobepm_lhs	epm_floor	epm_tower	epm_twr_t
+epm_rhs_ipepm_entry_tepm_rhs_ipxepm_rhs_smbepm_rhs_spxepm_rhs_tcpepm_rhs_udpepm_twr_p_trpc_if_id_tepm_rhs_httpepm_rhs_nullepm_rhs_uuidepm_rhs_ncacnepm_rhs_ncadgepm_rhs_nb_ipxepm_rhs_ncalrpcepm_rhs_netbeuiepm_rhs_netbiosepm_rhs_osi_tp4epm_rhs_unix_dsepm_rhs_dnet_nspepm_rhs_osi_clnsepm_rhs_appletalkepm_rhs_vines_ipcepm_rhs_vines_sppepm_rhs_named_pipeepm_rhs_streettalkepm_rhs_atalk_streamepm_rhs_atalk_datagram	netr_Blob
+DcSitesCtrnetr_PacInfonetr_SidAttrnetr_UasInfonetr_SamInfo2netr_SamInfo3netr_SamInfo6netr_OsVersionnetr_TrustInfonetr_USER_KEYSnetr_Credentialnetr_DELTA_ENUMnetr_DELTA_USERnetr_DsRAddressnetr_UAS_INFO_0netr_USER_KEY16netr_USER_KEYS2NL_DNS_NAME_INFOnetr_AcctLockStrnetr_DELTA_ALIASnetr_DELTA_GROUPnetr_DomainTrustnetr_GenericInfonetr_NetworkInfonetr_SamBaseInfonetr_CIPHER_VALUEnetr_DELTA_DOMAINnetr_DELTA_POLICYnetr_DELTA_RENAMEnetr_DELTA_SECRETnetr_GenericInfo2netr_IdentityInfonetr_LMSessionKeynetr_PasswordInfonetr_QUOTA_LIMITSnetr_AccountBuffernetr_Authenticatornetr_CryptPasswordnetr_DELTA_ACCOUNTnetr_OneDomainInfonetr_UasLogoffInfoNL_PASSWORD_VERSIONnetr_ChangeLogEntrynetr_USER_KEY_UNIONnetr_UserSessionKeynetr_DomainTrustListnetr_NETLOGON_INFO_1netr_NETLOGON_INFO_2netr_NETLOGON_INFO_3netr_NETLOGON_INFO_4netr_OsVersionInfoExnetr_PasswordHistorynetr_trust_extensionnetr_DELTA_ENUM_ARRAYnetr_DsRGetDCNameInfoNL_DNS_NAME_INFO_ARRAYnetr_ChallengeResponsenetr_DELTA_DELETE_USERnetr_DomainInformationnetr_USER_PRIVATE_INFOnetr_DELTA_ALIAS_MEMBERnetr_DELTA_GROUP_MEMBERnetr_OsVersionContainernetr_DELTA_TRUSTED_DOMAINnetr_LsaPolicyInformationnetr_WorkstationInformationnetr_DsRAddressToSitenamesWCtrnetr_trust_extension_container netr_DsRAddressToSitenamesExWCtrDNS_ADDR	IP4_ARRAYDNSSRV_STATDNS_RPC_NAMEDNS_RPC_NODEDNS_EXTENSIONDNS_ADDR_ARRAYDNS_RPC_BUFFERDNS_RPC_RECORDDNS_RPC_DP_ENUMDNS_RPC_DP_INFODNS_RPC_DP_LISTDNS_RPC_RECORDSDNS_RPC_ZONE_W2KDNS_RPC_ENLIST_DPDNSSRV_STAT_HEADERDNS_RPC_DP_REPLICADNS_RPC_RECORD_BUFDNS_RPC_RECORD_SOADNS_RPC_RECORD_SRVDNS_RPC_IP_VALIDATEDNS_RPC_ZONE_DOTNETDNS_RPC_AUTOCONFIGUREDNS_RPC_RECORDS_ARRAYDNS_RPC_RECORD_STRINGDNS_RPC_ZONE_INFO_W2KDNS_RPC_ZONE_LIST_W2KDNS_RPC_FORWARDERS_W2KDNS_RPC_NAME_AND_PARAMDNS_RPC_ZONE_CHANGE_DPDNS_RPC_SERVER_INFO_W2KDNS_RPC_UTF8_STRING_LISTDNS_RPC_ZONE_EXPORT_INFODNS_RPC_ZONE_INFO_DOTNETDNS_RPC_ZONE_LIST_DOTNEThandlersastcmdascii
+MenuEditordisplayaclcors	lifecyclebucketlistresultsetlistelementinstancesecuritygroupevent
+attributesvpckeybucketvolumezonerecordhealthchecksupportitemmessagelayer2optionstatus	exception
+regioninfolayer1builder
+usedoctestsequenceqobjectcreatorgpogroupntacldomainnetcmd	processessamdbsitesntacls	provisionschemaupgrade
+hostconfigOSRNGtest_winrandomFortunaRandomProtocoltest_pkcs1_15
+PKCS1_v1_5
+DhcpClientNetworkwheel	sysconfigdeprecationFSMANSItap
+test_errortest_logtest_script	test_utiltest_explorertrialhtmlizer
+test_stdiotest_inotifytest_processtest_threadstest_abstracttcpudpreactorabstracttest_tlsinternet	test_basenmearequestresponsewin32	sanitizer_basetoken	endpointsauthorizationpre_configured
+parametersrequest_validator	debtagshwlogdebconfserver
+py26compatappletwidgetsCommandNotFound_compatmainuiqtlinuxdarwindocumentart	publisherlistenerimpltopicmgrimplpublishermixintopicargspecimplpubsetupstyles	hyperlink
+inspectionbuttonpanelflatnotebookfoldpanelbarcustomtreectrlauiimageseditormixinslistctrl	imagelist
+rubberbandplotCDatesheetshellevtmgrpubsubwxpTaganchorsbuttonsdialogsintctrllayoutfmvctreepyshellrcsizercolourdbfloatbarfoldmenuneweventpopupctlprintoutstattextthrobbertimectrl	fancytext	infoframe	multisashintlcolourchooser	pypalettepycolourboxpycoloursliderpycolourchooser
+gridmovers
+imageutils
+maskededit
+rightalignanalogclockfloatcanvascolourselectimagebrowsersplashscreenwxPlotCanvasscrolledpanelactivexwrapperfilebrowsebuttonClickableHtmlWindowdbgimg2pyimg2imgimg2pngimg2xpm
+helpviewerstcxrc_gdigrid_core_misciewingizmoswebkitwizardactivexanimate_windowsglcanvas	_controls
+connectiontablegeneratewordnetregexpstanfordtoolboxutilconfigcommandstreetestsmedia	constantsdataservicewindowsopenshot__main__nosetoolsTransferRegistrytag
+interfacesGCFillEventCursorDeviceKeymapPixbufRegionScreenStatusVisualAxisUseDisplayCapStyleColormapDrawableFillRuleFontTypeFunctionPropMode	ByteOrder	EventMask	EventType	InputMode	JoinStyle	LineStyle	RgbDither
+Colorspace
+CursorType
+DragAction
+GrabStatus
+InterpType
+NotifyType
+VisualType
+WMFunction
+WindowEdgeDragContextInputSourceOverlapTypeOwnerChangePixbufErrorWindowClassWindowHintsWindowStateCairoContextCrossingModeDragProtocolFilterReturnGCValuesMaskModifierTypePixbufLoaderWMDecorationExtensionModePangoRendererPropertyStateSettingActionSubwindowModeDisplayManagerInputConditionPixbufRotationWindowTypeHintPixbufAlphaModePixbufAnimationScrollDirectionVisibilityStateAppLaunchContextPixbufSimpleAnimPixbufAnimationIterPixbufSimpleAnimIterWindowAttributesTypeBinObjectPixmapWindow	ImageType
+WindowTypeMessageTypeObjectFlagsglib	interfaceFontColorGravitynbtsamrdnswkssvcdrsuapidrsblobsepmappernetlogonxattrdcerpcsamba3authparamregistrycredentialsHashUtilCipher	PublicKeyerrorsparser
+exceptions	SignatureDNS_RPC_ENUM_ZONES_FILTERDNS_RPC_FORWARDERS_DOTNETDNS_RPC_ZONE_DATABASE_W2KDNS_RPC_SERVER_INFO_DOTNETDNS_RPC_ZONE_INFO_LONGHORNDNS_RPC_FORWARDERS_LONGHORNDNS_RPC_SERVER_INFO_LONGHORNDNS_RPC_ZONE_CREATE_INFO_W2KDNS_RPC_ZONE_DATABASE_DOTNETDNS_RPC_ZONE_SECONDARIES_W2KDNS_RPC_RECORD_NAME_PREFERENCEDNS_RPC_ZONE_CREATE_INFO_DOTNETDNS_RPC_ZONE_SECONDARIES_DOTNET!DNS_RPC_ZONE_CREATE_INFO_LONGHORN!DNS_RPC_ZONE_SECONDARIES_LONGHORNsvcctlwinregkrb5pacsmb_aclwinbindunixinfo	server_idinitshutdownnetsmbdpassdbsmb_ldb_gluenetbios	xattr_tdb
+posix_eadbxattr_native_MD2_MD4_SHA224_SHA256_SHA384_SHA512
+_RIPEMD160strxor_counter_AES_DES_XOR_ARC2_ARC4_CAST_DES3	_Blowfish	_fastmath_iobz2dbmgrpimpldbnispwdtdb_xapianSSLrandcrypto_ast_csv_md5_sha_sreCacheCdromGroupHashesPolicyAcquirePackageTagFileVersionDepCacheFileLockapt_pkg	GroupList	IndexFile	MetaIndex	OrderList
+Dependency
+HashString
+SourceList
+SystemLock
+TagSectionAcquireFileAcquireItemDescriptionPackageFilePackageListIndexRecordsAcquireWorkerConfigurationSourceRecordsDependencyListPackageManagerPackageRecordsAcquireItemDescProblemResolver_PackageManagergdbmmmapntdbpyexpatspwdraisersendmsgzlib_json_webparraycmathcrypterrnofcntl	_pynotifystrop_bsddb_heapq	_librsyncfpectlpyHnj	_rl_accelselectsignaltallocthread_bisect_codecs_ctypes_curses_locale_lsprof_random_sha256_sha512_socket_structaudioopcPicklecupsextmarshalscanexttermios_blueman_hashlib_hotshot_imaging_sqlite3_weakrefapt_instbinasciihpmudextmatemenuoperatorpcardextreadline	_symtable	_testcapi	_warnings	gstoption	netifaces	xxsubtype	zipimport
+_codecs_cn
+_codecs_hk
+_codecs_jp
+_codecs_kr
+_codecs_tw
+_functools
+_imagingft
+libxml2mod
+pangocairoByteArrayInt16Int32Int64DoubleUInt16UInt32UInt64UnixFdBoolean_Server_IntBase_StrBase_dbus_bindings	ByteArray	_LongBase
+Connection
+Dictionary
+ObjectPath
+UTF8String
+_FloatBasePendingCallErrorMessageSignalMessageNativeMainLoop_SignatureIterMethodCallMessage_LibDBusConnectionMethodReturnMessage_imagingcmsossaudiodevunicodedata_ctypes_test_elementtree_imagingmathgtkunixprint_curses_panel_imagingmorphlinuxaudiodev_cython_0_20_1_codecs_iso2022_multibytecodecfuture_builtins_multiprocessing_dbus_glib_bindingsQVBoxLayout	QDateEdit
+QWhatsThisQRubberBandQGraphicsWidgetQImageQTabletEventQGraphicsEllipseItem	QShortcutQMenuBarQStandardItemModelQPaintEvent
+QTableViewQPolygonQListWidgetItemQStyleOptionQTextBlockFormatQStyleOptionSlider
+QUndoStackQProxyModelQErrorMessageQGraphicsRotationQStyleOptionHeaderQStyleOptionTitleBarQToolBar	QSplitterQIconDragEventQGraphicsSceneQToolButtonQPixmapCacheQStyleHintReturnMaskQFileOpenEventQBrush
+QScrollBarQTextInlineObjectQTextFormatQTextTableCellFormatQStyleOptionMenuItemQAbstractTextDocumentLayoutQGraphicsDropShadowEffectQStyleOptionTabV2QLinearGradient	QPolygonFQCloseEvent	QFontInfoQStyleOptionViewItemV3QPanGestureQMouseEventTransitionQTapAndHoldGestureQFileSystemModel
+QMatrix2x4QDataWidgetMapperQGraphicsRectItemQMdiSubWindowQGraphicsSceneDragDropEventQRegion
+QBoxLayoutQFrameQGraphicsObjectQSplashScreen
+QMatrix3x3
+QMatrix4x2QDesktopWidgetQSyntaxHighlighterQMatrixQPrintPreviewDialog	QVector3DQMainWindowQPainterPathStrokerQStyleOptionToolBoxV2QPainterPathQStyleOptionDockWidgetQAbstractPrintDialogQPrintEngineQStyledItemDelegate	QUndoViewQGraphicsSceneMouseEventQSizePolicyQGraphicsItemQFileIconProviderQScrollAreaQActionQCalendarWidget	QGlyphRunQTextTableFormatQMimeSourceQPlainTextEditQDockWidgetQIntValidatorQTableWidgetSelectionRangeQGraphicsProxyWidgetQInputEventQKeyEventTransitionQPaintEngineQActionGroupQGraphicsTransformQTextCharFormatQGraphicsSceneWheelEvent
+QMatrix2x2QConicalGradientQFontMetricsQStyleOptionTabQPaintDeviceQGraphicsItemGroupQSpacerItemQIcon
+QLCDNumberQToolBoxQWizardPageQHoverEventQPrintPreviewWidgetQTextBlockUserDataQFontComboBoxQGraphicsLinearLayoutQX11InfoQUndoCommandQGraphicsEffectQAbstractItemDelegate	QTextListQLayoutQStyleOptionViewItemV2QButtonGroupQStyleOptionButtonQPainter
+QStatusBarQGraphicsColorizeEffectQGraphicsViewQWhatsThisClickedEventQSessionManagerQStyleOptionToolBoxQRegExpValidatorQGraphicsOpacityEffectQTreeWidgetItemIteratorQGraphicsSceneHoverEventQWidgetActionQResizeEventQColumnViewQGraphicsItemAnimationQStyleOptionTabWidgetFrameQTableWidgetItem
+QMatrix3x4QCommonStyle
+QMatrix4x3
+QValidatorQTextImageFormatQAbstractGraphicsShapeItemQStyleOptionComboBoxQAbstractProxyModelQDialogButtonBoxQMouseEventQtGuiQGestureRecognizerQGraphicsSimpleTextItemQStyleOptionProgressBarQProgressDialog
+QHideEvent	QVector4D	QTextEditQMdiAreaQStyleOptionTabBarBaseQContextMenuEventQPrinterInfoQGraphicsPolygonItemQRadioButtonQStyleOptionTabV3	QTreeView	QTextItemQGridLayoutQDesktopServicesQMenuQMovieQImageReaderQIdentityProxyModelQInputMethodEventQDialogQTextOptionQX11EmbedWidgetQStyleHintReturnVariantQPlainTextDocumentLayoutQSplitterHandleQImageWriterQLayoutItemQWizardQMessageBoxQStackedWidgetQHBoxLayoutQGraphicsAnchorQPixmapQTextFrameFormatQGraphicsPixmapItemQStyleOptionDockWidgetV2	QSizeGripQSortFilterProxyModelQTextTableCellQStyleOptionViewItem
+QPictureIO
+QWorkspaceQSliderQTreeWidgetQDialQItemEditorCreatorBaseQGestureQStyleOptionRubberBandQInputDialogQTextBlockGroupQStyleOptionFrameQPenQFormLayoutQTextLengthQStaticTextQRadialGradient
+QMatrix4x4	QKeyEventQTextDocumentFragment	QGroupBoxQGraphicsLayoutQStyleOptionGroupBoxQFocusFrame	QTimeEditQGraphicsSceneContextMenuEventQFontDatabaseQCommandLinkButtonQInputContextQBitmapQPictureQGraphicsLayoutItem
+QHelpEventQHeaderViewQStyleOptionToolButton
+QClipboardQDoubleValidator
+QUndoGroupQStatusTipEventQWheelEventQIconEngineQWidgetItemQItemDelegateQGraphicsSceneMoveEventQX11EmbedContainerQAbstractScrollAreaQColorQFontDialog
+QShowEventQApplicationQGraphicsSceneHelpEventQSound
+QMoveEvent
+QTextBlockQRawFont	QLineEditQItemEditorFactoryQWidgetQTextDocumentWriterQStyleOptionTabWidgetFrameV2QStyleOptionFrameV3QTextObjectInterfaceQGraphicsGridLayoutQTextObjectQXmlEntityResolverQDomCommentQXmlDeclHandlerQXmlInputSourceQDomElementQDomDocumentTypeQDomTextQXmlNamespaceSupportQDomAttrQtXmlQXmlDefaultHandler
+QDomEntityQXmlLocator
+QXmlReaderQDomImplementationQDomNamedNodeMapQDomDocumentFragmentQDomDocumentQDomNodeQXmlErrorHandlerQDomEntityReferenceQDomNodeListQDomNotationQXmlContentHandlerQXmlDTDHandlerQXmlAttributesQXmlSimpleReaderQXmlParseExceptionQDomCDATASectionQDomCharacterDataQXmlLexicalHandlerQDomProcessingInstructionQXmlStreamAttributesQVariantAnimationQStringMatcherQGenericArgumentQCryptographicHashQRectFQMetaObjectQSignalMapperQFinalStateQMutexLockerQLocaleQPointFQStringListQMutexQTimeQDirIteratorQAbstractFileEngine	QIODeviceQObject
+QStringRefQFileSystemWatcherQReadWriteLockQTextDecoderQTextBoundaryFinderQAbstractListModelQReadLockerQSysInfoQTranslatorQVariantQTimerEventQTextStreamManipulatorQMetaMethodQModelIndexQSocketNotifierQObjectCleanupHandlerQLatin1StringQMetaPropertyQLineFpyqtBoundSignalQXmlStreamWriterQAbstractFileEngineHandlerQAbstractFileEngineIteratorpyqtPropertyQProcessQTemporaryFileQXmlStreamEntityDeclarationQSignalTransitionQSizeFQAbstractTransitionQSequentialAnimationGroupQThreadPoolQEventQGenericReturnArgumentQProcessEnvironmentQSystemSemaphoreQtCoreQBasicTimerQDirQtQAbstractState
+pyqtSignalQByteArrayMatcherQXmlStreamNotationDeclarationQSizeQPersistentModelIndexQHistoryStateQXmlStreamEntityResolverQLibraryInfoQBufferQTimerQSystemLocale
+QSemaphoreQLatin1CharQThreadQEasingCurve
+QTextCodecQCharQTextEncoderQPauseAnimationQAbstractItemModelQDynamicPropertyChangeEventQElapsedTimerQXmlStreamAttribute	QRunnable	QFileInfo	QDateTimeQWaitConditionQFSFileEngineQAbstractEventDispatcherQFileQLineQLibrary
+QEventLoopQAnimationGroup	QTimeLine
+QByteArray	QtMsgTypeQDataStream	QMimeData	QSettingsQRectQAbstractTableModelQWriteLockerQStateMachineQPropertyAnimationQUrlQUuidQCoreApplicationQDateQSharedMemory	QMetaType	QBitArrayQStringQAbstractAnimationQPointQParallelAnimationGroupQPluginLoaderQXmlStreamNamespaceDeclarationQChildEventQXmlStreamReaderQTextStreamQStateQEventTransition	QResourceQRegExp	QMetaEnumQMetaClassInfoQMarginspyqtWrapperTypeQNetworkRequestQNetworkAccessManagerQNetworkSessionQHttpMultiPart	QSslErrorQAuthenticatorQHttpResponseHeaderQNetworkCookieJarQNetworkProxy
+QUdpSocketQLocalSocketQLocalServerQNetworkProxyQueryQNetworkCookieQHttpHeader
+QSslSocketQHttpQAbstractSocketQNetworkDiskCacheQNetworkCacheMetaDataQNetworkProxyFactory
+QTcpServerQSslQSslConfiguration	QtNetworkQNetworkInterfaceQNetworkReply	QHttpPart	QHostInfoQHttpRequestHeaderQFtpQSslKeyQNetworkConfigurationQNetworkAddressEntry
+QSslCipherQUrlInfoQHostAddressQSslCertificateQAbstractNetworkCacheQNetworkConfigurationManager
+QTcpSocketEllipseLineDashItemVisibilityGridItemModelSimplePointsPolylineModel	ItemModelPathAnimateTypeEllipseModel	goocanvas	GridModel	PathModel
+ImageModelPointerEventsBounds	RectModelPolylineRect	TextModel
+TableModel
+GroupModel
+ItemSimpleglade_mltpycurlQtXmlPatternsQtDBusQtWebKit
+QtDesignerQtAssistantQtScriptToolsQtScriptQtSvgQtDeclarativeQtTestQtHelpQDateTimeEditQStandardItemQPaintEngineStateQTreeWidgetItemQDragQGraphicsSceneEventQDragLeaveEventQStyleOptionSizeGrip	QCheckBox	QDirModelQLabelQItemSelectionRange	QVector2D
+QMatrix3x2QGraphicsPathItemQToolTipQTableWidgetQShortcutEventQPaletteQTextListFormatQSystemTrayIconQPinchGestureQIconEngineV2QSwipeGestureQGraphicsBlurEffectQListWidgetQWindowStateChangeEventQStyleOptionTabBarBaseV2QPageSetupDialog	QListViewQPrintDialogQGraphicsSceneResizeEvent
+QTransformQImageIOHandlerQFileDialogQStyleOptionComplex	QComboBoxQStringListModel	QGradientQFocusEventQGestureEventQTouchEventQStyleOptionProgressBarV2QTabBarQInputContextFactoryQAbstractButtonQStyleQStyleOptionToolBarQStyleOptionGraphicsItemQPrinterQAbstractSpinBoxQSpinBoxQDragMoveEventQStyleOptionFrameV2QKeySequence
+QTabWidgetQGraphicsScaleQStyleFactory	QTextLineQStyleOptionFocusRect
+QTextFrameQGraphicsLineItemQDoubleSpinBoxQStyleHintReturnQGraphicsAnchorLayoutQFontMetricsF
+QDropEventQItemSelectionQDragEnterEventQCursor
+QCompleterQAbstractSliderQQuaternionQPushButtonQTapGestureQStyleOptionViewItemV4QTextCursorQItemSelectionModel
+QTextTable
+QMatrix2x3QAbstractItemViewQActionEventQStylePainterQColorDialogQStackedLayoutQTextLayoutQTextFragmentQProgressBarQTextBrowserQTextDocumentQGraphicsTextItemQPyTextObjectQFontQStyleOptionSpinBoxcorrelationswrappers	set_repos	test_port
+test_eicar
+test_initsrun_testingtest_removetest_updatetest_wrappertest_app_infotest_firewalltest_app_starttest_check_guitest_check_runtest_es_connecttest_update_keytest_port_config	configuredrweb_log_parseriterngramsrrd
+windowdiffmalletptexamplesresolveremittercomposernodesconstructorcyamlrepresenterdumper
+containersyamltagsolacsourcedstringwxwordnet_appcrfsimplifycorrelations1correlations2correlations3correlations4correlations5correlations6correlations7correlations8	correlate
+correlate1	nltk_testcorrelate_freqpearson_correlateRepresenterErrorCEmitterCParserScannerError
+AliasTokenAnchorToken
+ScalarNodeDocumentEndTokenConstructorErrorDocumentStartTokenTagTokenScalarEventBlockEndTokenSequenceNodeReaderErrorMarkComposerErrorFlowEntryTokenFlowMappingEndTokenSequenceEndEventSequenceStartEventBlockSequenceStartTokenBlockMappingStartTokenKeyTokenStreamEndEvent_yaml
+ValueTokenStreamStartTokenDirectiveTokenMappingNodeMappingEndEventDocumentStartEventEmitterErrorMappingStartEvent
+AliasEventDocumentEndEventFlowMappingStartTokenScalarTokenSerializerErrorBlockEntryToken	YAMLErrorStreamEndTokenFlowSequenceStartTokenStreamStartEventFlowSequenceEndTokentest1	html_parselementtestingdiagnosebs4dammit	test_docs	test_treetest_builder_registry	test_souptest_html5lib	test_lxmltest_htmlparser_htmlparser	_html5lib_lxmlconfmldata_fixturelabeled_faces_fixturetwenty_newsgroups_fixturegenerate_skeletonsworking_with_text_data_fixture	pyparsing
+parse_pathsvg2imagemap	numpy_extnumpydoc	docscrapedocscrape_sphinxgen_rstgithub_linktest_svmtest_boundstest_sparseboundstest_exportexporttest_ldatest_qda	test_init
+test_dummytest_isotonictest_pipelinetest_check_buildtest_grid_searchtest_naive_bayestest_learning_curvetest_cross_validationtest_random_projectiontest_kernel_approximation
+test_bench
+test_fixes
+test_graph
+test_statstest_extmathtest_testingtest_fast_dicttest_murmurhashtest_validationtest_sparsefuncstest_class_weighttest_shortest_pathtest_linear_assignmentbencharpackextmathmockingoptimizetest_traversaltest_spanning_treesparsetools_graph_validation
+validationsparsefuncsclass_weightestimator_checkslinear_assignment_ldaqdatest_dbscantest_k_meanstest_mean_shifttest_hierarchicaltest_affinity_propagationdbscan_k_means_mean_shift_hierarchicalaffinity_propagation__feature_agglomerationtest_pairwisetest_regressiontest_score_objectstest_classificationtest_biclustertest_supervisedtest_unsupervised
+supervisedscorerrankingpairwisetest_gmm
+test_dpgmmgmmdpgmmmixturetest_lfwtest_20newstest_mldatatest_covtypetest_svmlight_formattest_samples_generatorlfwmlcompmldatacovtypedatasetsolivetti_facessvmlight_formatsamples_generatortwenty_newsgroupscalifornia_housingspecies_distributionstest_foresttest_baggingtest_weight_boostingtest_gradient_boostingtest_partial_dependence%test_gradient_boosting_loss_functionsforestbaggingensembleweight_boostinggradient_boostingpartial_dependencetest_mds
+test_t_snetest_isomaptest_locally_lineartest_spectral_embeddingmdst_sneisomapmanifoldlocally_linearspectral_embedding_diskmemoryjoblibparallelformat_stackfunc_inspectnumpy_picklemy_exceptions_multiprocessing_helpers	externalstest_externals_setuptest_kdetest_kd_treetest_ball_treetest_neighborstest_dist_metricstest_nearest_centroidkde	neighborskd_tree	ball_treebinary_treenearest_centroidtest_covariancetest_graph_lassotest_robust_covariance
+covariancegraph_lasso_outlier_detectionrobust_covarianceshrunk_covariance_empirical_covariance_sklearnisotonicpipelinetest_omptest_sgd
+test_bayes
+test_ridgetest_ransactest_logistictest_perceptrontest_least_angletest_randomized_l1test_coordinate_descenttest_passive_aggressivetest_sparse_coordinate_descentompbayesridgeransaclinear_modellogistic
+perceptronleast_anglerandomized_l1coordinate_descent
+fetch_dataexercise_02_sentiment exercise_01_language_train_modeltest_multiclass
+test_utilstest_spectralspectraltest_common	biclustergraphtypedefs
+regressionunsuperviseddist_metricsclassification
+multiclassgaussian_processhashing	plot_iris
+imputationpassive_aggressivestochastic_gradient__check_buildtest_nmftest_pcatest_fasticatest_kernel_pcatest_sparse_pcatest_dict_learningtest_truncated_svdtest_factor_analysisnmfpcadecompositionfastica_
+kernel_pca
+sparse_pcadict_learningtruncated_svdfactor_analysis
+test_labeltest_weightstest_imputationlabelpreprocessing_weightsgrid_searchnaive_bayestest_rbmrbmneural_network_build_utilstest_label_propagationsemi_supervisedlabel_propagationtest_gaussian_processregression_modelscorrelation_modelstest_rfe	test_chi2test_from_modeltest_feature_selecttest_variance_thresholdrfefeature_selection
+from_modelselector_mixinvariance_thresholdunivariate_selectionlearning_curve
+test_imagetest_feature_hashertest_dict_vectorizerfeature_extraction
+stop_wordsdict_vectorizertest_plscca_pls_cross_decompositioncross_validationrandom_projectionkernel_approximationplot_oneclassplot_svm_anovaplot_svm_marginplot_svm_kernelsplot_svm_scale_cplot_custom_kernelplot_svm_nonlinearplot_rbf_parametersplot_svm_regressionplot_weighted_samplesplot_separating_hyperplane%plot_separating_hyperplane_unbalanceddocument_clusteringhashing_vs_dict_vectorizer$document_classification_20newsgroups%mlcomp_sparse_document_classificationplot_tree_regression plot_tree_regression_multioutputplot_dbscanplot_mean_shiftplot_cluster_irisplot_kmeans_digitsplot_lena_compressplot_digits_linkageplot_segmentation_toyplot_dict_face_patchesplot_lena_segmentationplot_mini_batch_kmeansplot_cluster_comparisonplot_color_quantizationplot_affinity_propagationplot_digits_agglomerationplot_lena_ward_segmentationplot_agglomerative_clustering!plot_adjusted_for_chance_measures#plot_kmeans_stability_low_dim_dense$plot_ward_structured_vs_unstructured%plot_agglomerative_clustering_metrics2plot_feature_agglomeration_vs_univariate_selectionplot_gmmplot_gmm_pdfplot_gmm_sinplot_gmm_selectionplot_gmm_classifierplot_iris_datasetplot_random_datasetplot_digits_last_imageplot_random_multilabel_datasetplot_forest_irisplot_bias_varianceplot_adaboost_twoclassplot_forest_importancesplot_partial_dependenceplot_adaboost_multiclassplot_adaboost_regressionplot_adaboost_hastie_10_2plot_gradient_boosting_oobplot_random_forest_embeddingplot_forest_importances_facesplot_gradient_boosting_quantile!plot_gradient_boosting_regression%plot_gradient_boosting_regularizationplot_mdsplot_swissrollplot_lle_digitsplot_compare_methodsplot_manifold_spherebicluster_newsgroupsplot_spectral_biclusteringplot_spectral_coclusteringplot_cv_digitsplot_cv_diabetesplot_iris_exercisedigits_classification_exerciseplot_kde_1dplot_regressionplot_species_kdeplot_classificationplot_nearest_centroidplot_digits_kde_samplingplot_lw_vs_oasplot_sparse_covplot_outlier_detectionplot_covariance_estimationplot_mahalanobis_distances#plot_robust_vs_empirical_covariancesvm_guiface_recognitionplot_stock_marketplot_prediction_latencytopics_extraction_with_nmfplot_outlier_detection_housingplot_model_complexity_influenceplot_out_of_core_classificationwikipedia_principal_eigenvector!plot_tomography_l1_reconstruction"plot_species_distribution_modelingplot_ardplot_olsplot_ompplot_ols_3dplot_ransacplot_logisticplot_sgd_irisplot_lasso_larsplot_ridge_pathplot_iris_logisticplot_logistic_pathplot_sgd_penaltiesplot_bayesian_ridgeplot_sgd_comparisonplot_sparse_recoveryplot_ols_ridge_varianceplot_sgd_loss_functionsplot_lasso_and_elasticnetplot_sgd_weighted_sampleslasso_dense_vs_sparse_dataplot_lasso_model_selectionplot_logistic_l1_l2_sparsityplot_multi_task_lasso_supportplot_polynomial_interpolationplot_sgd_separating_hyperplane"plot_lasso_coordinate_descent_pathplot_pca_3dplot_pca_irisplot_ica_vs_pcaplot_kernel_pcaplot_pca_vs_ldaplot_sparse_codingplot_image_denoisingplot_faces_decompositionplot_pca_vs_fa_model_selection plot_ica_blind_source_separationplot_lda_qdaplot_classifier_comparisonplot_digits_classificationplot_classification_probabilityplot_rocplot_roc_crossvalrandomized_searchgrid_search_digitsplot_learning_curveplot_confusion_matrixplot_precision_recallplot_validation_curveplot_underfitting_overfittingplot_train_error_vs_test_error#grid_search_text_feature_extraction plot_rbm_logistic_classificationplot_label_propagation_digits plot_label_propagation_structure&plot_label_propagation_versus_svm_iris-plot_label_propagation_digits_active_learningplot_gp_regressiongp_diabetes_dataset5plot_gp_probabilistic_classification_after_regressionplot_rfe_digitsplot_feature_selectionfeature_selection_pipelineplot_rfe_with_cross_validation(plot_permutation_test_for_classificationfeature_stackerplot_multilabel plot_compare_cross_decompositionplot_digits_pipeplot_isotonic_regressionplot_kernel_approximation plot_johnson_lindenstrauss_bound plot_multioutput_face_completion	bench_glm
+bench_treebench_lassobench_glmnetbench_isotonicbench_plot_nmfbench_plot_svdbench_sparsifybench_covertypebench_plot_wardbench_plot_omp_larsbench_plot_neighborsbench_sgd_regressionbench_plot_fastkmeansbench_plot_lasso_pathbench_multilabel_metricsbench_random_projectionsbench_plot_parallel_pairwise bench_sample_without_replacementcollect_bodies_statargshpiPyKate4hsi_fortrantest_filtersnoseclassestest_paralleltest_multivariatecpuinfo	test_dumptest_unicodepy3ktest_collections	macrodatarun_allcolorbartsasparseplottingdistributionskernelsnonparametric	datetools
+test_buildtest_vartest_stringstest_indexing
+test_tools
+test_arraypytablesexpressionsadd_newdocsextrastest_extrasfftpacktest_helper
+user_arrayfunction_basetest_polynomialtest_shape_basetest_function_basetest_ionumerictypesrecordsdefchararraysetup_commongenerate_numpy_apimemmap
+arrayprint	_internaltest_recordstest_multiarray_assignmenttest_umath_complex
+test_ufunc	test_halftest_apitest_numerictypestest_defchararray
+test_dtypetest_getlimitstest_item_selectiontest_errstate
+test_printtest_scalarmathtest_indexerrors
+test_umathtest_blasdottest_machartest_arrayprinttest_scalarprinttest_nditertest_einsumtest_datetimetest_memmapf2py_testing	use_rulescb_rulesf2py2ecfuncs	capi_mapscrackfortranf2pycommon_rulesf90mod_rules	func2subrrulesauxfuncstest_ctypeslibtest_matlib_inspecttest_linalg
+nosetester	numpytestprint_coercion_tablestest_decoratorstest_doctestingnumarraysessionnd_imageconvolvelib2defnpy_pkg_configline_endingssystem_info	misc_utilfrom_templateconv_templatepathccompilernumpy_distributionmingw32ccompilerintelccompilerexec_commandtest_misc_utiltest_fcompiler_inteltest_fcompiler_gnutest_exec_commandtest_npy_pkg_configgen_ext	test_fib3f2py_ext	test_fib2swig_exttest_exampletest_example2	pyrex_exttest_primesf2py_f90_exttest_fooautodistconfig_compilerinstall_clib	build_srcvastabsoftibmsungnucompaqnagintel	fcompilerhpuxlaheyg95mipsnonepathf95pg	defmatrix	matrixlibtest_defmatrixfix_default_axisarrayfnsarray_printer
+oldnumerictypeconv	rng_statsrng	precisiontest_oldnumericlaguerre	hermite_elegendrepolytemplate	polyutilshermite	chebyshevtest_hermitetest_polyutilstest_laguerretest_chebyshevtest_classestest_legendretest_printingtest_hermite_etest_my_exceptionstest_func_inspect	test_pooltest_memory	test_disktest_loggertest_hashingtest_format_stacktest_numpy_pickletzinfo	referencepytztzfilescipywavfilemmioidlnetcdfarffreadarfftest_arffreadtest_fortrantest_netcdftest_idltest_wavfile	test_mmiomio5_paramsmiobasemio5byteordercodesmio4matlabmiotest_miobasetest_byteordercodestest_mio_utilstest_streamstest_mio5_utilstest_mio_funcstest_pathologicaltest_miobench_structarrbench_memusage_fortran_format_parserhbharwell_boeingtest_hbtest_fortran_format_gcutilstest__gcutilstest__version	test_gesvtest_esvodrpackodrtest_odrdoccerpilutiltest_pilutiltest_doccermstats_extras_continuous_distnsrv_multivariate	morestatsvonmisesmstats_tukeylambda_statscontingency_binned_statistic_discrete_distns_distn_infrastructuremstats_basic_distr_paramstest_mstats_extrastest_binned_statisticcommon_tests	test_ranktest_fittest_morestatstest_contingencytest_tukeylambda_statstest_kdeothtest_discrete_basictest_distributionstest_mstats_basictest_continuous_basic
+size_checknumpy_scalar_specswigptrc_specbuild_tools_dumbdbm_patched_dumb_shelveinline_tools
+blitz_specblitz_toolscommon_info
+swig2_specweave_version	ext_tools
+converters	ast_toolsaccelerate_toolsslice_handlerbytecodecompilercatalogcpp_namespace_spec	base_specweaveswigptr2platform_infostandard_array_specvtk_spec	base_infotest_build_toolstest_size_checktest_slice_handlertest_numpy_scalar_specweave_test_utilstest_scxx_dicttest_inline_toolsscxx_timingstest_catalogtest_standard_array_spectest_scxx_objecttest_ext_toolstest_blitz_toolstest_scxx_sequencetest_c_spectest_ast_tools	decomp_luclapackflapackdecompfblas
+_decomp_qzdecomp_schur_matfuncs_inv_ssqspecial_matriceslinalg_version
+decomp_svd_expm_frechet_matfuncs_sqrtm	decomp_qrflinalg_decomp_polar_interpolative_backend_solversinterpolativedecomp_choleskycblastest_solverstest_interpolativetest_decomptest_decomp_choleskytest_special_matricestest_decomp_polarbench_decombench_sqrtmfir_filter_design_savitzky_golaysignaltoolsltisysdltisys_arraytoolswaveletsbsplinesfilter_design_peak_findingcont2discrete	waveformstest_dltisystest_cont2discretetest_waveletstest_windowstest_signaltoolstest_filter_designtest_peak_findingtest_fir_filter_designtest_array_toolstest_ltisystest_savitzky_golaytest_waveformsbench_convolve2ddok	constructlilcsrgenerate_sparsetoolsbsrcscextractdiacoospfuncssputils
+compressedtest_csrtest_spfuncstest_extracttest_csctest_sputilstest_sparsetoolstest_construct_onenormest_expm_multiplyeigentest_arpacktest_lobpcglarge_scale	benchmarktest_expm_multiplytest_onenormest_add_newdocsdsolvelinsolvetest_linsolvelgmreslsqrminreslsmr	iterativeisolve	test_lsmrdemo_lgmrestest_lgmrestest_iterative	test_lsqr
+bench_expmbench_expm_multiplybench_onenormest_validation_components
+_laplaciancsgraphtest_graph_laplaciantest_conversionstest_connected_componentstest_graph_componentsbench_sparse	hierarchyvqvq_testtest_hierarchytest_vqrealtransformsfftpack_versionpseudo_diffstest_real_transformsantlrgendatatest_pseudo_diffsgen_fftw_refbench_pseudo_diffsfourier_ni_supportmeasurements
+morphologyndimageinterpolation
+namedrangetest_datatypestest_ndimagedrawingtest_measurementscelldatavalidationopenpyxl
+test_stylekdtreetest_password_hash
+test_writetest_vbatest_iter_stream
+_plotutilstest_worksheetspatial
+test_chart	test_readtest_distance	test_meta	test_iter
+test_qhulltest_named_rangetest__plotutils
+test_props	test_celltest_kdtree
+test_themetest_datavalidationtest_number_formattest_workbookbench_ckdtreelambertw
+orthogonalspfun_statsiter_worksheettest_spfun_statstest_lambertw
+test_logittest_orthogonaltest_boxcoxtest_orthogonal_evaltest_mpmath	date_time_trustregion_doglegooxml_root_basinhoppingpassword_hasherminpacklbfgsbnonlinodictallanytnc
+linesearchslsqp	_minimizetempnamedfileelementtreennls	_tstutilscobyla_trustregion_trustregion_ncgzerosannealdrawings
+test_slsqpdump_worksheettest_annealtest__basinhopping
+test_zerostest_tnc
+test__roottest_linesearchtest_minpacktest_cobylatest_trustregion	test_nnlstest_nonlintest_functionsbench_zerosbench_optimizerscodatatest_codataodepack_ode
+quadraturequadpack	integratetest_integratefiguretest_quadraturetest_quadpackgridspecfitpack2fitpackinterpnd_inforbffont_managerinterpolate_wrapper
+ndgriddatablocking_input	_monotonetextpathartist
+texmanagerpolyinttest_fitpack2financetest_rbfhatchpatheffectstest_interpolate_wrapper	animationtest_interpndtest_interpolatemathtexttest_ndgriddatatight_layouttest_polyintpatchestest_fitpack
+matplotlibbackend_baseslegend
+transformsspines	offsetboxsankeyfontconfig_pattern	stackplotcbookaxisstatsmodelslegend_handlerdviread
+tight_bboxquiverafm_mathtext_data_pylab_helperscm	adfvaluescontourtsatoolsarima_processmplarima_modelpyplotmlemodellinesar_model	type1fontvarma_processbezierarma_mle_cm
+streamplot	tsa_modelrcsetupdatestest_datetoolstriinterpolatetest_arima_process	trifindertest_adfuller_lag
+test_arima	tripcolortest_ar	trirefinetest_tsa_toolstritools
+tricontourtest_stattoolstriplottriangulationarima111_css_resultstriarima211nc_resultsresults_armaarima112nc_resultsarima111_resultsarima211nc_css_resultstest_pngarima211_css_resultstest_dvireadtest_colorbardatamlw_tlstest_colors	test_mlabtest_simplificationtest_backend_svgarima112_resultstest_contourtest_arrow_patches	make_armaresults_arimaarima112nc_css_resultstest_backend_pgfarima111nc_resultstest_patchesarima211_resultstest_sankeyarima111nc_css_resultstest_aggarima112_css_resultsresults_processtest_patheffects
+results_artest_coding_standardstest_subplotssavedrvstest_rcparamstest_animationtest_delaunaytest_streamplotdentoninterptest_backend_qt4test_denton	bk_filter	cf_filter
+test_linestest_ticker	hp_filtertest_compare_imagesfiltertoolstest_tightlayouttest_ttconv
+test_cbooktest_artist	test_axeskalmanfiltertest_legendkalmanftest_spines
+test_dates
+svar_modeltest_figure	test_pathdynamictest_backend_pdftest_bbox_tighttest_transformsirftest_mathtexttest_triangulation	var_modeloutput	vector_arexample_svar	test_svarresults_var_dataresults_svarresults_varl1_solvers_commonl1_slsqp	l1_cvxopttest_shrink_picklesummarysmpickletableformattingforeignstata_summary_examplesiolibsummary2
+image_utilcomparetest_summary_oldtest_summarytest_table_econpyDurationtest_foreignEpochConverterUnitDblConverterUnitDblEpochStrConverterUnitDblFormatter	jpl_unitsadnorm
+lilliefors	tabledistanova
+proportioncorrelation_toolsbackend_gtk3inter_raterbackend_pgfbackend_qt4aggweightstatsbackend_tkaggbackend_gtkbackend_cocoaaggbackend_gtkcairo	multitestbackend_macosx
+backend_psoutliers_influence	windowinggofpowerbackend_gdkcontrastmoment_helpersbackend_templatebackend_cairotest_panel_robustcovbackend_svgbackend_qt4test_groups_swbackend_aggbackend_webaggtest_nonparametrictest_weightstatsbackend_mixedtest_moment_helpersbackend_gtk3cairo
+backend_wxtest_inter_ratertkagg
+test_powerbackend_gtkaggbackend_wxaggtest_gof
+qt4_compattest_descriptivestatsbackend_gtk3aggbackend_pdftest_corrpsdtest_proportiontest_contrastfigureoptionstest_sandwich
+formlayouttest_statstools
+qt4_editor	test_tosttest_diagnostic
+test_multiresults_powerresults_proportionresults_panelrobust	make_tbls
+libqsturngqsturng_coverage_sm
+rmodelwrapcheck_for_rpyprint_versiondump2modulenumdiffcompatibilityrootfindingcatadd
+grouputilssm_exceptionseval_measurestest_cataddtest_numdifftest_eval_measurestest_rootfindinggeneralized_linear_modelgenmodtest_glm	testfuncsdelaunaytriangulateglm_test_residsresults_glmfamilylinksvarfuncsfamiliesrobust_linear_modelnormsplot_directivemathmplipython_directiveonly_directivestest_rlmipython_console_highlighting	sphinxextresults_rlmdescriptiveoriginregresskoul_and_mcaft_elelanovaemplike	elregresspolartest_descriptiveprojectionstest_origintest_aft
+el_resultsformulatoolsgambsplinegtktools	utils_oldmpl_toolkits
+exceltoolsmultilinearsurvivalproj3dart3daxis3d	survival2	descstatsaxes3dinfotheomplot3dcoxsysregmlerlscontrast_oldkm_classtry_var_convolve
+diffusion2try_fi	diffusiongarchtry_arma_morefftarmavarmaexample_armamovstattry_ld_nitimeex_mle_armaex_mle_garchexample_varpanel_shortsandwich_covariance_genericmixedcorrelation_structuresrandom_panelpanelmodmpl_axestest_random_panel
+axes_grid1contrast_toolsstats_dhuardex_newtestsstats_mstats_shortrunsdatamlwmaketests_mlabwraptest_gammodel_resultssavervs
+axisartisttry_mctools	tools_pca	cross_valmctoolstimemachinexldatecompdoclinalg_covmatlinalg_decomp_1xlrdbiffhfactormodelsdatarichexample_sysreg
+formattingexample_maxentex_onewayglsxlsxlicencestry_smoothersex_mixed_lls_reex_cusum
+bayespriorexample_pcarelativedeltaexample_garchexample_mletzwin
+ex_formulatzex_gam_resultsexample_gamtry_multiolseasterexample_gam_0rruletry_quantile_regression1dateutilex_mixed_lls_0zoneinfoexample_pca_regressionexample_nbintry_quantile_regressionex_formula_factorex_random_panelexample_crossvalex_kaplan_meierex_mixed_lls_timecorrex_ratereturntry_interchangefindow_0findow_1arma
+mcevaluateanova_nistcertified
+sympy_difftreewalkerclasstry_ols_anovakernridgeregress_classtry_treewalkerrunmnlexample_kernridge	penalized	onewayglstry_catdataar_panelpredstdols_anova_originaltransform_functionscopula
+estimatorstry_potsppatch	genparetomv_measurestransformedgof_new	otherdistmultivariate	mv_normaltry_maxquantize_est_fit
+testtransfcheck_moments
+distparamsex_mvelliptical	matchdist
+ex_transf2
+necompilerex_gofex_fitfrnumexprtest_numexpr	smootherskdecovclassdgp_exampleskernel_extrasdensityorthopolykde2
+simplejsontestdatatest_bigint_as_stringtest_smootherstest_bitsize_int_as_stringex_gam_am_newtest_kernel_extras
+test_pass3test_decode
+ex_gam_newex_smootherstest_speedupscountertest_indent
+test_tupleordereddict
+test_pass2	test_failtest_namedtupletest_item_sort_key	np_compatcompatnpiter_compattest_check_circulartest_itercompat
+test_pass1test_recursion
+test_floattest_for_jsontest_encode_for_htmltest_encode_basestring_asciitest_scanstringtemplate_datatest_separatorstest_errorstest_decimalidxutilsreq_versionstableExtensionindexesExtensiondescriptionfairundoredolrucacheExtensionleafnileattributeset
+conditionsccardlinkExtensionengelunimplementedhearthdf5ExtensionutilsExtensioncarrayearrayanes96
+expressioncancervlarraycopperindexeslinkelninonodeflavorstar98_pastenum	proxydictcpunishfilenodelongleytest_filenoderandhiespectorstrikestest_expressiontest_attributes	test_enumgrunfeld
+test_lists
+test_typestest_indexvaluesscotlandtest_garbagetest_createcreate_backcompat_indexessunspots
+test_numpy
+test_linkstest_earraytest_queriestest_basics	committeetest_indexescheck_leakstest_vlarraytest_nestedtypestest_tables	stacklosstest_index_backcompat
+statecrimetest_alltest_hdf5compatdiscrete_marginsdiscrete_modeltest_backcompatdiscretetest_timetypetest_discretetest_do_undoresults_discretetest_tablesMD	try_powertest_carrayex_emplike_1ex_kernel_regressiontut_ols_rlm_shortex_scatter_ellipseex_pairwise	ex_lowessex_grangercausalityex_misc_tmodelexample_ols_minimal_compex_emplike_3ex_generic_mle_ttry_tukey_hsdtry_polytrendex_misc_tarma	ex_pandasex_kernel_singleindex_dgp
+try_power2ex_kernel_regression3ex_kernel_semilinear_dgptry_gof_chisquareex_shrink_pickletry_2regressex_arch_canadaex_generic_mleex_proportionpt2to3ptdumpptrepackex_rootfindingexample_enhanced_boxplotsex_sandwichex_kernel_regression_dgpex_nearest_correx_outliers_influencepandastut_ols_ancovaex_feasible_gls_hetexample_rpyexample_kdeex_sandwich3ex_kernel_test_functionalex_feasible_gls_het_0example_functional_plots!ex_kernel_test_functional_li_wangex_regressionplotsex_pareto_plotstataex_sandwich2gaex_kernel_regression2sql	t_est_rlmex_inter_rateres_misc_poisson2ex_kernel_regression_sigtestex_generic_mle_tdistex_kernel_regression_censored2ex_multivar_kdepackersexample_discrete_mnlgbqex_emplike_2ex_univar_kdetry_arwbex_cointex_arma_allex_armadate_converterslagpolynomialex_var_reordertest_gatest_wb	test_htmlex_vartest_sqlar1choleskycompare_armatest_date_converterstest_cparser
+arma_plots
+short_demotest_clipboardsklearn_comparegenerate_legacy_pickles	tukeyplottest_gbqgofplotsboxplotstest_parsers
+plot_gridstest_packersfactorplotstest_json_norm	plottools
+functional
+test_stata
+mosaicplot
+test_exceltest_pytablestsaplotscorrelationregressionplotstest_mosaicplottest_factorplotstest_gofplotstest_regressionplotstest_tsaplotstest_correlationtest_boxplotstest_functionalnonlinls
+try_mlecovtmodelcount
+miscmodelsresults_tmodeltest_tmodel
+test_tarmatest_generic_mletest_poissonquantile_regressionfeasible_glstest_deprecationstest_multiarraytest_numericufuncsrandom_arrayalter_code1	functionslinear_algebraalter_code2scons_supportblaslapacktest_lapack	test_blas
+test_fblasmatfuncslobpcgtest_matfuncsbench_basic
+_testutilsstyleworkbook	worksheetmlabpylabtest_optimize
+test_tabledescriptivestats	stattoolstest_qsturnglinalginterpolatescale
+test_scale
+test_anovaaxes_dividerinset_locatoraxes_rgbsandwich_covarianceparasite_axesanchored_artists	axes_size	axes_grid	multicomp
+diagnosticangle_helperfloating_axes	clip_pathgrid_finderaxisline_stylegrid_helper_curvelinear	axislinesaxis_artisttest_formulaformulaexceltest_picklematrix	clipboardcategoricalseriesevalops
+__config__mafftformat
+polynomialtest_format
+shape_basetest_glsar_statatest_quantile_regressiontest_glsar_gretltest_covresults_quantile_regressionmacro_gr_corc_stataresults_regressiontest_pandas
+resampling	test_json
+test_ujsonmixture_rvsempirical_distribution	test_ecdfmassvarstest_mixturerpysmoothers_lowess_oldsmoothers_lowesskdetoolspanelnd
+algorithmskernel_density_kernel_basekernel_regressionindexing
+bandwidthstest_lowesstest_kernel_densitytest_kernel_regressionconfig_initnanopsreshapeconeprogprintinggroupbypanel4dmskcvxprogcvxoptprint_versionssolversterminalmodelingfama_macbethplmolsvarmomentsinfix_parser	user_utiltest_highleveltest_fama_macbeth	highlevelparse_formulastatemgcv_cubic_splinestest_moments	test_mathtest_ols	contraststest_regressionstest_graphicsdesign_infotest_splines_bs_datacompat_ordereddicttest_reshape
+redundancytest_series
+test_algos
+test_indexmissingdesctest_splines_crs_datapatsysplinestest_tseriestest_expressions
+test_stateCompoundDoctest_internalsColumn
+test_paneltest_panelndCell	WorksheetBIFFRecordsBitmaptest_multileveltest_nanopsExcelFormulaLexer
+test_frameUnicodeUtilsxlwtWorkbookExcelFormula
+test_rplottest_groupbytest_panel4dtest_categoricalExcelFormulaParser
+ExcelMagictest_sequnpack	test_case
+Formattingtest_buffertest_subtypeRowtest_read_sizetest_seqtest_unpack_rawtest_msgpack	test_packtest_objtest_exceptdescribemergetilepivotrplot	test_tile
+test_merge
+test_pivotpickle_compatchainmapchainmap_implopenpyxl_compattest_libsparse	test_listqtpandasoffsetsintervalperiodresample	convertertseries
+timedeltasfrequenciesholidaytest_timeseriestest_timezonestest_plottingtest_periodtest_daterange
+test_tslibtest_timeseries_legacytest_offsetstest_convertertest_timedeltastest_holidaytest_frequenciestest_resampleenginesscopeexprcomputation	test_eval_import_toolsdual	ctypeslibmatlibmrecordstimer_comparisontest_mrecordstest_subclassingtest_old_matest_fftpacktwodim_basescimathrecfunctions	financialarraypadstride_tricksnanfunctions
+type_checkindex_tricksnpyioarrayterator_datasource_iotools	ufunclikearraysetopstest_arraypadtest_ufuncliketest_twodim_basetest_recfunctionstest_arraysetopstest_type_checktest_financialtest_arrayteratortest_index_trickstest_nanfunctionstest_stride_trickstest__iotoolstest__datasourcenumeric	getlimitsmacharfromnumeric_methods
+calc_lwork_hsi_cython_0_20_2_tkinterfftpack_lite_compiled_baseumath
+scalarmath_dummymultiarray_testsstruct_ufunc_testoperand_flag_teststest_rationalumath_tests_dotblaslapack_lite_umath_linalgmtrand_capistreams	mio_utils	__odrpackmvnfutilstatlib_rankvonmises_cython_fblas_flapack_flinalg_interpolative	_spectralsplinesigtools_csparsetools_sparsetools_arpack_superlu
+_iterative
+_traversal_min_spanning_tree_tools_shortest_path_vq_hierarchy_wrap_fftpack	_ni_label	_nd_imageckdtree_distance_wrapqhull_ufuncs_cxx_ufuncsspecfun_minpack_lbfgsbminpack2	moduleTNC_cobyla_zeros_nnls_slsqp	_quadpack_odepacklsodavode_dop_fitpackdfitpackinterpnd_ppoly_interpolateumfpackmisc_solverscholmodfftwamddsdpgslalgos_sparsetslib	hashtablemsgpack_testingkalman_loglike_smoothers_lowesslinbin	_speedupslinkextensionindexesextensionhdf5extensionlrucacheextension_comp_bzip2	_comp_lzoutilsextensiontableextension_path_png_trittconv_image	_delaunay_cntrft2font_tkagg_gtkagg_backend_agg_backend_gdkordered_set                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         

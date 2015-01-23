@@ -1,0 +1,35 @@
+<application>
+  <component name="UpdatesConfigurable">
+    <option name="myPluginHosts">
+      <value>
+        <list size="0" />
+      </value>
+    </option>
+    <option name="myKnownUpdateChannels">
+      <value>
+        <list size="11">
+          <item index="0" class="java.lang.String" itemvalue="pycharm" />
+          <item index="1" class="java.lang.String" itemvalue="pycharm1EAP" />
+          <item index="2" class="java.lang.String" itemvalue="pycharm10" />
+          <item index="3" class="java.lang.String" itemvalue="pycharm2EAP" />
+          <item index="4" class="java.lang.String" itemvalue="pycharm2Beta" />
+          <item index="5" class="java.lang.String" itemvalue="pycharm2" />
+          <item index="6" class="java.lang.String" itemvalue="pycharm3Beta" />
+          <item index="7" class="java.lang.String" itemvalue="pycharm3" />
+          <item index="8" class="java.lang.String" itemvalue="pycharm4EAP" />
+          <item index="9" class="java.lang.String" itemvalue="pycharm4Beta" />
+          <item index="10" class="java.lang.String" itemvalue="pycharm4" />
+        </list>
+      </value>
+    </option>
+    <option name="myIgnoredBuildNumbers">
+      <value>
+        <list size="0" />
+      </value>
+    </option>
+    <option name="CHECK_NEEDED" value="true" />
+    <option name="LAST_TIME_CHECKED" value="1416819173764" />
+    <option name="LAST_BUILD_CHECKED" value="PY-135.1057" />
+    <option name="UPDATE_CHANNEL_TYPE" value="release" />
+  </component>
+</application>

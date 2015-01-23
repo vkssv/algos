@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<conversion>
+  <applied-converters>
+    <converter id="PythonTestConverterProvider" />
+  </applied-converters>
+  <project-files>
+    <file path="/home/calypso/git/../ML/class/.idea/class.iml" timestamp="1416323305000" />
+    <file path="/home/calypso/git/../SK/.idea/SK.iml" timestamp="1415249689000" />
+    <file path="/home/calypso/git/../SK/tasks/.idea/tasks.iml" timestamp="1419863190000" />
+    <file path="/home/calypso/git/../elama/.idea/elama.iml" timestamp="1419280104000" />
+    <file path="/home/calypso/git/../yandex/.idea/yandex.iml" timestamp="1415957561000" />
+    <file path="/home/calypso/git/.idea/dictionaries/root.xml" timestamp="1419412901000" />
+    <file path="/home/calypso/git/.idea/encodings.xml" timestamp="1410390404000" />
+    <file path="/home/calypso/git/.idea/git.iml" timestamp="1419863344000" />
+    <file path="/home/calypso/git/.idea/inspectionProfiles/Project_Default.xml" timestamp="1419281170000" />
+    <file path="/home/calypso/git/.idea/inspectionProfiles/profiles_settings.xml" timestamp="1415958694000" />
+    <file path="/home/calypso/git/.idea/misc.xml" timestamp="1410390404000" />
+    <file path="/home/calypso/git/.idea/modules.xml" timestamp="1419863344000" />
+    <file path="/home/calypso/git/.idea/scopes/scope_settings.xml" timestamp="1410390404000" />
+    <file path="/home/calypso/git/.idea/vcs.xml" timestamp="1410390404000" />
+    <file path="/home/calypso/git/.idea/workspace.xml" timestamp="1421593428000" />
+  </project-files>
+</conversion>
+
