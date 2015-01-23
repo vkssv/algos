@@ -307,40 +307,32 @@ class InfoPattern(BasePattern):
             # parse by lines
             if 'html' in content_type:
                 soup = BeautifulSoup(line)
+                tags_map = [
 
-                if soup.table:
-                    if len(filter(lambda i: i.name == 'table', [i for i in soup.table.descendants])) > self.NEST_TAB_THRESHOLD:
-                        body_dict['html_score'] += score
+                                'table' :{
+                                            'width$'                  : '100%$',
+                                            'id$'                     : '^.*Table$',
+                                            '(bg|background-)color$'  : '#[0-9A-F]{6}'
+                                },
+                                'img'   :{
+                                            'alt'   : '.*',
+                                            'style' : '.*vertical-align\:(middle|bottom|top);.*border\:\d;.*text-decoration\:.*;.*',
+                                            'width' : '\d{2,3}',
+                                            'height': '\d{2,3}',
+                                            'title' : '.*'
+                                },
+                                'td'    :{
+                                            'style'                     : '(font-.*|(bg)?color\:#[0-9A-F]{6})',
+                                            'wight'                     : '\d{2,3}',
+                                            '(v)?align'                 : '(center|middle)',
+                                            '(bg|background-)color$'    : '#[0-9A-F]{6}'
+                                },
+                                'a'     :{
+                                            'style' : '(color:#[0-9A-F]{6}|\!important)',
+                                            'target': '_blank',
+                                }
 
-                    tab_mandatory_attr = {
-                                            r'width$'                  : r'100%$',
-                                            r'id$'                     : r'^.*Table$',
-                                            r'(bg|background-)color$'  : '#[0-9A-F]{6}'
-                    }
-
-                    img_mandatory_attr = {
-                                            'alt':  r'.*',
-                                            'style': r'.*vertical-align\:(middle|bottom|top);.*border\:\d;.*text-decoration\:.*;.*',
-                                            'width': r'\d{2,3}',
-                                            'height': r'\d{2,3}',
-                                            'title' : r'.*'
-                    }
-
-                    table_attr = list()
-                    for k in patterns_attr.iterkeys():
-                        attr = filter(lambda attr: re.match(k,attr,re.I), soup.table.attrs.keys())
-                        if attr and re.match(patterns_attr.get(k), soup.table.attr, re.I):
-                            body_dict['html_score'] += score
-
-                    if soup.img:
-                        all_img_attrs = [i.attrs for i in soup.find_all('img')]
-                        for k in img_mandatory_attr.iterkeys():
-                            for d in all_img_attrs:
-                                attr = filter(lambda attr: re.match(k,attr,re.I), [d.keys() for d in all_img_attrs])
-                            if attr and re.match(patterns_attr.get(k), soup.table.attr, re.I):
-                            body_dict['html_score'] += score
-
-                    
+                ]
 
 
 

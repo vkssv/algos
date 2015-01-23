@@ -406,15 +406,37 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 
     return(dict(basic_features), netloc_list)
 
-def basic_html_checker(bs_object):
+def basic_html_checker(bs_object, tags_map):
     # check common html-emails makeups trics
     # http://thesiteslinger.com/blog/10-tips-for-designing-html-emails/
     # now it's not so cheap for russian spammers to perform old-school html-email makeup by patterns
+    html_score = INIT_SCORE
+    html_checksum = INIT_SCOR
+
+    attrs_list = list()
+    for tag in tags_map:
+        if bs_object.tag:
+
+            soup_attrs_list = [ t.attrs.items() for t in bs_object.findall(tag) ]
+            soup_attrs_list = reduce(add, soup_attrs_list)
+            expected_attrs_dict = tags_map.get(tag)
+            pairs = list()
+
+            for key_attr in expected_attrs_dict:
+                pairs = filter(lambda pair: re.match(key_attr,pair(0),re.I),soup_attrs_list)
+                check_values = list()
+                if pairs:
+                    check_values = filter(lambda pair: re.match(expected_attrs_dict.get(key_attr), pair(1),re.I),soup_attrs_list)
+                    html_score += score*len(check_values)
 
 
+    if bs_object.body:
 
-    pass
-    return(INIT_SCORE)
+        regexps = (ur'<(!--.*--)?>','')
+        body_string = bs_object.body.prettify(formatter=lambda )
+        makeup_skeleton = bs_object.body.prettify(formatter=lambda )
+
+    return(html_score, html_checksum)
 
 def basic_text_checker(utf_line,regexp_list):
     pass
