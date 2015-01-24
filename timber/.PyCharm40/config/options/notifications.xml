@@ -1,8 +1,0 @@
-<application>
-  <component name="NotificationConfiguration">
-    <notification groupId="IDE Usage Statistics" displayType="STICKY_BALLOON" shouldLog="false" />
-    <toolWindow group="Find in Path" />
-    <toolWindow group="Inspection Results" />
-    <toolWindow group="Vcs Messages" />
-  </component>
-</application>

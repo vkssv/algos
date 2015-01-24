@@ -8,15 +8,19 @@ import email, os, sys, re, logging, binascii, unicodedata, urlparse
 from email.errors import MessageParseError
 from email.header import decode_header
 from operator import add, itemgetter
-from collections import Counter, OrderedDict
+from collections import Counter, OrderedDict, namedtuple
 from itertools import ifilterfalse
+from bs4 import BeautifulSoup, Comment
 
 from pattern_wrapper import BasePattern
+
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+HEADER = namedtuple('HEADER','name, value')
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
+
 
 # just for debugging new regexp on fly
 def get_regexp(regexp_list, compilation_flag=0):
@@ -37,8 +41,12 @@ def get_regexp(regexp_list, compilation_flag=0):
 # header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items() - save the order of heads
 def get_all_heads_crc(header_value_list, excluded_list = None):
 
+
+
     vect = dict.fromkeys(['heads_crc','values_crc'])
     logger.debug("header_value_list >>"+str(header_value_list))
+
+    # just to play with itemgetter ))
     heads_vector = tuple(map(itemgetter(0), header_value_list))
     heads_dict = dict(header_value_list)
 
@@ -172,7 +180,9 @@ def basic_headers_cheker(head_pattern, known_mailers, header_value_list, score):
 
     typical_heads_score = INIT_SCORE
     known_mailer_flag = INIT_SCORE
-    headers_list = [i[0] for i in header_value_list]
+
+    header_value_list = [HEADER(pair) for pair in header_value_list]
+    headers_list = [i.name for i in header_value_list]
 
     emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), headers_list))
     typical_heads_score += len(emarket_heads)*score
@@ -406,37 +416,41 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 
     return(dict(basic_features), netloc_list)
 
-def basic_html_checker(bs_object, tags_map):
+def basic_html_checker(line, tags_map):
     # check common html-emails makeups trics
     # http://thesiteslinger.com/blog/10-tips-for-designing-html-emails/
-    # now it's not so cheap for russian spammers to perform old-school html-email makeup by patterns
+    # now this is not so cheap for russian spammers to perform old-school html-email makeup by patterns
     html_score = INIT_SCORE
-    html_checksum = INIT_SCOR
+    content_entropy = INIT_SCORE
 
+    soup = BeautifulSoup(line)
+    tag_attribute = namedtuple('tag_attribute','name, value')
     attrs_list = list()
-    for tag in tags_map:
-        if bs_object.tag:
 
-            soup_attrs_list = [ t.attrs.items() for t in bs_object.findall(tag) ]
-            soup_attrs_list = reduce(add, soup_attrs_list)
+    for tag in tags_map:
+        if not soup.tag.is_empty_element :
+
+            soup_attrs_list = [ t.attrs.items() for t in soup.findall(tag) ]
+            soup_attrs_list = [ tag_attribute(obj) for obj in reduce(add, soup_attrs_list) ]
             expected_attrs_dict = tags_map.get(tag)
             pairs = list()
 
             for key_attr in expected_attrs_dict:
-                pairs = filter(lambda pair: re.match(key_attr,pair(0),re.I),soup_attrs_list)
+                pairs = filter(lambda pair: re.match(key_attr, pair.name, re.I), soup_attrs_list)
                 check_values = list()
                 if pairs:
-                    check_values = filter(lambda pair: re.match(expected_attrs_dict.get(key_attr), pair(1),re.I),soup_attrs_list)
+                    check_values = filter(lambda pair: re.match(expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
                     html_score += score*len(check_values)
 
 
-    if bs_object.body:
-
-        regexps = (ur'<(!--.*--)?>','')
-        body_string = bs_object.body.prettify(formatter=lambda )
+    if not soup.body.is_empty_element:
+        comments = soup.findAll(text=lambda text:isinstance(text, Comment))
+        # remove bones
+        [comment.extract() for comment in comments]
+        content_iterator = soup.body.stripped_strings
         makeup_skeleton = bs_object.body.prettify(formatter=lambda )
 
-    return(html_score, html_checksum)
+    return(html_score, content_iterator, content_entropy)
 
 def basic_text_checker(utf_line,regexp_list):
     pass

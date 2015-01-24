@@ -296,7 +296,7 @@ class InfoPattern(BasePattern):
         # 9. check body
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
-        body_features = [ 'regexp_score', 'html_score', 'body_checksum' ]
+        body_features = [ 'regexp_score', 'html_score', 'part_entropy' ]
         body_dict = Counter(dict(map(lambda x,y: (x,y), body_features, [INIT_SCORE]*len(body_features))))
 
         text_parts = self.get_text_parts()
@@ -306,8 +306,7 @@ class InfoPattern(BasePattern):
         for line, content_type in text_parts:
             # parse by lines
             if 'html' in content_type:
-                soup = BeautifulSoup(line)
-                tags_map = [
+                 tags_map = [
 
                                 'table' :{
                                             'width$'                  : '100%$',
@@ -334,16 +333,10 @@ class InfoPattern(BasePattern):
 
                 ]
 
+                body_dict['html_score'], content_iter, body_dict['part_entropy'] = common.basic_html_checker(line, tags_map)
 
-
-
-
-
-
-
-                html_content = common.get_content(soup)
-                if html_content:
-                    body_dict['regexp_score'] += common.basic_text_checker(html_content)
+                if content_iter:
+                    body_dict['regexp_score'] += common.basic_text_checker()
 
             else:
                 body_dict['regexp_score'] += common.basic_text_checker(line)

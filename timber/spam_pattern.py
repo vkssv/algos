@@ -340,7 +340,7 @@ class SpamPattern(BasePattern):
         # 9. check body
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
-        body_features = [ 'regexp_score', 'body_checksum' ]
+        body_features = [ 'regexp_score', 'part_entropy' ]
         body_dict = Counter(dict(map(lambda x,y: (x,y), body_features, [INIT_SCORE]*len(body_features))))
 
         text_parts = self.get_text_parts()
