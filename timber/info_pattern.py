@@ -296,13 +296,19 @@ class InfoPattern(BasePattern):
         # 9. check body
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
-        body_features = [ 'regexp_score', 'html_score', 'part_entropy' ]
-        body_dict = Counter(dict(map(lambda x,y: (x,y), body_features, [INIT_SCORE]*len(body_features))))
+        # todo: refactor architecture --> such check should be made in pattern_wrapper.py,
+        # which initializes msg object only once and perfoms all checks for all patterns one by one.
+        # spam/info/net/ham-classes have to became just conatiners for appropriate regexes sets,
+        # some variables and maybe rules...(rules are the room for particular reflections)
+
+        # use Counter cause we can have many MIME-parts
+        scores = ['text_score', 'html_score']
+        body_scores = Counter(dict(map(lambda x,y: (x,y), scores, [INIT_SCORE]*len(scores))))
 
         text_parts = self.get_text_parts()
         logger.debug('TEXT_PARTS: '+str(text_parts))
+        table_checksum = INIT_SCORE
 
-        html_text = ''
         for line, content_type in text_parts:
             # parse by lines
             if 'html' in content_type:
@@ -333,16 +339,19 @@ class InfoPattern(BasePattern):
 
                 ]
 
-                body_dict['html_score'], content_iter, body_dict['part_entropy'] = common.basic_html_checker(line, tags_map)
+                html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
+                body_scores['html_score'] += html_score
 
-                if content_iter:
-                    body_dict['regexp_score'] += common.basic_text_checker()
+                if content_iterator:
+                    body_dict['text_score'] += common.basic_text_checker(content_iterator)
 
             else:
-                body_dict['regexp_score'] += common.basic_text_checker(line)
+                body_dict['text_score'] += common.basic_text_checker(line)
 
 
-        vector_dict.update(body_dict)
+        vector_dict.update(body_scores)
+        vector_dict['table_checksum'] = table_checksum
+        vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
 
         return (vector_dict)
 

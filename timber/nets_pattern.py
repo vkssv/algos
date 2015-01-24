@@ -262,6 +262,62 @@ class NetsPattern(BasePattern):
 
 
         # 10. check body
+
+        logger.debug('>>> 10. BODY\'S TEXT PARTS CHECKS:')
+        # use Counter cause we can have many MIME-parts
+        scores = ['regexp_score', 'html_score']
+        body_scores = Counter(dict(map(lambda x,y: (x,y), scores, [INIT_SCORE]*len(scores))))
+
+        text_parts = self.get_text_parts()
+        logger.debug('TEXT_PARTS: '+str(text_parts))
+        table_checksum = INIT_SCORE
+
+        for line, content_type in text_parts:
+            # parse by lines
+            if 'html' in content_type:
+                 tags_map = [
+
+                                'table' :{
+                                            'width$'                  : '100%$',
+                                            'id$'                     : '^.*Table$',
+                                            '(bg|background-)color$'  : '#[0-9A-F]{6}'
+                                },
+                                'div'   :{
+                                            'alt'   : '.*',
+                                            'style' : '.*vertical-align\:(middle|bottom|top);.*border\:\d;.*text-decoration\:.*;.*',
+                                            'width' : '\d{2,3}',
+                                            'height': '\d{2,3}',
+                                            'title' : '.*'
+                                },
+                                'td'    :{
+                                            'style'                     : '(font-.*|(bg)?color\:#[0-9A-F]{6})',
+                                            'wight'                     : '\d{2,3}',
+                                            '(v)?align'                 : '(center|middle)',
+                                            '(bg|background-)color$'    : '#[0-9A-F]{6}'
+                                },
+                                'a'     :{
+                                            'style' : '(color:#[0-9A-F]{6}|\!important)',
+                                            'target': '_blank',
+                                }
+
+                ]
+
+                html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
+                body_scores['html_score'] += html_score
+
+                #if content_iterator:
+                #    body_dict['regexp_score'] += common.basic_text_checker()
+
+            #else:
+            #    body_dict['regexp_score'] += common.basic_text_checker(line)
+
+
+        vector_dict.update(body_scores)
+        vector_dict['table_checksum'] = table_checksum
+
+
+
+
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
         body_features = [ 'regexp_score', 'html_score', 'body_checksum' ]
@@ -285,6 +341,8 @@ class NetsPattern(BasePattern):
 
 
         vector_dict.update(body_dict)
+        vector_dict['table_checksum'] = table_checksum
+        vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
 
         return (vector_dict)
 

@@ -161,6 +161,11 @@ class BasePattern(object):
 
         return(self.url_list)
 
+    def get_body_parts_entropy(self):
+
+        self.entropy = 42
+        return(self.entropy)
+
 
 class PatternFactory(object):
     """Factory for creating on the fly set of rules for desired class"""

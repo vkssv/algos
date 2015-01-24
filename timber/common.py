@@ -416,18 +416,23 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 
     return(dict(basic_features), netloc_list)
 
-def basic_html_checker(line, tags_map):
+def basic_html_checker(line, **kwargs):
     # check common html-emails makeups trics
     # http://thesiteslinger.com/blog/10-tips-for-designing-html-emails/
     # now this is not so cheap for russian spammers to perform old-school html-email makeup by patterns
+
     html_score = INIT_SCORE
-    content_entropy = INIT_SCORE
+    table_checksum = INIT_SCORE
+    content_iterator = list[]
 
     soup = BeautifulSoup(line)
+    if soup.body.is_empty_element:
+        return(html_score, table_checksum, content_iterator)
+
     tag_attribute = namedtuple('tag_attribute','name, value')
     attrs_list = list()
 
-    for tag in tags_map:
+    for tag in kwargs:
         if not soup.tag.is_empty_element :
 
             soup_attrs_list = [ t.attrs.items() for t in soup.findall(tag) ]
@@ -442,19 +447,27 @@ def basic_html_checker(line, tags_map):
                     check_values = filter(lambda pair: re.match(expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
                     html_score += score*len(check_values)
 
-
-    if not soup.body.is_empty_element:
-        comments = soup.findAll(text=lambda text:isinstance(text, Comment))
+    if not soup.body.table.is_empty_element:
+        comments = soup.body.table.findAll(text=lambda text:isinstance(text, Comment))
         # remove bones
         [comment.extract() for comment in comments]
-        content_iterator = soup.body.stripped_strings
-        makeup_skeleton = bs_object.body.prettify(formatter=lambda )
+        # leave only closing tags struct
+        reg = re.compile(ur'<[a-z]*/[a-z]*>',re.I)
+        # todo: investigate about the order of elems within included generators
+        table_skeleton = (t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(),re.M)))
+        table_checksum = binascii.crc32(''.join(table_skeleton))
 
-    return(html_score, content_iterator, content_entropy)
+    content_iterator = soup.body.stripped_strings
+
+    return(html_score, table_checksum, content_iterator)
 
 def basic_text_checker(utf_line,regexp_list):
     pass
-    return(INIT_SCORE)
+    return(body_score)
+
+
+
+
 
 
 
