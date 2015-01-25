@@ -107,7 +107,7 @@ class HamPattern(BasePattern):
         for line, content_type in text_parts:
             # parse by lines, weak feature
             if 'html' in content_type:
-                 tags_map = [
+                 tags_map = {
                                 'img' :{
                                             'alt'             : '(account(s)?||Google Plus|Blog|Facebook|LinkedIn|Twitter|YouTube|Logo.*)',
                                             'src'             : '(cid:(_.*|part.*|profile|photo|logo|google|ima?ge?\d{1,3}.*@[\w.])|assets|track(ing)?|api|ticket|logo|fb|vk|tw)',
@@ -117,7 +117,7 @@ class HamPattern(BasePattern):
                                             'dir'             : 'ltr',
                                             'class'           : '\[\'.*\'\]'
                                 }
-                 ]
+                 }
 
                 html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
                 html_total_score += html_score

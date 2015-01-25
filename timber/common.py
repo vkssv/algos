@@ -465,7 +465,7 @@ def basic_html_checker(line, **kwargs):
 
     return(html_score, table_checksum, content_iterator)
 
-def basic_text_checker(utf_line,regexp_list):
+def basic_text_checker(utf_line, regexp_list):
     pass
     return(body_score)
 

@@ -275,7 +275,7 @@ class NetsPattern(BasePattern):
         for line, content_type in text_parts:
             # parse by lines
             if 'html' in content_type:
-                 tags_map = [
+                 tags_map = {
 
                                 'table' :{
                                             'border'      : '0',
@@ -290,7 +290,7 @@ class NetsPattern(BasePattern):
 
                                 }
 
-                ]
+                 }
 
                 html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
                 body_scores['html_score'] += html_score

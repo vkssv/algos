@@ -129,7 +129,7 @@ class BasePattern(object):
         text_parts = self.get_text_parts()
         #logger.debug('TEXT_PARTS: '+str(text_parts))
         self.url_list = []
-        url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
+
         for line, content_type in text_parts:
             # parse by lines
             if 'html' in content_type:
@@ -138,7 +138,7 @@ class BasePattern(object):
                     # TODO: create deeply parsing with cool bs4 methods
                     self.url_list.extend([unicode(x) for x in soup.a])
             else:
-
+                url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
                 self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
 
         logger.debug("URL LIST:")
