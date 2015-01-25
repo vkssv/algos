@@ -313,31 +313,16 @@ class InfoPattern(BasePattern):
             # parse by lines
             if 'html' in content_type:
                  tags_map = [
-
-                                'table' :{
-                                            'width$'                  : '100%$',
-                                            'id$'                     : '^.*Table$',
-                                            '(bg|background-)color$'  : '#[0-9A-F]{6}'
-                                },
                                 'img'   :{
-                                            'alt'   : '.*',
-                                            'style' : '.*vertical-align\:(middle|bottom|top);.*border\:\d;.*text-decoration\:.*;.*',
-                                            'width' : '\d{2,3}',
-                                            'height': '\d{2,3}',
+                                            'alt'   : '',
+                                            'src'   : '(logo|promo|content|btn\.|butt\.|avatar|user|banner|content|download|send(friend)?|actions)',
                                             'title' : '.*'
                                 },
-                                'td'    :{
-                                            'style'                     : '(font-.*|(bg)?color\:#[0-9A-F]{6})',
-                                            'wight'                     : '\d{2,3}',
-                                            '(v)?align'                 : '(center|middle)',
-                                            '(bg|background-)color$'    : '#[0-9A-F]{6}'
-                                },
-                                'a'     :{
-                                            'style' : '(color:#[0-9A-F]{6}|\!important)',
-                                            'target': '_blank',
+                                'span'  :{
+                                            'style' : 'color\s?:\s?(\w{3,10}|#[a-z0-9]{3,6})',
+                                            'class' : '\[\'.*\'\]'
                                 }
-
-                ]
+                 ]
 
                 html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
                 body_scores['html_score'] += html_score

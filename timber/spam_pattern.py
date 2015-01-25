@@ -354,29 +354,24 @@ class SpamPattern(BasePattern):
             if 'html' in content_type:
                  tags_map = [
 
+                                'table':{
+                                            'width'                 : '[1-9]{3}[^%]',
+                                            'height'                : '[1-9]{1,3}',
+                                            'cell(padding|spacing)' : '[1-9]',
+                                            'border-color'          : '#[0-9A-F]{3,6}',
+                                            'border'                : '[1-9]',
+                                            'style'                 : '([A-Z-][^(a-z)]){3,10}'
+                                },
                                 'span' :{
-                                            'width$'                  : '100%$',
-                                            'id$'                     : '^.*Table$',
-                                            '(bg|background-)color$'  : '#[0-9A-F]{6}'
+                                            'style'                 : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10})',
+                                            'lang'                  : '(RU|EN-US)'
                                 },
-                                'a'   :{
-                                            'alt'   : '.*',
-                                            'style' : '.*vertical-align\:(middle|bottom|top);.*border\:\d;.*text-decoration\:.*;.*',
-                                            'width' : '\d{2,3}',
-                                            'height': '\d{2,3}',
-                                            'title' : '.*'
-                                },
-                                'lu'    :{
-                                            'style'                     : '(font-.*|(bg)?color\:#[0-9A-F]{6})',
-                                            'wight'                     : '\d{2,3}',
-                                            '(v)?align'                 : '(center|middle)',
-                                            '(bg|background-)color$'    : '#[0-9A-F]{6}'
-                                },
-                                'td'     :{
-                                            'style' : '(color:#[0-9A-F]{6}|\!important)',
-                                            'target': '_blank',
+                                'p'    :{
+                                            'style'                 : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10}))',
+                                            'class'                 : '\[\'(Mso.*|.*)\'\]',
+                                            'align'                 : 'center',
+                                            'css'                   : ''
                                 }
-
                 ]
 
                 html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)

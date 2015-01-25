@@ -278,26 +278,16 @@ class NetsPattern(BasePattern):
                  tags_map = [
 
                                 'table' :{
-                                            'width$'                  : '100%$',
-                                            'id$'                     : '^.*Table$',
-                                            '(bg|background-)color$'  : '#[0-9A-F]{6}'
+                                            'border'      : '0',
+                                            'cellpadding' : '0',
+                                            'cellspacing' : '0',
+                                            'width'       : '\d{1,2}[^%](px)?'
                                 },
-                                'div'   :{
-                                            'alt'   : '.*',
-                                            'style' : '.*vertical-align\:(middle|bottom|top);.*border\:\d;.*text-decoration\:.*;.*',
-                                            'width' : '\d{2,3}',
-                                            'height': '\d{2,3}',
-                                            'title' : '.*'
-                                },
-                                'td'    :{
-                                            'style'                     : '(font-.*|(bg)?color\:#[0-9A-F]{6})',
-                                            'wight'                     : '\d{2,3}',
-                                            '(v)?align'                 : '(center|middle)',
-                                            '(bg|background-)color$'    : '#[0-9A-F]{6}'
-                                },
-                                'a'     :{
-                                            'style' : '(color:#[0-9A-F]{6}|\!important)',
-                                            'target': '_blank',
+                                'img'   :{
+                                            'src'         : '(logo|notifications|photo|bu?tt?o?n|icon|person|contacts|email|profile|account|member|group|api).*',
+                                            'alt'         : '(Meetup|LinkedIn.*|L\'Internaute|''|(\w{1-10}\s*){1,3})',
+                                            'style'       : 'display:block'
+
                                 }
 
                 ]

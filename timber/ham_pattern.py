@@ -108,31 +108,16 @@ class HamPattern(BasePattern):
             # parse by lines, weak feature
             if 'html' in content_type:
                  tags_map = [
-
-                                'table' :{
-                                            'width$'                  : '100%$',
-                                            'id$'                     : '^.*Table$',
-                                            '(bg|background-)color$'  : '#[0-9A-F]{6}'
+                                'img' :{
+                                            'alt'             : '(account(s)?||Google Plus|Blog|Facebook|LinkedIn|Twitter|YouTube|Logo.*)',
+                                            'src'             : '(cid:(_.*|part.*|profile|photo|logo|google|ima?ge?\d{1,3}.*@[\w.])|assets|track(ing)?|api|ticket|logo|fb|vk|tw)',
+                                            'moz-do-not-send' : 'true'
                                 },
-                                'span'   :{
-                                            'alt'   : '.*',
-                                            'style' : '.*vertical-align\:(middle|bottom|top);.*border\:\d;.*text-decoration\:.*;.*',
-                                            'width' : '\d{2,3}',
-                                            'height': '\d{2,3}',
-                                            'title' : '.*'
-                                },
-                                'td'    :{
-                                            'style'                     : '(font-.*|(bg)?color\:#[0-9A-F]{6})',
-                                            'wight'                     : '\d{2,3}',
-                                            '(v)?align'                 : '(center|middle)',
-                                            '(bg|background-)color$'    : '#[0-9A-F]{6}'
-                                },
-                                'li'     :{
-                                            'style' : '(color:#[0-9A-F]{6}|\!important)',
-                                            'target': '_blank',
+                                'li'  :{
+                                            'dir'             : 'ltr',
+                                            'class'           : '\[\'.*\'\]'
                                 }
-
-                ]
+                 ]
 
                 html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
                 html_total_score += html_score

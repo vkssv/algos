@@ -369,6 +369,10 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
     # SENDER_COUNT: count of domains/subdomains from netlocation parts of URLs,
     # which are the same with sender domain from RCVD-headers.
 
+
+#
+#'style' : '(color:#[0-9A-F]{6}|\!important)',
+#                                            'target': '_blank',
     # url_count
     basic_features['url_count'] = len(parsed_links_list)
 
@@ -444,7 +448,7 @@ def basic_html_checker(line, **kwargs):
                 pairs = filter(lambda pair: re.match(key_attr, pair.name, re.I), soup_attrs_list)
                 check_values = list()
                 if pairs:
-                    check_values = filter(lambda pair: re.match(expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
+                    check_values = filter(lambda pair: re.search(expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
                     html_score += score*len(check_values)
 
     if not soup.body.table.is_empty_element:
