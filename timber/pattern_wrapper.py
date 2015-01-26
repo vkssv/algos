@@ -73,6 +73,7 @@ class BasePattern(object):
                     continue
 
                 self.text_parts.append((decoded_line, part.get_content_type()))
+            # maybe it's better to return generator instead of list (keep original order of parts)
 
         return (self.text_parts)
 
@@ -184,3 +185,5 @@ class PatternFactory(object):
         return (current_obj(msg))
 
 MetaPattern = PatternFactory()
+
+

@@ -427,7 +427,7 @@ def basic_html_checker(line, **kwargs):
 
     html_score = INIT_SCORE
     table_checksum = INIT_SCORE
-    content_iterator = list[]
+    content_iterator = list()
 
     soup = BeautifulSoup(line)
     if soup.body.is_empty_element:

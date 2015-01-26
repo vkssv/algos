@@ -304,15 +304,20 @@ class InfoPattern(BasePattern):
         # use Counter cause we can have many MIME-parts
         scores = ['text_score', 'html_score']
         body_scores = Counter(dict(map(lambda x,y: (x,y), scores, [INIT_SCORE]*len(scores))))
-
-        text_parts = self.get_text_parts()
-        logger.debug('TEXT_PARTS: '+str(text_parts))
         table_checksum = INIT_SCORE
 
-        for line, content_type in text_parts:
-            # parse by lines
-            if 'html' in content_type:
-                 tags_map = {
+        all_text_parts = self.get_text_parts()
+
+        if text_parts:
+            logger.debug('TEXT_PARTS: '+str(text_parts))
+            regexp_list = [
+
+            ]
+
+            for mime_text_part, content_type in all_text_parts:
+                # parse by lines
+                if 'html' in content_type:
+                    tags_map = {
                                 'img'   :{
                                             'alt'   : '',
                                             'src'   : '(logo|promo|content|btn\.|butt\.|avatar|user|banner|content|download|send(friend)?|actions)',
@@ -322,16 +327,16 @@ class InfoPattern(BasePattern):
                                             'style' : 'color\s?:\s?(\w{3,10}|#[a-z0-9]{3,6})',
                                             'class' : '\[\'.*\'\]'
                                 }
-                 }
+                    }
 
-                html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
-                body_scores['html_score'] += html_score
+                    html_score, table_checksum, content_iterator = common.basic_html_checker(mime_text_part, tags_map)
+                    body_scores['html_score'] += html_score
 
-                if content_iterator:
-                    body_dict['text_score'] += common.basic_text_checker(content_iterator)
+                    if content_iterator:
+                        body_dict['text_score'] += common.basic_text_checker(''.join(content_iterator), regexp_list)
 
-            else:
-                body_dict['text_score'] += common.basic_text_checker(line)
+                else:
+                    body_dict['text_score'] += common.basic_text_checker(mime_text_part, regexp_list)
 
 
         vector_dict.update(body_scores)

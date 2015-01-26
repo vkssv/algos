@@ -96,12 +96,8 @@ def get_text_parts(msg):
             break
 
         if part:
-            decoded_line = part.get_payload()
+            decoded_line = part.get_payload(decode=True)
             charset_map = {'x-sjis': 'shift_jis'}
-
-            if part.get('Content-Transfer-Encoding') in encodings.keys():
-                f = encodings.get(part.get('Content-Transfer-Encoding'))
-                decoded_line = f(decoded_line)
 
             charset = ''
             for charset in (part.get_content_charset(), part.get_charset()):
@@ -177,6 +173,8 @@ def get_url_list(msg, d_name, tags_list):
                     logger.debug("All "+tag.upper()+" attributes: ")
                     for obj in object_list:
                         logger.debug('\t'+str(obj.attrs))
+
+
 
 
                 else:
@@ -292,6 +290,30 @@ if __name__ == "__main__":
             logger.debug('NEST LEVEL: '+str(get_nest_level(msg)))
 
             header_counts_list.append(len(msg.keys()))
+
+            logger.debug('========== BODIES PARTS ==========\n')
+            bodies_parts = get_text_parts(msg)
+            n = 0
+            pairs=tuple()
+            for mime_text_part, encoding, content_type in bodies_parts:
+
+                if 'html' in content_type:
+                    soup = BeautifulSoup(mime_text_part)
+                    if soup.body and soup.body.stripped_strings:
+                        pairs = enumerate(soup.body.stripped_strings)
+
+                elif mime_text_part:
+                    pairs = enumerate(mime_text_part.split())
+
+                if pairs:
+                    for num, s in pairs:
+                        logger.debug(str(num)+': '+s)
+
+                    logger.debug('==========================================================')
+
+
+
+
 
         logger.debug('AVG URL LIST LEN: '+str(float(sum(urls_count_list))/float(len(urls_count_list))))
         logger.debug('AVG URL LEN: '+str(float(sum(urls_lens))/float(len(urls_lens))))
