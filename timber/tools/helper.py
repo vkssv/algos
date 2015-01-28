@@ -81,11 +81,6 @@ def replace(x):
 def get_text_parts(msg):
 
     text_parts = []
-    encodings = {
-                            'quoted-printable'  : lambda payload: quoprimime.body_decode(payload),
-                            'base64'            : lambda payload: base64mime.body_decode(payload)
-                }
-
     decoded_line = ''
     parts_iterator = iterators.typed_subpart_iterator(msg)
     while(True):
@@ -195,14 +190,17 @@ if __name__ == "__main__":
     usage = "usage: %prog [ training_directory | file ] -b"
     parser = argparse.ArgumentParser(prog='helper')
     parser.add_argument("PATH", type=str, help="path to collection dir or to email")
-    parser.add_argument("-b", action = "store_true", default=False, help="show only bodies MIME structures and URL, HTML parsed info")
-    parser.add_argument("-stat", action = "store_true", default=False, help="print headers stat")
+    parser.add_argument("-b", action = "store_true", default=False, help="show only bodies MIME structures and content")
+    parser.add_argument("-stat", action = "store_true", default=False, help="print headers, tags, urls stat")
     args = parser.parse_args()
 
     tmp = '/tmp'
     formatter = logging.Formatter('%(message)s')
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+
+    logger.setLevel(logging.INFO)
+    if args.stat:
+        logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tmp, 'headers_'+os.path.basename(args.PATH)+'_'+time.strftime("%y%m%d_%H%M", time.localtime())+'.log'), mode = 'w')
     ch.setFormatter(formatter)
@@ -225,15 +223,12 @@ if __name__ == "__main__":
         header_counts_list = []
         urls_count_list = []
         urls_lens = []
-        tags_list = ['table', 'tr', 'td', 'img', 'p', 'lu','li','div','span','style','script','a']
-        d = [[] for i in repeat(None, len(tags_list))]
-        tags = Counter(dict(zip(tags_list,d)))
 
         for sample_path in pathes:
             with open(sample_path, 'rb') as f:
                 msg = parser.parse(f)
 
-            logger.debug('\nPATH: '+sample_path.upper()+'\n')
+            logger.info('\nPATH: '+sample_path.upper()+'\n')
 
             filename = os.path.basename(sample_path)
             if not args.b:
@@ -241,42 +236,29 @@ if __name__ == "__main__":
                 #logger.debug('\n============== common garden parser ====================\n')
                 #headers_parser(cut_header_from_body(sample_path)[0], sample_path)
 
-                logger.debug('\n============== parser from STL email ====================\n')
+                logger.info('\n============== parser from STL email ====================\n')
                 for k in msg.keys():
                     if k == 'Subject':
 
                         subj_parts_list = [(l[0],(replace(l[1])).upper()) for l in decode_header(msg.get(k))]
-                        logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(subj_parts_list))
+                        logger.info('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(subj_parts_list))
 
                     else:
-                        logger.debug('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
-
-            heads_list = msg.keys()
-            common_heads_list.extend([(name, heads_list.count(name)) for name in heads_list])
+                        logger.info('HEADER( '+(filename)+' ):\t'+k+' ==> '+quote_the_value(str(msg.get(k))))
 
 
-            logger.debug('PREAMBLE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.preamble)))
-            logger.debug('STRUCTURE')
-            logger.debug('\t'+str(email.iterators._structure(msg)))
-            logger.debug("IS_MULTIPART_FLAG = "+str(msg.is_multipart()))
-            if msg.is_multipart():
-
-                d = get_mime_struct(msg)
-                logger.debug('=====================================')
-                for k in d.keys():
-                    logger.debug('\t{0:25} {1:}'.format(k,str(d.get(k))))
-
-                logger.debug('=====================================')
-
-            logger.debug('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
-            logger.debug('==========URL_LIST==========')
+            tags_list = ['table', 'tr', 'td', 'img', 'p', 'lu','li','div','span','style','script','a']
+            d = [ [] for i in repeat(None, len(tags_list)) ]
+            tags = Counter(dict(zip(tags_list,d)))
             i = 0
             url_list, tags_dict = get_url_list(msg, filename, tags_list)
+
+            logger.debug('==========URL_LIST==========')
             logger.debug('>> URL LIST '+str(url_list))
             logger.debug('\n')
+
             if tags_dict:
                 tags_dict = dict(tags_dict.items())
-
                 logger.debug('>> CURRENT TAGS COUNTS '+str(tags_dict))
                 tags.update(tags_dict)
 
@@ -284,14 +266,36 @@ if __name__ == "__main__":
                 logger.debug('\t'+str(i)+'. >'+str(l)+'<')
                 i +=1
                 urls_lens.append(len(l))
+
             logger.debug('URL LIST LEN: '+str(len(url_list)))
             urls_count_list.append(len(url_list))
 
-            logger.debug('NEST LEVEL: '+str(get_nest_level(msg)))
+
+            logger.info('NEST LEVEL: '+str(get_nest_level(msg)))
 
             header_counts_list.append(len(msg.keys()))
 
-            logger.debug('========== BODIES PARTS ==========\n')
+            heads_list = msg.keys()
+            common_heads_list.extend([(name, heads_list.count(name)) for name in heads_list])
+
+
+            logger.info('PREAMBLE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.preamble)))
+            logger.info('STRUCTURE')
+            logger.info('\t'+str(email.iterators._structure(msg)))
+            logger.info("IS_MULTIPART_FLAG = "+str(msg.is_multipart()))
+            if msg.is_multipart():
+
+                d = get_mime_struct(msg)
+                logger.info('=====================================')
+                for k in d.keys():
+                    logger.info('\t{0:25} {1:}'.format(k,str(d.get(k))))
+
+                logger.info('=====================================')
+
+            logger.info('EPILOGUE ( '+(filename)+' ): ==> '+quote_the_value(str(msg.epilogue)))
+
+
+            logger.info('========== BODIES PARTS ==========\n')
             bodies_parts = get_text_parts(msg)
             n = 0
             pairs=tuple()
@@ -303,31 +307,17 @@ if __name__ == "__main__":
                         pairs = enumerate(soup.body.stripped_strings)
 
                 elif mime_text_part:
-                    pairs = enumerate(mime_text_part.split())
+                    pairs = enumerate(mime_text_part.split('\n'))
 
                 if pairs:
                     for num, s in pairs:
-                        logger.debug(str(num)+': '+s)
+                        logger.info(str(num)+': '+s)
 
-                    logger.debug('==========================================================')
+                    logger.info('==========================================================')
 
-
-
-
-
-        logger.debug('AVG URL LIST LEN: '+str(float(sum(urls_count_list))/float(len(urls_count_list))))
-        logger.debug('AVG URL LEN: '+str(float(sum(urls_lens))/float(len(urls_lens))))
-        logger.debug('AVG HEADS COUNT: '+str(float(sum(header_counts_list))/float(len(header_counts_list))))
-        logger.debug('================ TAGS STAT ================= ')
-        for t in tags.keys():
-            appears = len(tags.get(t))
-            if appears == 0:
-                appears = 1 # :-)
-            total_count = sum(tags.get(t))
-            logger.debug('AVG '+t.upper()+' count '+str(math.ceil(float(total_count/appears))))
 
         if args.stat:
-            logger.debug('\n============== heads stat ====================\n')
+            logger.debug('\n============== HEADS STAT ====================\n')
             heads = [ i[0] for i in common_heads_list ]
             unique = tuple(set([ i[0] for i in common_heads_list ]))
             unique_list = list(zip(tuple([heads.count(u) for u in unique]),unique))
@@ -338,8 +328,24 @@ if __name__ == "__main__":
                 value,key = item
                 logger.debug(key+' --> '+str(value))
 
+            logger.debug('================ TAGS and URLS STAT ================= ')
+            logger.debug('AVG URL LIST LEN: '+str(float(sum(urls_count_list))/float(len(urls_count_list))))
+            logger.debug('AVG URL LEN: '+str(float(sum(urls_lens))/float(len(urls_lens))))
+            logger.debug('AVG HEADS COUNT: '+str(float(sum(header_counts_list))/float(len(header_counts_list))))
+
+
+            for t in tags.keys():
+                appears = len(tags.get(t))
+                if appears == 0:
+                    appears = 1 # :-)
+            total_count = sum(tags.get(t))
+            logger.debug('AVG '+t.upper()+' count '+str(math.ceil(float(total_count/appears))))
+
 
     except Exception as details:
         logger.error(str(details))
         raise
+
+
+
 

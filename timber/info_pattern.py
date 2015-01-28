@@ -311,6 +311,8 @@ class InfoPattern(BasePattern):
         if text_parts:
             logger.debug('TEXT_PARTS: '+str(text_parts))
             regexp_list = [
+                            ur'',
+
 
             ]
 
