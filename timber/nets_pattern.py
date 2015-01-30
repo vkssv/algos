@@ -304,32 +304,6 @@ class NetsPattern(BasePattern):
 
         vector_dict.update(body_scores)
         vector_dict['table_checksum'] = table_checksum
-
-
-
-
-        logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
-
-        body_features = [ 'regexp_score', 'html_score', 'body_checksum' ]
-        body_dict = Counter(dict(map(lambda x,y: (x,y), body_features, [INIT_SCORE]*len(body_features))))
-
-        text_parts = self.get_text_parts()
-        logger.debug('TEXT_PARTS: '+str(text_parts))
-
-        html_text = ''
-        for line, content_type in text_parts:
-            # parse by lines
-            if 'html' in content_type:
-                soup = BeautifulSoup(line)
-                body_dict['html_score'] += common.basic_html_checker(soup)
-                html_content = common.get_content(soup)
-                if html_content:
-                    body_dict['regexp_score'] += common.basic_text_checker(html_content)
-
-            else:
-                body_dict['regexp_score'] += common.basic_text_checker(line)
-
-
         vector_dict.update(body_dict)
         vector_dict['table_checksum'] = table_checksum
         vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)

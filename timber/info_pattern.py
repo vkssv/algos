@@ -308,12 +308,13 @@ class InfoPattern(BasePattern):
 
         all_text_parts = self.get_text_parts()
 
-        if text_parts:
-            logger.debug('TEXT_PARTS: '+str(text_parts))
+        if all_text_parts:
+            logger.debug('TEXT_PARTS: '+str(all_text_parts))
+
             regexp_list = [
-                            ur'',
-
-
+                            ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring)',
+                            ur'(news|letter|discount|sale|info|unsubscribe|bonus)',
+                            ur'(media|partage|share|actu|publicité|télécharger|download)'
             ]
 
             for mime_text_part, content_type in all_text_parts:

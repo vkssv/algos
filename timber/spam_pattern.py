@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for spams."""
 
-import os, sys, logging, re, common, binascii, urllib
+import os, sys, logging, re, common, binascii,math
 from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
@@ -265,7 +265,7 @@ class SpamPattern(BasePattern):
         urls_list = BasePattern.get_url_list(self)
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-        features = ['url_upper', 'repetitions', 'punicode', 'domain_name_level']
+        features = ['url_upper', 'repetitions', 'punicode', 'domain_name_level', 'url_avg_len']
         features_dict = OrderedDict(map(lambda x,y: (x,y), features, [INIT_SCORE]*len(features)))
 
         if urls_list:
@@ -312,9 +312,13 @@ class SpamPattern(BasePattern):
             print('DICT >>>'+str(basic_features_dict))
 
             if netloc_list:
-                for met in [ unicode.isupper, unicode.istitle ]:
+                for method in [ unicode.isupper, unicode.istitle ]:
                 #for met in [unicode.isupper, unicode.istitle]:
-                    features_dict['url_upper'] += len(filter(lambda s: met(s), netloc_list))*score
+                    features_dict['url_upper'] += len(filter(lambda s: method(s), netloc_list))*score
+                    # mostly thinking about shortened urls, created by tinyurl and other services,
+                    # but maybe weak feature
+
+                features_dict['url_avg_len'] = math.ceil(float(sum([len(s) for s in netloc_list]))/len(netloc_list))
 
                 puni_regex = ur'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
                 features_dict['punicode'] = len(filter(lambda u: re.search(puni_regex,u,re.I), netloc_list))*score
@@ -344,15 +348,33 @@ class SpamPattern(BasePattern):
         # use Counter cause we can have many MIME-parts
         scores = ['regexp_score', 'html_score']
         body_scores = Counter(dict(map(lambda x,y: (x,y), scores, [INIT_SCORE]*len(scores))))
-
-        text_parts = self.get_text_parts()
-        logger.debug('TEXT_PARTS: '+str(text_parts))
         table_checksum = INIT_SCORE
 
-        for line, content_type in text_parts:
-            # parse by lines
-            if 'html' in content_type:
-                 tags_map = {
+        all_text_parts = self.get_text_parts()
+
+        if all_text_parts:
+            logger.debug('TEXT_PARTS: '+str(all_text_parts))
+            # some simple greedy regexp, don't belive in them at all
+            # this like good all tradition of antispam filter's world
+            regexp_list = [
+                                ur'(vrnospam|not\s+(a\s+)?spam|(bu[ying]\s+.*(now|today|(on\s+)?.*sale|(click|go|open)[\s\.,_-]+here)',
+                                ur'(viagra|ciali([sz])?|doctors?|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
+                                ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required|(whole)?sale\s+.*prices?|phizer)',
+                                ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed)',
+                                ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
+                                ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)'
+                                ur'(автомати[зиче].*\sдоход|халяв[аыне].*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
+                                ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар[ьша]|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер[ия])',
+                                ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
+                                ur'(мазь\s+(как\s+)?+средство\s+(от\s+жизни\s)?.*для\s+.*\s+(по)?худ|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
+                                ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
+                                ur'(\+\d\)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}
+            ]
+
+            for mime_text_part, content_type in all_text_parts:
+                # parse by lines
+                if 'html' in content_type:
+                    tags_map = {
 
                                 'table':{
                                             'width'                 : '[1-9]{3}[^%]',
@@ -363,24 +385,24 @@ class SpamPattern(BasePattern):
                                             'style'                 : '([A-Z-][^(a-z)]){3,10}'
                                 },
                                 'span' :{
-                                            'style'                 : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10})',
+                                            'style'                 : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
                                             'lang'                  : '(RU|EN-US)'
                                 },
                                 'p'    :{
-                                            'style'                 : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10}))',
+                                            'style'                 : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
                                             'class'                 : '\[\'(Mso.*|.*)\'\]',
                                             'align'                 : 'center',
                                             'css'                   : ''
                                 }
 
-                 html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
-                 body_scores['html_score'] += html_score
+                    html_score, table_checksum, content_iterator = common.basic_html_checker(mime_text_part, tags_map)
+                    body_scores['html_score'] += html_score
 
-                #if content_iterator:
-                #    body_dict['regexp_score'] += common.basic_text_checker()
+                    if content_iterator:
+                        body_scores['text_score'] += common.basic_text_checker(''.join(content_iterator), regexp_list)
 
-            #else:
-            #    body_dict['regexp_score'] += common.basic_text_checker(line)
+                else:
+                    body_scores['regexp_score'] += common.basic_text_checker(mime_text_part)
 
 
         vector_dict.update(body_scores)

@@ -91,21 +91,27 @@ def get_text_parts(msg):
             break
 
         if part:
+
             decoded_line = part.get_payload(decode=True)
+
             charset_map = {'x-sjis': 'shift_jis'}
 
             charset = ''
             for charset in (part.get_content_charset(), part.get_charset()):
                 if charset:
+                    logger.info('........'+charset.upper())
                     if charset in charset_map.keys():
                         charset =  charset_map.get(charset)
 
             if isinstance(decoded_line, bytes) and charset:
-                decoded_line = decoded_line.decode(charset, 'replace')
+                logger.info('........'+charset.upper())
+                decoded_line = decoded_line.decode(charset)
+
 
             elif isinstance(decoded_line, bytes):
                 decoded_line = decoded_line.decode('utf-8', 'replace')
 
+            logger.info('........'+decoded_line+'...................')
             text_parts.append((decoded_line, part.get_content_charset(), part.get_content_type()))
 
     return (text_parts)
