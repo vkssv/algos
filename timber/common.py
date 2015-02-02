@@ -22,21 +22,6 @@ logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 
-# just for debugging new regexp on fly
-def get_regexp(regexp_list, compilation_flag=0):
-    compiled_list = []
-
-    for exp in regexp_list:
-        logger.debug(exp)
-        if compilation_flag:
-            exp = re.compile(exp, compilation_flag)
-        else:
-            exp = re.compile(exp)
-
-        compiled_list.append(exp)
-
-    return(compiled_list)
-
 # excluded_list=['Received', 'From', 'Date', 'X-.*']
 # header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items() - save the order of heads
 def get_all_heads_crc(header_value_list, excluded_list = None):
@@ -228,7 +213,7 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
     logger.debug('line after: '+line_in_unicode)
 
     # for debug purposes:
-    regs = get_regexp(regexes)
+    regs = BasePattern.get_regexp(regexes)
 
     #regexes = [re.compile(exp) for exp in regexes]
     matched = filter(lambda r: r.search(line, re.I), regs)
@@ -369,10 +354,6 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
     # SENDER_COUNT: count of domains/subdomains from netlocation parts of URLs,
     # which are the same with sender domain from RCVD-headers.
 
-
-#
-#'style' : '(color:#[0-9A-F]{6}|\!important)',
-#                                            'target': '_blank',
     # url_count
     basic_features['url_count'] = len(parsed_links_list)
 
@@ -400,7 +381,7 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 
     # url_score, distinct_count, sender_count
     if netloc_list:
-        domain_regs = get_regexp(domain_regs, re.I)
+        domain_regs = BasePattern.get_regexp(domain_regs, re.I)
 
         for reg in domain_regs:
             basic_features['url_score'] += len(filter(lambda netloc: reg.search(netloc), netloc_list))*score
@@ -414,60 +395,12 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
         metainfo_list.extend([i.__getattribute__(attr) for i in parsed_links_list])
 
     if metainfo_list:
-        regs = get_regexp(regs, re.I)
+        regs = BasePattern.get_regexp(regs, re.I)
         for reg in regs:
             basic_features['url_score'] += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*score
 
     return(dict(basic_features), netloc_list)
 
-def basic_html_checker(line, **kwargs):
-    # check common html-emails makeups trics
-    # http://thesiteslinger.com/blog/10-tips-for-designing-html-emails/
-    # now this is not so cheap for russian spammers to perform old-school html-email makeup by patterns
-
-    html_score = INIT_SCORE
-    table_checksum = INIT_SCORE
-    content_iterator = list()
-
-    soup = BeautifulSoup(line)
-    if soup.body.is_empty_element:
-        return(html_score, table_checksum, content_iterator)
-
-    tag_attribute = namedtuple('tag_attribute','name, value')
-    attrs_list = list()
-
-    for tag in kwargs:
-        if not soup.tag.is_empty_element :
-
-            soup_attrs_list = [ t.attrs.items() for t in soup.findall(tag) ]
-            soup_attrs_list = [ tag_attribute(obj) for obj in reduce(add, soup_attrs_list) ]
-            expected_attrs_dict = tags_map.get(tag)
-            pairs = list()
-
-            for key_attr in expected_attrs_dict:
-                pairs = filter(lambda pair: re.match(ur''+key_attr, pair.name, re.I), soup_attrs_list)
-                check_values = list()
-                if pairs:
-                    check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
-                    html_score += score*len(check_values)
-
-    if not soup.body.table.is_empty_element:
-        comments = soup.body.table.findAll(text=lambda text:isinstance(text, Comment))
-        # remove bones
-        [comment.extract() for comment in comments]
-        # leave only closing tags struct
-        reg = re.compile(ur'<[a-z]*/[a-z]*>',re.I)
-        # todo: investigate the order of elems within included generators
-        table_skeleton = (t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(),re.M)))
-        table_checksum = binascii.crc32(''.join(table_skeleton))
-
-    content_iterator = soup.body.stripped_strings
-
-    return(html_score, table_checksum, content_iterator)
-
-def basic_text_checker(utf_line, regexp_list):
-    pass
-    return(body_score)
 
 
 

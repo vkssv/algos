@@ -296,55 +296,31 @@ class InfoPattern(BasePattern):
         # 9. check body
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
-        # todo: refactor architecture --> such check should be made in pattern_wrapper.py,
-        # which initializes msg object only once and perfoms all checks for all patterns one by one.
-        # spam/info/net/ham-classes have to became just conatiners for appropriate regexes sets,
-        # some variables and maybe rules...(rules are the room for particular reflections)
+        regexp_list = [
+                        ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring|look|blog|spot)',
+                        ur'(news|letter|discount|sale|info|unsubscribe|bonus|ads|market)',
+                        ur'((social)?media|partage|share|actu|publicité|télécharger|download)'
+        ]
 
-        # use Counter cause we can have many MIME-parts
-        scores = ['text_score', 'html_score']
-        body_scores = Counter(dict(map(lambda x,y: (x,y), scores, [INIT_SCORE]*len(scores))))
-        table_checksum = INIT_SCORE
+        tags_map = {
+                        'img'   :{
+                                    'alt'   : '',
+                                    'src'   : '(logo|promo|content|btn\.|butt\.|avatar|user|banner|content|download|send(friend)?|actions)',
+                                    'title' : '.*'
+                        },
+                        'span'  :{
+                                    'style' : 'color\s?:\s?(\w{3,10}|#[a-z0-9]{3,6})',
+                                    'class' : '\[\'.*\'\]'
+                        }
+        }
 
-        all_text_parts = self.get_text_parts()
+        features = ('html_score', 'text_score', 'table_checksum')
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, tags_map, regexp_list, score)))
+        features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
 
-        if all_text_parts:
-            logger.debug('TEXT_PARTS: '+str(all_text_parts))
+        vector_dict.update(features_dict)
 
-            regexp_list = [
-                            ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring)',
-                            ur'(news|letter|discount|sale|info|unsubscribe|bonus)',
-                            ur'(media|partage|share|actu|publicité|télécharger|download)'
-            ]
-
-            for mime_text_part, content_type in all_text_parts:
-                # parse by lines
-                if 'html' in content_type:
-                    tags_map = {
-                                'img'   :{
-                                            'alt'   : '',
-                                            'src'   : '(logo|promo|content|btn\.|butt\.|avatar|user|banner|content|download|send(friend)?|actions)',
-                                            'title' : '.*'
-                                },
-                                'span'  :{
-                                            'style' : 'color\s?:\s?(\w{3,10}|#[a-z0-9]{3,6})',
-                                            'class' : '\[\'.*\'\]'
-                                }
-                    }
-
-                    html_score, table_checksum, content_iterator = common.basic_html_checker(mime_text_part, tags_map)
-                    body_scores['html_score'] += html_score
-
-                    if content_iterator:
-                        body_dict['text_score'] += common.basic_text_checker(''.join(content_iterator), regexp_list)
-
-                else:
-                    body_dict['text_score'] += common.basic_text_checker(mime_text_part, regexp_list)
-
-
-        vector_dict.update(body_scores)
-        vector_dict['table_checksum'] = table_checksum
-        vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
+        #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
 
         return (vector_dict)
 
@@ -365,7 +341,6 @@ if __name__ == "__main__":
     except Exception as details:
         raise
 
-			
 
 
 		

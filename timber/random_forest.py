@@ -143,6 +143,10 @@ if __name__ == "__main__":
         raise
 
 
+# todo: refactor architecture --> such check should be made in pattern_wrapper.py,
+# which initializes msg object only once and perfoms all checks for all patterns one by one.
+# spam/info/net/ham-classes have to became just conatiners for appropriate regexes sets,
+# some variables and maybe rules...(rules are the room for particular reflections)
 
 
 

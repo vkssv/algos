@@ -7,9 +7,9 @@ from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
 
-INIT_SCORE = BasePattern.INIT_SCORE
-MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
-NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
+#INIT_SCORE = BasePattern.INIT_SCORE
+#MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+#NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
 
 # formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
@@ -43,7 +43,7 @@ class SpamPattern(BasePattern):
         # basic parsing and dummy checks with regexps (takes only first n_rcvds headers)
 
 
-        vector_dict ["trace_rule"] = BasePattern.INIT_SCORE
+        vector_dict ["trace_rule"] = INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
         rcvd_rules = [
                         r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
@@ -51,7 +51,8 @@ class SpamPattern(BasePattern):
         ]
 
         n_rcvds = 2
-        rcvds = BasePattern.get_rcvds(self,n_rcvds)
+        #rcvds = BasePattern.get_rcvds(self,n_rcvds)
+        rcvds = self.get_rcvds(self, n_rcvds)
         print('TYPE:'+str(type(rcvds)))
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
         for rule in rcvd_rules:
@@ -345,22 +346,13 @@ class SpamPattern(BasePattern):
 
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
-        # use Counter cause we can have many MIME-parts
-        scores = ['regexp_score', 'html_score']
-        body_scores = Counter(dict(map(lambda x,y: (x,y), scores, [INIT_SCORE]*len(scores))))
-        table_checksum = INIT_SCORE
-
-        all_text_parts = self.get_text_parts()
-
-        if all_text_parts:
-            logger.debug('TEXT_PARTS: '+str(all_text_parts))
             # some simple greedy regexp, don't belive in them at all
             # this like good all tradition of antispam filter's world
             regexp_list = [
                                 ur'(vrnospam|not\s+(a\s+)?spam|(bu[ying]\s+.*(now|today|(on\s+)?.*sale|(click|go|open)[\s\.,_-]+here)',
                                 ur'(viagra|ciali([sz])?|doctors?|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
-                                ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required|(whole)?sale\s+.*prices?|phizer)',
-                                ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed)',
+                                ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
+                                ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
                                 ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
                                 ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)'
                                 ur'(автомати[зиче].*\sдоход|халяв[аыне].*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
@@ -371,43 +363,36 @@ class SpamPattern(BasePattern):
                                 ur'(\+\d\)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}
             ]
 
-            for mime_text_part, content_type in all_text_parts:
-                # parse by lines
-                if 'html' in content_type:
-                    tags_map = {
+            tags_map = {
 
-                                'table':{
-                                            'width'                 : '[1-9]{3}[^%]',
-                                            'height'                : '[1-9]{1,3}',
-                                            'cell(padding|spacing)' : '[1-9]',
-                                            'border-color'          : '#[0-9A-F]{3,6}',
-                                            'border'                : '[1-9]',
-                                            'style'                 : '([A-Z-][^(a-z)]){3,10}'
-                                },
-                                'span' :{
-                                            'style'                 : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
-                                            'lang'                  : '(RU|EN-US)'
-                                },
-                                'p'    :{
-                                            'style'                 : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
-                                            'class'                 : '\[\'(Mso.*|.*)\'\]',
-                                            'align'                 : 'center',
-                                            'css'                   : ''
-                                }
-
-                    html_score, table_checksum, content_iterator = common.basic_html_checker(mime_text_part, tags_map)
-                    body_scores['html_score'] += html_score
-
-                    if content_iterator:
-                        body_scores['text_score'] += common.basic_text_checker(''.join(content_iterator), regexp_list)
-
-                else:
-                    body_scores['regexp_score'] += common.basic_text_checker(mime_text_part)
+                            'table':{
+                                        'width'                 : '[1-9]{3}[^%]',
+                                        'height'                : '[1-9]{1,3}',
+                                        'cell(padding|spacing)' : '[1-9]',
+                                        'border-color'          : '#[0-9A-F]{3,6}',
+                                        'border'                : '[1-9]',
+                                        'style'                 : '([A-Z-][^(a-z)]){3,10}'
+                            },
+                            'span' :{
+                                        'style'                 : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
+                                        'lang'                  : '(RU|EN-US)'
+                            },
+                            'p'    :{
+                                        'style'                 : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
+                                        'class'                 : '\[\'(Mso.*|.*)\'\]',
+                                        'align'                 : 'center',
+                                        'css'                   : ''
+                            }
+            }
 
 
-        vector_dict.update(body_scores)
-        vector_dict['table_checksum'] = table_checksum
-        vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
+            features = ('html_score', 'text_score', 'table_checksum')
+            features_dict = Counter(zip(features, self.get_html_parts_metrics(self, tags_map, regexp_list, score)))
+            features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
+
+        vector_dict.update(features_dict)
+
+        #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
 
         return (vector_dict)
 

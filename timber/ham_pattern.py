@@ -97,41 +97,35 @@ class HamPattern(BasePattern):
 
 
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
-        # use Counter cause we can have many MIME-parts
 
-        text_parts = self.get_text_parts()
-        logger.debug('TEXT_PARTS: '+str(text_parts))
-        table_checksum = INIT_SCORE # if we have usual transactional letters in main INBOX
-        html_total_score = INIT_SCORE
+        tags_map = {
+                        'img' :{
+                                    'src'             : '(cid:(_.*|part.*|profile|photo|logo|google|ima?ge?\d{1,3}.*@[\w.])|assets|track(ing)?|api|ticket|logo|fb|vk|tw)',
+                                    'moz-do-not-send' : 'true'
+                        },
+                        'li'  :{
+                                    'dir'             : 'ltr',
+                                    'class'           : '\[\'.*\'\]'
+                        }
+        }
 
-        for line, content_type in text_parts:
-            # parse by lines, weak feature
-            if 'html' in content_type:
-                 tags_map = {
-                                'img' :{
-                                            'alt'             : '(account(s)?||Google Plus|Blog|Facebook|LinkedIn|Twitter|YouTube|Logo.*)',
-                                            'src'             : '(cid:(_.*|part.*|profile|photo|logo|google|ima?ge?\d{1,3}.*@[\w.])|assets|track(ing)?|api|ticket|logo|fb|vk|tw)',
-                                            'moz-do-not-send' : 'true'
-                                },
-                                'li'  :{
-                                            'dir'             : 'ltr',
-                                            'class'           : '\[\'.*\'\]'
-                                }
-                 }
+        regexp_list= [
+                        ur'(tracking\s+No|proc(é|e)+d(er)?|interview|welcom(ing)?|introduc(tion)?|your\s+.*(ticket|order)s?*\s+(\#|№)|day|quarter|inquir[yies])',
+                        ur'(feature|questions?|support|request|contract|draft|team|priority|details|attached|communic.*|train(ing)?)',
+                        ur'(proposal|found\s+this|concern(ing|ant)?|remind(er)?|contrac?t|act|s(e|é)curit[yieés]|during\s+.*(the)?\s+period)',
+                        ur'(report|(re)?scheduled|(specified|conference|call)\s+.*time|transfer|cancel(ed)?|payment|work|labour)',
+                        ur'(profile\s+activation|invit(aion)?|registration|forgot.*password|pre-.*|post-.*|document(ation)?|compte)',
+                        ur'((d\')?expiration|exchange|service|requisition|albeit|complémentaires?|additional|terms\s+and\s+conditions)',
+                        ur'(en\s+invitant|ci-(jointe|dessous)|transmette|souscription|sp(é|e)siale?|procéder|(e|é)change|us(age|ing|er)'
 
-                html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
-                html_total_score += html_score
-
-                #if content_iterator:
-                #    body_dict['regexp_score'] += common.basic_text_checker()
-
-            #else:
-            #    body_dict['regexp_score'] += common.basic_text_checker(line)
+                    ]
 
 
-        vector_dict['html_score'] = html_total_score
-        vector_dict['table_checksum'] = table_checksum
-        vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
+        features = ('html_score', 'text_score', 'table_checksum')
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, tags_map, regexp_list, score)))
+        features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
+        vector_dict.update(features_dict)
+        #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
 
 	    return(vector_dict)
 

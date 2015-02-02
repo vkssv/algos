@@ -20,6 +20,20 @@ class BasePattern(object):
     def __init__(self, msg):
         self.msg = msg
 
+    # just for debugging new regexp on the fly
+    def get_regexp(regexp_list, compilation_flag=0):
+        compiled_list = []
+
+        for exp in regexp_list:
+            logger.debug(exp)
+            if compilation_flag:
+                exp = re.compile(exp, compilation_flag)
+            else:
+                exp = re.compile(exp)
+
+            compiled_list.append(exp)
+
+    return(compiled_list)
 
     def get_text_parts(self):
     # returns list of text body's parts: each in one unicode line
@@ -58,7 +72,7 @@ class BasePattern(object):
                 #logger.debug('Type of line >>>>>>>>>'+str(type(decoded_line)))
 
                 charset_map = {'x-sjis': 'shift_jis'}
-                # Python2.7 => try to decode all lines from their particular charsets,
+                # Python2.7 => try to decode all lines from their particular charsets to unicode,
                 # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
                 for charset in (part.get_content_charset(), part.get_charset()):
                     if charset:
@@ -73,7 +87,7 @@ class BasePattern(object):
                     continue
 
                 self.text_parts.append((decoded_line, part.get_content_type()))
-            # maybe it's better to return generator instead of list (keep original order of parts)
+
 
         return (self.text_parts)
 
@@ -147,7 +161,7 @@ class BasePattern(object):
             logger.debug('-------------')
             logger.debug(i)
         if self.url_list:
-            # to do: fix this shame (there is nothing more permanent, then some temporary peaces of shame in your code (()
+            # to do: fix this shame (there is nothing more permanent, then some temporary peaces of shame in your simple code ()
             self.url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(').strip('<').strip('>') for s in self.url_list ]
 
             parsed_urls = []
@@ -161,6 +175,78 @@ class BasePattern(object):
             self.url_list = parsed_urls
 
         return(self.url_list)
+
+    def get_text_parts_metrics(self, regs_list, score, lines_generator=list()):
+
+        text_score = INIT_SCORE
+        lines = []
+        if not lines_generator:
+            all_text_parts = self.get_text_parts()
+            if not all_text_parts:
+                return text_score
+
+
+            for mime_text_part, content_type in all_text_parts:
+                if 'text' in content_type and mime_text_part.strip():
+                    lines.append(mime_text_part.split('\r\n'))
+
+        compiled_regs_list = self.get_regexp(regs_list, re.U)
+        for regexp_obj in compiled_regs_list:
+            text_score += len(filter(lambda line: regexp_obj.search(line,re.I), lines))
+
+        return text_score
+
+    def get_html_parts_metrics(self, **kwargs, regs_list, score):
+        # **kwargs - tags_map (dictionary of tags, in which sets of <attribute:values> pairs we are interested in)
+
+        metrics = (html_score, text_score, html_checksum)
+        metrics = [INIT_SCORE]*len(metrics)
+        tag_attribute = namedtuple('tag_attribute','name,value')
+
+        all_text_parts = self.get_text_parts()
+        if not all_text_parts:
+            return metrics
+
+        logger.debug('TEXT_PARTS: '+str(all_text_parts))
+        html_skeleton = list()
+        for mime_text_part, content_type in all_text_parts:
+            if 'html' in content_type:
+                soup = BeautifulSoup(mime_text_part)
+                if soup.body.is_empty_element:
+                    continue
+
+                # analyze pure text content within tags
+                text_score += self.get_text_parts_score(regs_list, score, soup.body.stripped_string)
+
+                if soup.body.table.is_empty_element:
+                    continue
+
+                # get table checksum
+                comments = soup.body.table.findAll(text=lambda text:isinstance(text, Comment))
+                [comment.extract() for comment in comments]
+                # leave only closing tags struct
+                reg = re.compile(ur'<[a-z]*/[a-z]*>',re.I)
+                # todo: investigate the order of elems within included generators
+                html_skeleton.append(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(),re.M)))
+
+                # analyze tags and their attributes
+                for tag in kwargs:
+                    soup_attrs_list = [ t.attrs.items() for t in soup.findall(tag) ]
+                    soup_attrs_list = [ tag_attribute(obj) for obj in reduce(add, soup_attrs_list) ]
+                    #expected_attrs_dict = tags_map.get(tag)
+                    compiled_regexp_list = self.get_regexp(tags_map.get(tag))
+                    pairs = list()
+
+                    for key_attr in compiled_regexp_list: #expected_attrs_dict:
+                        pairs = filter(lambda pair: re.match(ur''+key_attr, pair.name, re.I), soup_attrs_list)
+                        check_values = list()
+                        if pairs:
+                            check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
+                            html_score += score*len(check_values)
+
+        table_checksum = binascii.crc32(''.join(html_skeleton))
+
+        return metrics
 
     def get_body_parts_entropy(self):
 

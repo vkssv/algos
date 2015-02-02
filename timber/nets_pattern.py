@@ -262,51 +262,32 @@ class NetsPattern(BasePattern):
 
 
         # 10. check body
+        regexp_list = [
+                        ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring)',
+                        ur'(news|letter|discount|sale|info|unsubscribe|bonus|ads|market)',
+                        ur'(media|partage|share|actu|publicité|télécharger|download)'
+        ]
 
-        logger.debug('>>> 10. BODY\'S TEXT PARTS CHECKS:')
-        # use Counter cause we can have many MIME-parts
-        scores = ['regexp_score', 'html_score']
-        body_scores = Counter(dict(map(lambda x,y: (x,y), scores, [INIT_SCORE]*len(scores))))
+        tags_map = {
+                        'table' :{
+                                    'border'      : '0',
+                                    'cellpadding' : '0',
+                                    'cellspacing' : '0',
+                                    'width'       : '\d{1,2}[^%](px)?'
+                        },
+                        'img'   :{
+                                    'src'         : '(logo|notification?|photo|bu?tt?o?n|icon|person|contacts|email|profile|account|member|group|api)',
+                                    'alt'         : '(accounts?|Google\s+Plus|Blog|Facebook|LinkedIn|Twitter|YouTube|Logo.*|Meetup|L\'Internaute|''|(\w{1-10}\s*){1,3})',
+                                    'style'       : 'display:block'
 
-        text_parts = self.get_text_parts()
-        logger.debug('TEXT_PARTS: '+str(text_parts))
-        table_checksum = INIT_SCORE
+                        }
+        }
 
-        for line, content_type in text_parts:
-            # parse by lines
-            if 'html' in content_type:
-                 tags_map = {
-
-                                'table' :{
-                                            'border'      : '0',
-                                            'cellpadding' : '0',
-                                            'cellspacing' : '0',
-                                            'width'       : '\d{1,2}[^%](px)?'
-                                },
-                                'img'   :{
-                                            'src'         : '(logo|notifications|photo|bu?tt?o?n|icon|person|contacts|email|profile|account|member|group|api).*',
-                                            'alt'         : '(Meetup|LinkedIn.*|L\'Internaute|''|(\w{1-10}\s*){1,3})',
-                                            'style'       : 'display:block'
-
-                                }
-
-                 }
-
-                html_score, table_checksum, content_iterator = common.basic_html_checker(line, tags_map)
-                body_scores['html_score'] += html_score
-
-                #if content_iterator:
-                #    body_dict['regexp_score'] += common.basic_text_checker()
-
-            #else:
-            #    body_dict['regexp_score'] += common.basic_text_checker(line)
-
-
-        vector_dict.update(body_scores)
-        vector_dict['table_checksum'] = table_checksum
-        vector_dict.update(body_dict)
-        vector_dict['table_checksum'] = table_checksum
-        vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
+        features = ('html_score', 'text_score', 'table_checksum')
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, tags_map, regexp_list, score)))
+        features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
+        vector_dict.update(features_dict)
+        #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
 
         return (vector_dict)
 
