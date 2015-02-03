@@ -95,7 +95,6 @@ class HamPattern(BasePattern):
 
             vector_dict.update(urls_dict)
 
-
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
         tags_map = {
@@ -110,19 +109,22 @@ class HamPattern(BasePattern):
         }
 
         regexp_list= [
-                        ur'(tracking\s+No|proc(é|e)+d(er)?|interview|welcom(ing)?|introduc(tion)?|your\s+.*(ticket|order)s?*\s+(\#|№)|day|quarter|inquir[yies])',
-                        ur'(feature|questions?|support|request|contract|draft|team|priority|details|attached|communic.*|train(ing)?)',
-                        ur'(proposal|found\s+this|concern(ing|ant)?|remind(er)?|contrac?t|act|s(e|é)curit[yieés]|during\s+.*(the)?\s+period)',
-                        ur'(report|(re)?scheduled|(specified|conference|call)\s+.*time|transfer|cancel(ed)?|payment|work|labour)',
+                        ur'(track(ing)?\s+No|proc(é|e)+d(er)?|interview|invit[eation]|welcom(ing)?|introduc(tion)?|your\s+.*(ticket|order)s?*\s+(\#|№)|day|quarter|inquir[yies])',
+                        ur'(feature|questions?|support|request|contrac?ts?|drafts?|teams?|priorit[yies]|details?|attach(ed)?|communic.*|train(ing)?)',
+                        ur'(propos[eal]|found\s+this|concern(ing|ant)?|remind[ers]|contrac?t|act|s(e|é)curit[yieés]|during\s+.*(the)?\s+period)',
+                        ur'(reports?|logs?|journals?|(re)?scheduled?|(specif[yied]|conference|call)\s+.*time|transfer|cancel(ed)?|payment|work|labour|mis\s+(à|a)\s+jour)',
                         ur'(profile\s+activation|invit(aion)?|registration|forgot.*password|pre-.*|post-.*|document(ation)?|compte)',
-                        ur'((d\')?expiration|exchange|service|requisition|albeit|complémentaires?|additional|terms\s+and\s+conditions)',
-                        ur'(en\s+invitant|ci-(jointe|dessous)|transmette|souscription|sp(é|e)siale?|procéder|(e|é)change|us(age|ing|er)'
-
+                        ur'((d\')?expiration|exchange|service|requisition|albeit|compl(é|e)mentaire(es)?|addition(al)?|terms?\s+and\s+conditions?)',
+                        ur'(en\s+invitant|ci-(jointe|dessous)|trans(mette|mis)|souscription|sp(é|e)siale?|procéd[eré]|(e|é)change|us(age|ing|er)',
+                        ur'(valider\s+les?|donnéés|дата|недел|тариф|уведомлен|связ|по\s+причин|магазин|поступил|отмен).*',
+                        ur'(заказ|сч(е|ё)т|предложен|контракт|отмена?|платеж|чек|данн|подтвер(ждение|ит[еть]|билет|номер|трэк|(тех)?поддерж).*',
+                        ur'(аккаунт|парол|доступ|истек[лоает]|договор|справка|интервью|встреча?|приглашен|собеседован|офис|врем|график|адрес).*',
+                        ur'(баланс|детали|выписк|прикреплен|(набор\s)?.*услуг).*'
                     ]
 
 
         features = ('html_score', 'text_score', 'table_checksum')
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, tags_map, regexp_list, score)))
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, regexp_list, score, tags_map)))
         features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
         vector_dict.update(features_dict)
         #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)

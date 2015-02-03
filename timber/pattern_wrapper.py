@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import sys, os, importlib, logging, re
+import sys, os, importlib, logging, re, binascii
 from email import iterators, base64mime, quoprimime
 from urlparse import urlparse
 from bs4 import BeautifulSoup
 #from collections import OrderedDict
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -21,7 +21,7 @@ class BasePattern(object):
         self.msg = msg
 
     # just for debugging new regexp on the fly
-    def get_regexp(regexp_list, compilation_flag=0):
+    def _get_regexp_(self, regexp_list, compilation_flag=0):
         compiled_list = []
 
         for exp in regexp_list:
@@ -33,14 +33,15 @@ class BasePattern(object):
 
             compiled_list.append(exp)
 
-    return(compiled_list)
+        return(compiled_list)
 
-    def get_text_parts(self):
+    def _get_text_parts_(self):
+    # todo: make this as normal people do with yield, ужас просто
     # returns list of text body's parts: each in one unicode line
-        encodings = {
-                        'quoted-printable'  : lambda payload: quoprimime.body_decode(payload),
-                        'base64'            : lambda payload: base64mime.body_decode(payload)
-                    }
+        #encodings = {
+        #                'quoted-printable'  : lambda payload: quoprimime.body_decode(payload),
+        #                'base64'            : lambda payload: base64mime.body_decode(payload)
+        #            }
 
         self.text_parts = []
 
@@ -58,9 +59,6 @@ class BasePattern(object):
 
             if part:
                 decoded_line = part.get_payload(decode=True)
-                #logger.debug('DEC LINE: '+str(decoded_line))
-
-                #logger.debug('CHARSET: ')
                 #logger.debug(part.get_content_charset())
 
 
@@ -88,15 +86,9 @@ class BasePattern(object):
 
                 self.text_parts.append((decoded_line, part.get_content_type()))
 
-
         return (self.text_parts)
 
-    def get_rcvds(self, rcvds_num=0):
-        # parse all RCVD headers by default if rcvds_num wasn't defined
-        self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received')])[ -1*rcvds_num : ]
-        return (self.parsed_rcvds)
-
-    def get_mime_struct(self):
+    def _get_mime_struct_(self):
         logger.debug("IN get_mime_struct")
         self.mime_parts= defaultdict(list)
         
@@ -132,16 +124,21 @@ class BasePattern(object):
 
         return(self.mime_parts)
 
+    def get_rcvds(self, rcvds_num=0):
+        # parse all RCVD headers by default if rcvds_num wasn't defined
+        self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received')])[ -1*rcvds_num : ]
+        return (self.parsed_rcvds)
+
     def get_nest_level(self):
 
-        mime_parts = self.get_mime_struct()
+        mime_parts = self._get_mime_struct_()
         self.level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
 
         return(self.level)
 
     def get_url_list(self):
 
-        text_parts = self.get_text_parts()
+        text_parts = self._get_text_parts_()
         #logger.debug('TEXT_PARTS: '+str(text_parts))
         self.url_list = []
 
@@ -178,10 +175,10 @@ class BasePattern(object):
 
     def get_text_parts_metrics(self, regs_list, score, lines_generator=list()):
 
-        text_score = INIT_SCORE
+        text_score = self.INIT_SCORE
         lines = []
         if not lines_generator:
-            all_text_parts = self.get_text_parts()
+            all_text_parts = self._get_text_parts_()
             if not all_text_parts:
                 return text_score
 
@@ -190,22 +187,20 @@ class BasePattern(object):
                 if 'text' in content_type and mime_text_part.strip():
                     lines.append(mime_text_part.split('\r\n'))
 
-        compiled_regs_list = self.get_regexp(regs_list, re.U)
+        compiled_regs_list = self._get_regexp_(regs_list, re.U)
         for regexp_obj in compiled_regs_list:
             text_score += len(filter(lambda line: regexp_obj.search(line,re.I), lines))
 
         return text_score
 
-    def get_html_parts_metrics(self, **kwargs, regs_list, score):
-        # **kwargs - tags_map (dictionary of tags, in which sets of <attribute:values> pairs we are interested in)
+    def get_html_parts_metrics(self, score, regs_list, tags_map):
 
-        metrics = (html_score, text_score, html_checksum)
-        metrics = [INIT_SCORE]*len(metrics)
+        (html_score, text_score, html_checksum) = [self.INIT_SCORE]*3
         tag_attribute = namedtuple('tag_attribute','name,value')
 
-        all_text_parts = self.get_text_parts()
+        all_text_parts = self._get_text_parts_()
         if not all_text_parts:
-            return metrics
+            return html_score, text_score, html_checksum
 
         logger.debug('TEXT_PARTS: '+str(all_text_parts))
         html_skeleton = list()
@@ -230,11 +225,11 @@ class BasePattern(object):
                 html_skeleton.append(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(),re.M)))
 
                 # analyze tags and their attributes
-                for tag in kwargs:
+                for tag in tags_map:
                     soup_attrs_list = [ t.attrs.items() for t in soup.findall(tag) ]
                     soup_attrs_list = [ tag_attribute(obj) for obj in reduce(add, soup_attrs_list) ]
                     #expected_attrs_dict = tags_map.get(tag)
-                    compiled_regexp_list = self.get_regexp(tags_map.get(tag))
+                    compiled_regexp_list = self._get_regexp_(tags_map.get(tag))
                     pairs = list()
 
                     for key_attr in compiled_regexp_list: #expected_attrs_dict:
@@ -246,12 +241,28 @@ class BasePattern(object):
 
         table_checksum = binascii.crc32(''.join(html_skeleton))
 
-        return metrics
+        return html_score, text_score, html_checksum
 
-    def get_body_parts_entropy(self):
+    def get_body_entropy_metrics():
+        metrics = (parts_compress_ratio, max_part_entropy)
+        metrics = [INIT_SCORE]*len(metrics)
+        # PARTS_COMPRESS_RATIO ? (compress only pure text lines):
+        # probably will be very high for infos and nets, cause they all have in bodies:
+        # ...
+        #   multipart/alternative
+        #       text/plain
+        #       text/html
+        # ...
+        # for bodies with one or more parts - will be some expected values in expected boundaries
+        # (high for hams, not so high - for spams)
+        # parts, which contain absolutely the same text => high redunduncy => low entropy => good compression
+        # investigate more about the efficiancy of compression algos on short text pieces, LZW 12bit ?
+        # http://www.pal-blog.de/entwicklung/perl/compressing-test-for-short-strings.html
+        #
+        # MAX_PART_ENTROPY ? (maybe... calculate on fly for each line into the current text part and each time keep the max,
+        # it has to have some distribution of peak values for different classes)
 
-        self.entropy = 42
-        return(self.entropy)
+        return(metrics)
 
 
 class PatternFactory(object):

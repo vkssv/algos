@@ -5,11 +5,11 @@
 import os, sys, logging, re, common, binascii,math
 from operator import add
 from pattern_wrapper import BasePattern
-from collections import OrderedDict, Counter
+from collections import OrderedDict, Counter, namedtuple
 
-#INIT_SCORE = BasePattern.INIT_SCORE
-#MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
-#NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
+INIT_SCORE = BasePattern.INIT_SCORE
+MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
 
 # formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
@@ -52,7 +52,7 @@ class SpamPattern(BasePattern):
 
         n_rcvds = 2
         #rcvds = BasePattern.get_rcvds(self,n_rcvds)
-        rcvds = self.get_rcvds(self, n_rcvds)
+        rcvds = self.get_rcvds(n_rcvds)
         print('TYPE:'+str(type(rcvds)))
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
         for rule in rcvd_rules:
@@ -153,7 +153,9 @@ class SpamPattern(BasePattern):
                                 ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
                             ]
 
-            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_rule, score)
+            # for debug purposes:
+            regs = self._get_regexp_(subject_rule, re.U)
+            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, regs, score)
 
             # some words in UPPER case or almoust all words in subj string are Titled
             if upper_flag or (len(norm_words_list) - title_flag) < 3:
@@ -241,7 +243,8 @@ class SpamPattern(BasePattern):
                                 r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
                             ]
 
-            mime_skeleton = BasePattern.get_mime_struct(self)
+            mime_skeleton = self.get_mime_struct(self)
+            #mime_skeleton = BasePattern.get_mime_struct(self)
             logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
 
 
@@ -266,12 +269,21 @@ class SpamPattern(BasePattern):
         urls_list = BasePattern.get_url_list(self)
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-        features = ['url_upper', 'repetitions', 'punicode', 'domain_name_level', 'url_avg_len']
+        features = ['url_upper', 'repetitions', 'punicode', 'domain_name_level', 'url_avg_len', \
+                    'onMouseOver', 'hex', 'at_sign']
+        # URL_UPPER: presense of elements in upper-case in URL
+        # REPETITIONS: presense of repetitions like:
+        # PUNICODE: respectively (very often for russian spams)
+        # DOMAIN NAME LEVEL: very often russian spams are send from third-level domains
+        # URL_AVG_LENGTH: they are short in general, cause of url-short services, etc
+        # many usual and not usual ideas about phising urls:
+        # http://www.isteams.org/conference/pdf/Paper%20111-%20iSTEAMS%202014%20-Asani%20et%20al%20-%20MAXIMUM%20PHISH%20BAIT%20-%20TOWARDS%20FEATURE%20BASED%20DETECTION%20OF%20PHISING%20USING%20MAXIMUM%20ENTROPY%20CLASSIFICATION%20TECHNIQUE.pdf
+        # (Now I'm not having time to code all features by day or two ;-((( )
         features_dict = OrderedDict(map(lambda x,y: (x,y), features, [INIT_SCORE]*len(features)))
 
         if urls_list:
 
-            domain_regs = [
+            for_dom_pt = [
                                 ur'tinyurl\.',
                                 ur'(\w{3,6}-){1,3}\w{2,45}(\.\w{2,5}){0,3}',
                                 ur'\D{1,3}(\.|-)\w{1,61}(\.\w{2,5}){0,3}',
@@ -288,7 +300,7 @@ class SpamPattern(BasePattern):
                                 ur'\w{1,61}(\.\w{1,4}){0,3}\.\w{1,3}([^\u0000-\u007F]{1,3}|\d{1,5})'
                         ]
 
-            regs = [
+            for_txt_pt = [
                                 ur'(click|here|link|login|update|confirm|legilize|now|buy|online)+',
                                 ur'(Free|Shipping|Options|Pills|Every?|Order|Best|Deal|Today|Now|Contact|Pay|go)+',
                                 ur'(Ccылк|Курс|Цен|Посмотреть|Каталог|Здесь|Сюда|Регистрация|бесплатное|участие|на\s+сайт|подробн)',
@@ -305,20 +317,21 @@ class SpamPattern(BasePattern):
                                 ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
                     ]
 
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
-            basic_features_dict.pop('url_count') # for spams url count may be totally different
+            reg = namedtuple('reg', 'for_dom_pt,for_txt_pt')
+            compiled = reg(*(self._get_regexp_(l, re.I) for l in [for_dom_pt, for_txt_pt]))
 
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, compiled.for_dom_pt, compiled.for_txt_pt)
+            basic_features_dict.pop('url_count') # for spams url count may be totally different
 
             print('NETLOC_LIST >>>'+str(netloc_list))
             print('DICT >>>'+str(basic_features_dict))
 
             if netloc_list:
                 for method in [ unicode.isupper, unicode.istitle ]:
-                #for met in [unicode.isupper, unicode.istitle]:
                     features_dict['url_upper'] += len(filter(lambda s: method(s), netloc_list))*score
-                    # mostly thinking about shortened urls, created by tinyurl and other services,
-                    # but maybe weak feature
 
+                # mostly thinking about shortened urls, created by tinyurl and other services,
+                # but maybe this is weak feature
                 features_dict['url_avg_len'] = math.ceil(float(sum([len(s) for s in netloc_list]))/len(netloc_list))
 
                 puni_regex = ur'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
@@ -326,12 +339,13 @@ class SpamPattern(BasePattern):
 
                 features_dict['domain_name_level'] = len(filter(lambda n: n>=2, [s.count('.') for s in netloc_list]))*score
 
-
             repet_regex = ur'(https?:\/\/|www\.)\w{1,61}(\.\w{2,10}){1,5}'
             urls = [x.geturl() for x in urls_list]
 
             if filter(lambda l: len(l)>1, map(lambda url: re.findall(repet_regex,url,re.I), urls)):
                 features_dict['repetitions'] = 1
+
+
 
         else:
             basics = ['url_score', 'distinct_count', 'sender_count']
@@ -348,47 +362,47 @@ class SpamPattern(BasePattern):
 
             # some simple greedy regexp, don't belive in them at all
             # this like good all tradition of antispam filter's world
-            regexp_list = [
-                                ur'(vrnospam|not\s+(a\s+)?spam|(bu[ying]\s+.*(now|today|(on\s+)?.*sale|(click|go|open)[\s\.,_-]+here)',
-                                ur'(viagra|ciali([sz])?|doctors?|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
-                                ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
-                                ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
-                                ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
-                                ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)'
-                                ur'(автомати[зиче].*\sдоход|халяв[аыне].*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
-                                ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар[ьша]|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер[ия])',
-                                ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
-                                ur'(мазь\s+(как\s+)?+средство\s+(от\s+жизни\s)?.*для\s+.*\s+(по)?худ|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
-                                ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
-                                ur'(\+\d\)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}
-            ]
+        regexp_list = [
+                            ur'(vrnospam|not\s+a?.*spam|(bu[ying]\s+.*(now|today|(on\s+)?.*sale|(click|go|open)[\s\.,_-]+here)',
+                            ur'(viagra|ciali([sz])+|doctors?|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
+                            ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
+                            ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
+                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
+                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
+                            ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
+                            ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
+                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
+                            ur'(мазь\s+(как\s+)?+средство\s+(от\s+жизни\s)?.*для\s+.*\s+(по)?худ|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
+                            ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
+                            ur'(\+\d\)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
+        ]
 
-            tags_map = {
+        tags_map = {
 
-                            'table':{
-                                        'width'                 : '[1-9]{3}[^%]',
-                                        'height'                : '[1-9]{1,3}',
-                                        'cell(padding|spacing)' : '[1-9]',
-                                        'border-color'          : '#[0-9A-F]{3,6}',
-                                        'border'                : '[1-9]',
-                                        'style'                 : '([A-Z-][^(a-z)]){3,10}'
-                            },
-                            'span' :{
-                                        'style'                 : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
-                                        'lang'                  : '(RU|EN-US)'
-                            },
-                            'p'    :{
-                                        'style'                 : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
-                                        'class'                 : '\[\'(Mso.*|.*)\'\]',
-                                        'align'                 : 'center',
-                                        'css'                   : ''
-                            }
-            }
+                        'table':{
+                                    'width'                 : '[1-9]{3}[^%]',
+                                    'height'                : '[1-9]{1,3}',
+                                    'cell(padding|spacing)' : '[1-9]',
+                                    'border-color'          : '#[0-9A-F]{3,6}',
+                                    'border'                : '[1-9]',
+                                    'style'                 : '([A-Z-][^(a-z)]){3,10}'
+                        },
+                        'span' :{
+                                    'style'                 : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
+                                    'lang'                  : '(RU|EN-US)'
+                        },
+                        'p'    :{
+                                    'style'                 : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
+                                    'class'                 : '\[\'(Mso.*|.*)\'\]',
+                                    'align'                 : 'center',
+                                    'css'                   : ''
+                        }
+        }
 
 
-            features = ('html_score', 'text_score', 'table_checksum')
-            features_dict = Counter(zip(features, self.get_html_parts_metrics(self, tags_map, regexp_list, score)))
-            features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
+        features = ('html_score', 'text_score', 'table_checksum')
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list,  tags_map)))
+        features_dict['text_score'] += self.get_text_parts_metrics(regexp_list, score)
 
         vector_dict.update(features_dict)
 

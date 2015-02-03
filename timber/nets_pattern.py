@@ -263,9 +263,10 @@ class NetsPattern(BasePattern):
 
         # 10. check body
         regexp_list = [
-                        ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring)',
-                        ur'(news|letter|discount|sale|info|unsubscribe|bonus|ads|market)',
-                        ur'(media|partage|share|actu|publicité|télécharger|download)'
+                        ur'(say\s+(happy\s+birthday|congratulat[eions]|condolences?)|new\s+job|anniversary|meet)',
+                        ur'(are\s+looking|tomorrow|introduc[eing]|l?earn\s+more|work\s+fast|die\s+young|(leave|be)\s+positive.*(in\s+your\s+coffin)?)',
+                        ur'(fellow|new\s+friends|(build|create|new).*(community|group)|passion|(do\s+)?you\s+know.*(that\s+he\s+is ...)?)',
+                        ur'(add\s+me\s+to|eat\s+me|drink\s+me|kill\s+me|connections?|more\s+people)'
         ]
 
         tags_map = {
@@ -284,7 +285,7 @@ class NetsPattern(BasePattern):
         }
 
         features = ('html_score', 'text_score', 'table_checksum')
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, tags_map, regexp_list, score)))
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, regexp_list, score, tags_map)))
         features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
         vector_dict.update(features_dict)
         #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)

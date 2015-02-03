@@ -204,7 +204,7 @@ def basic_attach_checker(mime_parts_list, reg_list, score):
     return(attach_count, score, inline_score)
 
 # returns score
-def basic_subjects_checker(line_in_unicode, regexes, score):
+def basic_subjects_checker(line_in_unicode, compiled_regs, score):
 
     # check by regexp rules
     total_score = INIT_SCORE
@@ -212,11 +212,8 @@ def basic_subjects_checker(line_in_unicode, regexes, score):
     line = re.sub(ur'[\\\|\/\*]', '', line_in_unicode)
     logger.debug('line after: '+line_in_unicode)
 
-    # for debug purposes:
-    regs = BasePattern.get_regexp(regexes)
-
     #regexes = [re.compile(exp) for exp in regexes]
-    matched = filter(lambda r: r.search(line, re.I), regs)
+    matched = filter(lambda r: r.search(line, re.I), compiled_regs)
     logger.debug(str(matched))
     total_score += score*len(matched)
 
@@ -343,6 +340,7 @@ def basic_rcpts_checker(score, traces_values_list, to_values_list):
     return(rcpt_score)
 
 def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
+    # domain_regs, regs - lists of compiled RE objects
     logger.debug('our list: '+str(parsed_links_list))
 
     basics = ['url_count', 'url_score', 'distinct_count', 'sender_count']
@@ -381,7 +379,6 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
 
     # url_score, distinct_count, sender_count
     if netloc_list:
-        domain_regs = BasePattern.get_regexp(domain_regs, re.I)
 
         for reg in domain_regs:
             basic_features['url_score'] += len(filter(lambda netloc: reg.search(netloc), netloc_list))*score
@@ -395,7 +392,6 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
         metainfo_list.extend([i.__getattribute__(attr) for i in parsed_links_list])
 
     if metainfo_list:
-        regs = BasePattern.get_regexp(regs, re.I)
         for reg in regs:
             basic_features['url_score'] += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*score
 

@@ -99,19 +99,19 @@ def get_text_parts(msg):
             charset = ''
             for charset in (part.get_content_charset(), part.get_charset()):
                 if charset:
-                    logger.info('........'+charset.upper())
+                    logger.debug('........'+charset.upper())
                     if charset in charset_map.keys():
                         charset =  charset_map.get(charset)
 
             if isinstance(decoded_line, bytes) and charset:
-                logger.info('........'+charset.upper())
+                logger.debug('........'+charset.upper())
                 decoded_line = decoded_line.decode(charset)
 
 
             elif isinstance(decoded_line, bytes):
                 decoded_line = decoded_line.decode('utf-8', 'replace')
 
-            logger.info('........'+decoded_line+'...................')
+            logger.debug('........'+decoded_line+'...................')
             text_parts.append((decoded_line, part.get_content_charset(), part.get_content_type()))
 
     return (text_parts)
@@ -207,6 +207,7 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
     if args.stat:
         logger.setLevel(logging.DEBUG)
+
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tmp, 'headers_'+os.path.basename(args.PATH)+'_'+time.strftime("%y%m%d_%H%M", time.localtime())+'.log'), mode = 'w')
     ch.setFormatter(formatter)
@@ -317,7 +318,7 @@ if __name__ == "__main__":
 
                 if pairs:
                     for num, s in pairs:
-                        logger.info(str(num)+': '+s)
+                        logger.debug(str(num)+': '+s)
 
                     logger.info('==========================================================')
 

@@ -315,12 +315,12 @@ class InfoPattern(BasePattern):
         }
 
         features = ('html_score', 'text_score', 'table_checksum')
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, tags_map, regexp_list, score)))
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, regexp_list, score, tags_map)))
         features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
 
         vector_dict.update(features_dict)
 
-        #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
+        vector_dict['e_compress'] = BasePattern.get_body_parts_entropy(self)
 
         return (vector_dict)
 
