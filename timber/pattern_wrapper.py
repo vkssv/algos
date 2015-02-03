@@ -3,7 +3,7 @@
 import sys, os, importlib, logging, re, binascii
 from email import iterators, base64mime, quoprimime
 from urlparse import urlparse
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 #from collections import OrderedDict
 from collections import defaultdict, namedtuple
 
@@ -173,7 +173,7 @@ class BasePattern(object):
 
         return(self.url_list)
 
-    def get_text_parts_metrics(self, regs_list, score, lines_generator=list()):
+    def get_text_parts_metrics(self, score, regs_list, lines_generator=list()):
 
         text_score = self.INIT_SCORE
         lines = []
@@ -182,14 +182,11 @@ class BasePattern(object):
             if not all_text_parts:
                 return text_score
 
-
+            compiled_regs_list = self._get_regexp_(regs_list, re.U)
             for mime_text_part, content_type in all_text_parts:
-                if 'text' in content_type and mime_text_part.strip():
-                    lines.append(mime_text_part.split('\r\n'))
-
-        compiled_regs_list = self._get_regexp_(regs_list, re.U)
-        for regexp_obj in compiled_regs_list:
-            text_score += len(filter(lambda line: regexp_obj.search(line,re.I), lines))
+                if 'plain' in content_type and mime_text_part.strip():
+                    for regexp_obj in compiled_regs_list:
+                        text_score += len(filter(lambda line: regexp_obj.search(line,re.I), mime_text_part.split('\r\n')))
 
         return text_score
 
@@ -207,13 +204,13 @@ class BasePattern(object):
         for mime_text_part, content_type in all_text_parts:
             if 'html' in content_type:
                 soup = BeautifulSoup(mime_text_part)
-                if soup.body.is_empty_element:
+                if not soup.body:
                     continue
 
                 # analyze pure text content within tags
-                text_score += self.get_text_parts_score(regs_list, score, soup.body.stripped_string)
+                text_score += self.get_text_parts_metrics(score, regs_list, soup.body.stripped_string)
 
-                if soup.body.table.is_empty_element:
+                if not soup.body.table:
                     continue
 
                 # get table checksum
@@ -226,7 +223,7 @@ class BasePattern(object):
 
                 # analyze tags and their attributes
                 for tag in tags_map:
-                    soup_attrs_list = [ t.attrs.items() for t in soup.findall(tag) ]
+                    soup_attrs_list = [ t.attrs.items() for t in soup.body.table.findall(tag) ]
                     soup_attrs_list = [ tag_attribute(obj) for obj in reduce(add, soup_attrs_list) ]
                     #expected_attrs_dict = tags_map.get(tag)
                     compiled_regexp_list = self._get_regexp_(tags_map.get(tag))

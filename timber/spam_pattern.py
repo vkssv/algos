@@ -243,7 +243,7 @@ class SpamPattern(BasePattern):
                                 r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
                             ]
 
-            mime_skeleton = self.get_mime_struct(self)
+            mime_skeleton = self._get_mime_struct_()
             #mime_skeleton = BasePattern.get_mime_struct(self)
             logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
 
@@ -363,7 +363,7 @@ class SpamPattern(BasePattern):
             # some simple greedy regexp, don't belive in them at all
             # this like good all tradition of antispam filter's world
         regexp_list = [
-                            ur'(vrnospam|not\s+a?.*spam|(bu[ying]\s+.*(now|today|(on\s+)?.*sale|(click|go|open)[\s\.,_-]+here)',
+                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
                             ur'(viagra|ciali([sz])+|doctors?|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
                             ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
                             ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
@@ -372,9 +372,9 @@ class SpamPattern(BasePattern):
                             ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
                             ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
                             ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
-                            ur'(мазь\s+(как\s+)?+средство\s+(от\s+жизни\s)?.*для\s+.*\s+(по)?худ|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
+                            ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
                             ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
-                            ur'(\+\d\)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
+                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
         ]
 
         tags_map = {
@@ -402,7 +402,7 @@ class SpamPattern(BasePattern):
 
         features = ('html_score', 'text_score', 'table_checksum')
         features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list,  tags_map)))
-        features_dict['text_score'] += self.get_text_parts_metrics(regexp_list, score)
+        features_dict['text_score'] += self.get_text_parts_metrics(score, regexp_list)
 
         vector_dict.update(features_dict)
 
