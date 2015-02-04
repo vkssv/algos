@@ -4,8 +4,9 @@
 
 import os, sys, logging, re, common, binascii,math
 from operator import add
-from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter, namedtuple
+
+from pattern_wrapper import BasePattern
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
@@ -317,7 +318,7 @@ class SpamPattern(BasePattern):
                                 ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
                     ]
 
-            reg = namedtuple('reg', 'for_dom_pt,for_txt_pt')
+            reg = namedtuple('reg', 'for_dom_pt for_txt_pt')
             compiled = reg(*(self._get_regexp_(l, re.I) for l in [for_dom_pt, for_txt_pt]))
 
             basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, compiled.for_dom_pt, compiled.for_txt_pt)

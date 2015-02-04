@@ -3,12 +3,21 @@
 import sys, os, importlib, logging, re, binascii
 from email import iterators, base64mime, quoprimime
 from urlparse import urlparse
-from bs4 import BeautifulSoup, Comment
-#from collections import OrderedDict
+from bs4 import BeautifulSoup, Comment, ResultSet
+from operator import add
 from collections import defaultdict, namedtuple
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
+
+
+class dream_bag(list):
+    """just tired to perfom filter(lambda x: x, list)"""
+    def sweep(self):
+        for obj in self:
+            if obj:
+                yield(obj)
+
 
 class BasePattern(object):
     """Base parent class for created all other pattern classes.
@@ -193,7 +202,7 @@ class BasePattern(object):
     def get_html_parts_metrics(self, score, regs_list, tags_map):
 
         (html_score, text_score, html_checksum) = [self.INIT_SCORE]*3
-        tag_attribute = namedtuple('tag_attribute','name,value')
+        attr_value_pair = namedtuple('attr_value_pair','name value')
 
         all_text_parts = self._get_text_parts_()
         if not all_text_parts:
@@ -214,27 +223,44 @@ class BasePattern(object):
                     continue
 
                 # get table checksum
-                comments = soup.body.table.findAll(text=lambda text:isinstance(text, Comment))
+                comments = soup.body.table.findAll( text=lambda text: isinstance(text, Comment) )
                 [comment.extract() for comment in comments]
                 # leave only closing tags struct
                 reg = re.compile(ur'<[a-z]*/[a-z]*>',re.I)
                 # todo: investigate the order of elems within included generators
                 html_skeleton.append(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(),re.M)))
 
-                # analyze tags and their attributes
-                for tag in tags_map:
-                    soup_attrs_list = [ t.attrs.items() for t in soup.body.table.findall(tag) ]
-                    soup_attrs_list = [ tag_attribute(obj) for obj in reduce(add, soup_attrs_list) ]
-                    #expected_attrs_dict = tags_map.get(tag)
-                    compiled_regexp_list = self._get_regexp_(tags_map.get(tag))
-                    pairs = list()
+                soup_attrs_list = list(dream_bag([soup.body.table.find_all(tag) for tag in tags_map.iterkeys()]).sweep())
+                print('type of obj'+str(type(soup_attrs_list)))
+                print('>>>>>>>>>>>>>>>>'+str([type(o) for o in soup_attrs_list]))
+                #soup_attrs_list = filter(lambda t: t, [soup.body.table.find_all(tag) for tag in tags_map.iterkeys()])
+                logger.debug('soup_attrs_list: '+str(soup_attrs_list))
 
-                    for key_attr in compiled_regexp_list: #expected_attrs_dict:
-                        pairs = filter(lambda pair: re.match(ur''+key_attr, pair.name, re.I), soup_attrs_list)
-                        check_values = list()
-                        if pairs:
-                            check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
-                            html_score += score*len(check_values)
+                if not soup_attrs_list:
+                    continue
+
+                # analyze tags and their attributes
+                # convert soup_attrs_list to list, cause type(soup.body.findAll('p') = <class 'bs4.element.ResultSet'>,
+                if ResultSet in [type(x) for x in soup_attrs_list]:
+                    soup_attrs_list = list(soup_attrs_list)
+
+                #soup_attrs_list = filter(lambda t: t, [ t.attrs.items() for t in soup_attrs_list ])
+                soup_attrs_list = list(dream_bag(filter(lambda t: t, [ t.attrs.items() for t in soup_attrs_list ])).sweep())
+                logger.debug('soup_attrs_list '+str(soup_attrs_list))
+                if not soup_attrs_list:
+                    continue
+
+                soup_attrs_list = filter(lambda t: t,[ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ])
+                    #expected_attrs_dict = tags_map.get(tag)
+                compiled_regexp_list = self._get_regexp_(tags_map.get(tag), re.U)
+                pairs = list()
+
+                for key_attr in compiled_regexp_list: #expected_attrs_dict:
+                    pairs = filter(lambda pair: key_attr.match(pair.name, re.I), soup_attrs_list)
+                    check_values = list()
+                    if pairs:
+                        check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
+                        html_score += score*len(check_values)
 
         table_checksum = binascii.crc32(''.join(html_skeleton))
 
