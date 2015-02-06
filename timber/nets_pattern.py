@@ -120,7 +120,7 @@ class NetsPattern(BasePattern):
                             ]
 
 
-            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj,subject_rule,score)
+            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_rule, score)
             # almoust all words in subj string are Titled
             if (len(norm_words_list) - title_flag ) < 5:
                 features_dict['subj_style'] = 1

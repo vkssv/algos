@@ -117,7 +117,6 @@ class InfoPattern(BasePattern):
                                 ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}'
                             ]
 
-            subject_regs = self._get_regexp_(subject_regs, re.U)
             subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_regs, score)
             # almoust all words in subj string are Titled
             if (len(norm_words_list) - title_flag ) < 3:
