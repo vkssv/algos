@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-shared module with common-used functions, maybe will became a separate class in future
+shared module with common-used functions,
+maybe, will became a separate class in future
 """
 
 import os, sys, re, logging, binascii, unicodedata, urlparse
