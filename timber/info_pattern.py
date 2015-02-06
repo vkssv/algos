@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Keeps and applies vectorising rules for infos. """
 
@@ -326,7 +326,7 @@ class InfoPattern(BasePattern):
 
         vector_dict.update(features_dict)
 
-        vector_dict['e_compress'] = BasePattern.get_body_parts_entropy(self)
+        #vector_dict['e_compress'] = BasePattern.get_body_parts_entropy(self)
 
         return (vector_dict)
 

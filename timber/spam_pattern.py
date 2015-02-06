@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Keeps and applies vectorising rules for spams. """
 
