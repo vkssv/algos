@@ -1,8 +1,9 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-"""Keeps and applies vectorising rules for nets."""
+""" Keeps and applies vectorising rules for nets. """
 
 import os, sys, logging, common, re, binascii, string, math
+
 from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
@@ -14,8 +15,16 @@ MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
-
 class NetsPattern(BasePattern):
+    """
+    Pattern class for build vectors, based on typical features of the
+    notifications from SNs ( call them "nets" ):
+
+        -- if email looks like notification from SN, it's vector will contain
+            values, which are mostly don't equal to zero ;
+        -- vector will contain almoust only zeros, if email doesn't
+            have these sets of features ;
+    """
 
     def run(self, score):
 

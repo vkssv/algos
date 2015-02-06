@@ -1,15 +1,15 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """
-
--can be imported as submodule to build feature vectors from emails collections,
+-- can be imported as submodule to build feature vectors from emails collections,
 using different presets of loaded heuristics
 
--returns NxM matrix --> N samples from collection x M features +label value
+-- returns NxM matrix --> N samples from collection x M features +label value
 (or "test" label if not defined) in numpy array type
 """
 
 import sys, os, logging, re, email, argparse, stat, tempfile, math
+
 from email.parser import Parser
 from collections import defaultdict, OrderedDict
 

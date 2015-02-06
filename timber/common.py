@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
-'''
-shared module with common-used functions, will be class in future
-'''
+"""
+shared module with common-used functions, maybe will became a separate class in future
+"""
 
-import email, os, sys, re, logging, binascii, unicodedata, urlparse
+import os, sys, re, logging, binascii, unicodedata, urlparse
 
-from email.errors import MessageParseError
 from email.header import decode_header
 from operator import add, itemgetter
 from collections import Counter, OrderedDict, namedtuple
 from itertools import ifilterfalse
-from bs4 import BeautifulSoup, Comment
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    print('Can\'t find bs4 module, probably, it isn\'t installed.')
+    print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 from pattern_wrapper import BasePattern
 
@@ -24,8 +28,6 @@ logger.setLevel(logging.DEBUG)
 # excluded_list=['Received', 'From', 'Date', 'X-.*']
 # header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items() - save the order of heads
 def get_all_heads_crc(header_value_list, excluded_list = None):
-
-
 
     vect = dict.fromkeys(['heads_crc','values_crc'])
     logger.debug("header_value_list >>"+str(header_value_list))
@@ -111,7 +113,6 @@ def get_addr_values(head_value=''):
 def get_smtp_domain(rcvds):
 # get sender domain from the first (by trace) RCVD-field, e.g. SMTP MAIL FROM: value
 
-
     regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
     orig_domain = ''
 
@@ -164,8 +165,9 @@ def basic_headers_cheker(head_pattern, known_mailers, header_value_list, score):
 
     typical_heads_score = INIT_SCORE
     known_mailer_flag = INIT_SCORE
+    header = namedtuple('header','name value')
 
-    header_value_list = [HEADER(pair) for pair in header_value_list]
+    header_value_list = [header(*pair) for pair in header_value_list]
     headers_list = [i.name for i in header_value_list]
 
     emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), headers_list))
@@ -203,7 +205,7 @@ def basic_attach_checker(mime_parts_list, reg_list, score):
     return(attach_count, score, inline_score)
 
 # returns score
-def basic_subjects_checker(line_in_unicode, compiled_regs, score):
+def basic_subjects_checker(line_in_unicode, subj_regs, score):
 
     # check by regexp rules
     total_score = INIT_SCORE
@@ -211,8 +213,9 @@ def basic_subjects_checker(line_in_unicode, compiled_regs, score):
     line = re.sub(ur'[\\\|\/\*]', '', line_in_unicode)
     logger.debug('line after: '+line_in_unicode)
 
-    #regexes = [re.compile(exp) for exp in regexes]
-    matched = filter(lambda r: r.search(line, re.I), compiled_regs)
+
+    regs = BasePattern._get_regexp_(subj_regs, re.U)
+    matched = filter(lambda r: r.search(line, re.I), regs)
     logger.debug(str(matched))
     total_score += score*len(matched)
 
@@ -338,7 +341,7 @@ def basic_rcpts_checker(score, traces_values_list, to_values_list):
 
     return(rcpt_score)
 
-def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
+def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, text_regs):
     # domain_regs, regs - lists of compiled RE objects
     logger.debug('our list: '+str(parsed_links_list))
 
@@ -370,16 +373,18 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
         only_str_obj  = [i.decode('utf8') for i in only_str_obj]
         netloc_list = only_str_obj + filter(lambda i: type(i) is unicode, netloc_list)
 
-    print("NETLOC: >>>>>"+str(netloc_list))
-
+    #print("NETLOC: >>>>>"+str(netloc_list))
 
     sender_domain = get_smtp_domain(rcvds)
     pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
 
     # url_score, distinct_count, sender_count
+    reg = namedtuple('reg', 'for_dom_pt for_txt_pt')
+    compiled = reg(*(BasePattern._get_regexp_(l, re.I) for l in (domain_regs, text_regs)))
+
     if netloc_list:
 
-        for reg in domain_regs:
+        for reg in compiled.for_dom_pt:
             basic_features['url_score'] += len(filter(lambda netloc: reg.search(netloc), netloc_list))*score
 
         basic_features['distinct_count'] += len(set([d.strip() for d in netloc_list]))
@@ -391,7 +396,7 @@ def basic_url_checker(parsed_links_list, rcvds, score, domain_regs, regs):
         metainfo_list.extend([i.__getattribute__(attr) for i in parsed_links_list])
 
     if metainfo_list:
-        for reg in regs:
+        for reg in compiled.for_txt_pt:
             basic_features['url_score'] += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*score
 
     return(dict(basic_features), netloc_list)

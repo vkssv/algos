@@ -1,12 +1,14 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-"""Keeps and applies vectorising rules for spams."""
+""" Keeps and applies vectorising rules for spams. """
 
-import os, sys, logging, re, common, binascii,math
+from pattern_wrapper import BasePattern
+
+import os, sys, logging, re, common, binascii, math
 from operator import add
 from collections import OrderedDict, Counter, namedtuple
 
-from pattern_wrapper import BasePattern
+
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
@@ -17,6 +19,12 @@ logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 class SpamPattern(BasePattern):
+    """
+    Pattern class for build vectors, based on typical spam's features:
+        -- if email looks like unconditional spam, it's vector will contain
+            different values, which are mostly don't equal to zero ;
+        -- vector will contain mostly zeros, if email isn't an unconditional spam ;
+    """
 
     MAX_SUBJ_LEN = 5
     MIN_SUBJ_LEN = 70
@@ -154,9 +162,7 @@ class SpamPattern(BasePattern):
                                 ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
                             ]
 
-            # for debug purposes:
-            regs = self._get_regexp_(subject_rule, re.U)
-            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, regs, score)
+            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_rule, score)
 
             # some words in UPPER case or almoust all words in subj string are Titled
             if upper_flag or (len(norm_words_list) - title_flag) < 3:
@@ -248,8 +254,6 @@ class SpamPattern(BasePattern):
             #mime_skeleton = BasePattern.get_mime_struct(self)
             logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
 
-
-
             count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
@@ -284,7 +288,7 @@ class SpamPattern(BasePattern):
 
         if urls_list:
 
-            for_dom_pt = [
+            regs_for_dom_pt = [
                                 ur'tinyurl\.',
                                 ur'(\w{3,6}-){1,3}\w{2,45}(\.\w{2,5}){0,3}',
                                 ur'\D{1,3}(\.|-)\w{1,61}(\.\w{2,5}){0,3}',
@@ -299,9 +303,9 @@ class SpamPattern(BasePattern):
                                 ur'\w{1,3}(\.[a-zA-Z]{1,4}){1,3}',
                                 ur'(.*-loader|lets-|youtu.be|goo.gl|wix.com|us\d.|jujf.ru)',
                                 ur'\w{1,61}(\.\w{1,4}){0,3}\.\w{1,3}([^\u0000-\u007F]{1,3}|\d{1,5})'
-                        ]
+            ]
 
-            for_txt_pt = [
+            regs_for_txt_pt = [
                                 ur'(click|here|link|login|update|confirm|legilize|now|buy|online)+',
                                 ur'(Free|Shipping|Options|Pills|Every?|Order|Best|Deal|Today|Now|Contact|Pay|go)+',
                                 ur'(Ccылк|Курс|Цен|Посмотреть|Каталог|Здесь|Сюда|Регистрация|бесплатное|участие|на\s+сайт|подробн)',
@@ -316,12 +320,9 @@ class SpamPattern(BasePattern):
                                 ur'[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{3,}',
                                 ur'[\+=\$]{1,3}(\w){0,}',
                                 ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
-                    ]
+            ]
 
-            reg = namedtuple('reg', 'for_dom_pt for_txt_pt')
-            compiled = reg(*(self._get_regexp_(l, re.I) for l in [for_dom_pt, for_txt_pt]))
-
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, compiled.for_dom_pt, compiled.for_txt_pt)
+            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, regs_for_dom_pt, regs_for_txt_pt)
             basic_features_dict.pop('url_count') # for spams url count may be totally different
 
             print('NETLOC_LIST >>>'+str(netloc_list))

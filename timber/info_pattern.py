@@ -1,15 +1,13 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-"""Keeps and applies vectorising rules for infos.
-If doc(email) is very similar to this pattern
-its vector will be filled by "1" or score value > 0
-or crc32 value for each feature, otherwise - "0" """
+""" Keeps and applies vectorising rules for infos. """
 
 import os, sys, logging, common, re, binascii, math, string
+
 from operator import add
-from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
 
+from pattern_wrapper import BasePattern
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
@@ -20,6 +18,15 @@ logger.setLevel(logging.DEBUG)
 
 
 class InfoPattern(BasePattern):
+    """
+    Pattern class for build vectors, based on typical features of the
+    advertising legal emails and news-letters ( call them "infos" ):
+
+        -- if email looks like news-letter, it's vector will contain
+            values, which are mostly don't equal to zero ;
+        -- vector will contain almoust only zeros, if email doesn't
+            have these sets of features ;
+    """
     MAX_SUBJ_LEN = 2
     MIN_SUBJ_LEN = 7
 
@@ -110,7 +117,7 @@ class InfoPattern(BasePattern):
                                 ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}'
                             ]
 
-
+            subject_regs = self._get_regexp_(subject_regs, re.U)
             subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_regs, score)
             # almoust all words in subj string are Titled
             if (len(norm_words_list) - title_flag ) < 3:

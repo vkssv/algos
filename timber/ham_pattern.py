@@ -1,10 +1,11 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-"Set vectorising rules for hams."
+"""Keeps and applies vectorising rules for hams. """
 
 import os, sys, logging, common, math
-from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
+
+from pattern_wrapper import BasePattern
 
 INIT_SCORE = BasePattern.INIT_SCORE
 MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
@@ -16,6 +17,16 @@ logger.setLevel(logging.DEBUG)
 
 
 class HamPattern(BasePattern):
+    """
+    Pattern class for build vectors, based on features,
+    which are more suitable for transactional emails,
+    i.e. correspondance from banks, e-shops, bills, etc:
+
+        -- if the email looks like ham, it's vector will contain
+            values, which are mostly don't equal to zero ;
+        -- vector will contain mostly zeros, if the email doesn't
+            have these sets of features ;
+    """
 
     MAX_SUBJ_LEN = 5
     MIN_SUBJ_LEN = 60

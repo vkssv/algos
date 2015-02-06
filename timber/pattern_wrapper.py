@@ -1,27 +1,30 @@
 # -*- coding: utf-8 -*-
 
 import sys, os, importlib, logging, re, binascii
-from email import iterators, base64mime, quoprimime
+
+from email import iterators
 from urlparse import urlparse
-from bs4 import BeautifulSoup, Comment, ResultSet
 from operator import add
 from collections import defaultdict, namedtuple
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
+try:
+    from bs4 import BeautifulSoup, Comment
+except ImportError:
+    print('Can\'t find bs4 module, probably, it isn\'t installed.')
+    print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
-class dream_bag(list):
-    """just tired to perfom filter(lambda x: x, list)"""
-    def sweep(self):
-        for obj in self:
-            if obj:
-                yield(obj)
-
+# todo: implement container class,
+# which will keep list of objects of any type except of None
+# or empty subsequences
 
 class BasePattern(object):
-    """Base parent class for created all other pattern classes.
-    Provides access to some pre-parsed attributes of msg"""
+    """
+    Base parent class for created all other four pattern classes.
+    Provides access to some pre-parsed attributes of msg.
+    """
     INIT_SCORE = 0
     MIN_TOKEN_LEN = 3
     NEST_LEVEL_THRESHOLD = 2
@@ -30,11 +33,12 @@ class BasePattern(object):
         self.msg = msg
 
     # just for debugging new regexp on the fly
-    def _get_regexp_(self, regexp_list, compilation_flag=0):
+    @staticmethod
+    def _get_regexp_(regexp_list, compilation_flag=0):
         compiled_list = []
 
         for exp in regexp_list:
-            logger.debug(exp)
+            #logger.debug(exp)
             if compilation_flag:
                 exp = re.compile(exp, compilation_flag)
             else:
@@ -228,29 +232,23 @@ class BasePattern(object):
                 # leave only closing tags struct
                 reg = re.compile(ur'<[a-z]*/[a-z]*>',re.I)
                 # todo: investigate the order of elems within included generators
-                html_skeleton.append(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(),re.M)))
+                html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(), re.M)))
 
-                soup_attrs_list = list(dream_bag([soup.body.table.find_all(tag) for tag in tags_map.iterkeys()]).sweep())
-                print('type of obj'+str(type(soup_attrs_list)))
-                print('>>>>>>>>>>>>>>>>'+str([type(o) for o in soup_attrs_list]))
-                #soup_attrs_list = filter(lambda t: t, [soup.body.table.find_all(tag) for tag in tags_map.iterkeys()])
+
+                soup_attrs_list = filter(lambda t: t, [soup.body.table.find_all(tag) for tag in tags_map.iterkeys()])
                 logger.debug('soup_attrs_list: '+str(soup_attrs_list))
 
                 if not soup_attrs_list:
                     continue
 
                 # analyze tags and their attributes
-                # convert soup_attrs_list to list, cause type(soup.body.findAll('p') = <class 'bs4.element.ResultSet'>,
-                if ResultSet in [type(x) for x in soup_attrs_list]:
-                    soup_attrs_list = list(soup_attrs_list)
+                soup_attrs_list = filter(lambda y: y, [ x.attrs.items() for x in soup.body.table.findAll(tag) ])
 
-                #soup_attrs_list = filter(lambda t: t, [ t.attrs.items() for t in soup_attrs_list ])
-                soup_attrs_list = list(dream_bag(filter(lambda t: t, [ t.attrs.items() for t in soup_attrs_list ])).sweep())
                 logger.debug('soup_attrs_list '+str(soup_attrs_list))
                 if not soup_attrs_list:
                     continue
 
-                soup_attrs_list = filter(lambda t: t,[ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ])
+                soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
                     #expected_attrs_dict = tags_map.get(tag)
                 compiled_regexp_list = self._get_regexp_(tags_map.get(tag), re.U)
                 pairs = list()
@@ -262,6 +260,7 @@ class BasePattern(object):
                         check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
                         html_score += score*len(check_values)
 
+        # logger.debug('HTML CLOSED:'+str(list(html_skeleton)))
         table_checksum = binascii.crc32(''.join(html_skeleton))
 
         return html_score, text_score, html_checksum
@@ -289,7 +288,7 @@ class BasePattern(object):
 
 
 class PatternFactory(object):
-    """Factory for creating on the fly set of rules for desired class"""
+    """ Factory for creating on the fly set of rules for desired pattern class, terrible """
 
     def New(self, msg, label):
         #logger.debug(label)
