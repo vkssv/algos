@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """ Keeps and applies vectorising rules for nets. """
 
@@ -9,7 +9,6 @@ from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
 
 INIT_SCORE = BasePattern.INIT_SCORE
-MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
 
 #formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
@@ -25,6 +24,7 @@ class NetsPattern(BasePattern):
         -- vector will contain almoust only zeros, if email doesn't
             have these sets of features ;
     """
+    RCVDS_NUM = 3
 
     def run(self, score):
 
@@ -52,8 +52,7 @@ class NetsPattern(BasePattern):
         vector_dict['to'] = common.basic_rcpts_checker(score ,self.msg.get_all('Received'), self.msg.get_all('To'))
 
         # get crc32 from first N trace fields
-        n_rcvds = 3
-        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds(self, n_rcvds)])
+        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds(self, RCVDS_NUM)])
         logger.debug(rcvd_vect)
         vector_dict.update(common.get_trace_crc(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
@@ -84,7 +83,7 @@ class NetsPattern(BasePattern):
         logger.debug('>>> 4. Specific SN-headers checks:')
 
         heads_pattern = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|Auto-Response-Suppress)$'
-        known_senders = [r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', 'GreenArrow']
+        known_senders = [r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow']
 
         heads_score, known_mailer_flag = common.basic_headers_cheker(heads_pattern, known_senders, self.msg.items(), score)
 
@@ -94,7 +93,7 @@ class NetsPattern(BasePattern):
 
         # 5. Subject checks
         logger.debug('>>> 5. SUBJECT CHECKS:')
-        features = ['style','score','encoding','checksum']
+        features = ('style', 'score', 'encoding', 'checksum')
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
         if self.msg.get('Subject'):
@@ -157,7 +156,7 @@ class NetsPattern(BasePattern):
 
         # 7. simple List fields checks
         logger.debug('>>> 7. LIST CHECKS:')
-        list_features = ['basic_checks', 'delivered']
+        list_features = ('basic_checks', 'delivered')
         list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
 
         logger.debug('\t----->'+str(list_features_dict))
@@ -181,17 +180,17 @@ class NetsPattern(BasePattern):
         # 8. Check MIME headers
         logger.debug('>>> 8. MIME CHECKS:')
 
-        mime_features = [ 'mime_score', 'checksum', 'att_score', 'att_count', 'nest_level']
+        mime_features = ('mime_score', 'checksum', 'att_score', 'att_count', 'nest_level')
         mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         if self.msg.is_multipart():
             mime_dict['mime_score'] = score
 
-            mime_skeleton = BasePattern.get_mime_struct(self)
+            mime_skeleton = BasePattern._get_mime_struct_(self)
 
             # some particular rules for SN emails
             # presence of typical mime-parts for infos
-            frequent_struct = set(['multipart/alternative','text/plain','text/html'])
+            frequent_struct = set(['multipart/alternative', 'text/plain', 'text/html'])
             current_struct = set(mime_skeleton.keys())
             if frequent_struct == current_struct:
                 mime_dict['mime_score'] += score
@@ -200,12 +199,12 @@ class NetsPattern(BasePattern):
                         mime_dict['mime_score'] += score
 
             # weak metric probably
-            if filter(lambda marker_head: list(current_struct).count(marker_head), ['text/calendar','application/isc']):
+            if filter(lambda marker_head: list(current_struct).count(marker_head), ['text/calendar', 'application/isc']):
                 mime_dict['mime_score'] += score
 
             attach_regs = [
                                 r'(method\s?=|format\s?=\s?flowed\s?;\s?delsp\s?=\s/yes)'
-                            ]
+            ]
 
             logger.debug(str(mime_skeleton))
             count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
@@ -214,8 +213,9 @@ class NetsPattern(BasePattern):
             mime_dict['checksum'] = common.get_mime_crc(mime_skeleton)
 
             # helps to outline difference between spams, which were made very similar to nets
-            if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
-                mime_dict['nest_level'] = score
+            mime_dict['nest_level'] = BasePattern.get_nest_level(self)
+            #if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
+            #    mime_dict['nest_level'] = score
 
 
         vector_dict.update(mime_dict)
@@ -247,7 +247,7 @@ class NetsPattern(BasePattern):
 
             basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
 
-            urls_features = ['path_sim', 'ascii', 'avg_length']
+            urls_features = ('path_sim', 'ascii', 'avg_length')
             urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
             url_lines = [ ''.join(u._asdict().values()) for u in urls_list ]
@@ -263,7 +263,7 @@ class NetsPattern(BasePattern):
 
 
         else:
-            basics = ['url_count', 'url_score', 'distinct_count', 'sender_count']
+            basics = ('url_count', 'url_score', 'distinct_count', 'sender_count')
             basic_features_dict = dict(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
@@ -294,12 +294,12 @@ class NetsPattern(BasePattern):
         }
 
         features = ('html_score', 'text_score', 'table_checksum')
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, regexp_list, score, tags_map)))
-        features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list, tags_map)))
+        features_dict['text_score'] += self.get_text_parts_metrics(score, regexp_list)
         vector_dict.update(features_dict)
         #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
 
-        return (vector_dict)
+        return vector_dict
 
 
 if __name__ == "__main__":

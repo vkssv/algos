@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """
 -- can be imported as submodule to build feature vectors from emails collections,
@@ -15,10 +15,21 @@ from collections import defaultdict, OrderedDict
 
 from pattern_wrapper import MetaPattern
 
+
+
+#PYTHON_VERSION=(2,7)
+
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 # define some functions
+
+#def check_python_version(version):
+#    if version != (sys.version_info.major, sys.version_info.minor):
+#        major, minor = version
+#        sys.stderr.write( '[%s] - Error: Your Python interpreter must be %d.%d\n' % (sys.argv[0], major, minor))
+#        sys.exit(-1)
+#        return
 
 # create feature vector for email from doc_path,
 # if label is set => feature set is also predifined by pattern for this label
@@ -48,6 +59,12 @@ def vectorize(doc_path, label, score):
         raise
 
     return (vect_dict, label)
+
+def normilize(vect_dict):
+    # remove feature tags ?
+    #
+    pass
+
 
 def pathes_gen(path,st_mode):
 
@@ -89,6 +106,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    required_version = (2,7)
+
+
     formatter = logging.Formatter('%(filename)s: %(message)s')
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler(sys.stdout)
@@ -105,7 +125,7 @@ if __name__ == "__main__":
     checks = {
                 stat.S_IFREG : lambda fd: os.stat(fd).st_size,
                 stat.S_IFDIR : lambda d: os.listdir(d)
-            }
+    }
 
     mode = filter(lambda key: os.stat(args.PATH).st_mode & key, checks.keys())
     f = checks.get(*mode)

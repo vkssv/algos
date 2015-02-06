@@ -25,7 +25,6 @@ MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
-
 # excluded_list=['Received', 'From', 'Date', 'X-.*']
 # header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items() - save the order of heads
 def get_all_heads_crc(header_value_list, excluded_list = None):
@@ -128,7 +127,7 @@ def get_smtp_domain(rcvds):
 
     return(orig_domain)
 
-def get_subject(subj_line,token_len = MIN_TOKEN_LEN):
+def get_subject(subj_line, token_len = MIN_TOKEN_LEN):
 
     logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
     subj_parts = decode_header(subj_line)

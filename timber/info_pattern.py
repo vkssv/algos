@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """ Keeps and applies vectorising rules for infos. """
 
@@ -10,7 +10,7 @@ from collections import OrderedDict, Counter
 from pattern_wrapper import BasePattern
 
 INIT_SCORE = BasePattern.INIT_SCORE
-MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+#NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
 
 # formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
@@ -27,8 +27,8 @@ class InfoPattern(BasePattern):
         -- vector will contain almoust only zeros, if email doesn't
             have these sets of features ;
     """
-    MAX_SUBJ_LEN = 2
-    MIN_SUBJ_LEN = 7
+    #MAX_SUBJ_LEN = 2
+    #MIN_SUBJ_LEN = 7
 
     def run(self, score):
 
@@ -85,7 +85,7 @@ class InfoPattern(BasePattern):
         # 4. Subject checks
         logger.debug('>>> 4. SUBJ CHECKS:')
 
-        features = ['len','style','score','checksum','encoding']
+        features = ('len', 'style', 'score', 'checksum', 'encoding')
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
         if self.msg.get('Subject'):
@@ -123,9 +123,10 @@ class InfoPattern(BasePattern):
                 features_dict['subj_style'] = 1
 
             # un mine d'or for infos  http://emailmarketing.comm100.com/email-marketing-tutorial/
-            if self.MIN_SUBJ_LEN < len(norm_words_list) < self.MAX_SUBJ_LEN:
-                features_dict['subj_len'] = 1
-
+            #if self.MIN_SUBJ_LEN < len(norm_words_list) < self.MAX_SUBJ_LEN:
+            #    features_dict['subj_len'] = 1
+            # let's try just keep it for the first times
+            features_dict['subj_len'] = len(norm_words_list)
             features_dict['subj_score'] = total_score + subj_score
 
             # infos generally have subj lines in utf-8 or pure ascii
@@ -143,7 +144,7 @@ class InfoPattern(BasePattern):
 
         # 5. List checks and some other RFC 5322 compliences checks for headers
         logger.debug('>>> 5. LIST CHECKS:')
-        list_features = ['basic_checks', 'ext_checks','sender','precedence','typical_heads','reply-to','delivered']
+        list_features = ('basic_checks', 'ext_checks','sender','precedence','typical_heads','reply-to','delivered')
         list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
 
         logger.debug('\t----->'+str(list_features_dict))
@@ -206,14 +207,18 @@ class InfoPattern(BasePattern):
         # 7. Check MIME headers
         logger.debug('>>> 7. MIME CHECKS:')
 
-        mime_features = [ 'mime_score', 'checksum', 'att_count', 'att_score', 'in_score', 'nest_level']
+        mime_features = ('mime_score', 'checksum', 'att_count', 'att_score', 'in_score', 'nest_level')
         mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         logger.debug('IS MULTI >>>>>> '+str(self.msg.is_multipart()))
         if self.msg.is_multipart():
-            mime_dict['mime_score'] = score
+            mime_dict['mime_score'] += score
 
-            mime_skeleton = BasePattern.get_mime_struct(self)
+            first_content_type = self.msg.get('Content-Type')
+            if 'text/html' in first_content_type and re.search('utf-8',first_content_type,re.I):
+                mime_dict['mime_score'] += score
+
+            mime_skeleton = BasePattern._get_mime_struct_(self)
 
             logger.debug('MIME STRUCT: '+str(mime_skeleton))
 
@@ -235,8 +240,9 @@ class InfoPattern(BasePattern):
             mime_dict['in_score'] = in_score
 
             # helps to outline difference between spams, which were made very similar to infos
-            if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
-                mime_dict['nest_level'] = score
+            mime_dict['nest_level'] = BasePattern.get_nest_level(self)
+            #if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
+            #    mime_dict['nest_level'] = score
 
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
@@ -270,7 +276,7 @@ class InfoPattern(BasePattern):
 
             basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
 
-            urls_features = ['query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii']
+            urls_features = ('query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii')
             # initialize OrderedDict exactly by this way cause of
             # http://stackoverflow.com/questions/16553506/python-ordereddict-iteration
             # and vector of metrics is wanted, so order is important
@@ -293,7 +299,7 @@ class InfoPattern(BasePattern):
                     urls_dict[attr+'_sim'] = score
 
         else:
-            basics = ['url_count', 'url_score', 'distinct_count', 'sender_count']
+            basics = ('url_count', 'url_score', 'distinct_count', 'sender_count')
             basic_features_dict = dict(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
@@ -321,14 +327,14 @@ class InfoPattern(BasePattern):
         }
 
         features = ('html_score', 'text_score', 'table_checksum')
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(self, regexp_list, score, tags_map)))
-        features_dict['text_score'] += self.get_text_parts_metrics(self, regexp_list, score)
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list, tags_map)))
+        features_dict['text_score'] += self.get_text_parts_metrics(score, regexp_list)
 
         vector_dict.update(features_dict)
 
         #vector_dict['e_compress'] = BasePattern.get_body_parts_entropy(self)
 
-        return (vector_dict)
+        return vector_dict
 
 if __name__ == "__main__":
 

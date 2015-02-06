@@ -1,18 +1,17 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 """ Keeps and applies vectorising rules for spams. """
 
-from pattern_wrapper import BasePattern
+import os, sys, logging, re, binascii, math
 
-import os, sys, logging, re, common, binascii, math
 from operator import add
 from collections import OrderedDict, Counter, namedtuple
 
-
+import common
+from pattern_wrapper import BasePattern
 
 INIT_SCORE = BasePattern.INIT_SCORE
-MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
-NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
+#NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
 
 # formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
@@ -26,8 +25,9 @@ class SpamPattern(BasePattern):
         -- vector will contain mostly zeros, if email isn't an unconditional spam ;
     """
 
-    MAX_SUBJ_LEN = 5
-    MIN_SUBJ_LEN = 70
+    #MAX_SUBJ_LEN = 5
+    #MIN_SUBJ_LEN = 70
+    RCVDS_NUM = 2
 
     def run(self, score):
 
@@ -59,9 +59,7 @@ class SpamPattern(BasePattern):
                         r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch)'
         ]
 
-        n_rcvds = 2
-        #rcvds = BasePattern.get_rcvds(self,n_rcvds)
-        rcvds = self.get_rcvds(n_rcvds)
+        rcvds = self.get_rcvds(RCVDS_NUM)
         print('TYPE:'+str(type(rcvds)))
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
         for rule in rcvd_rules:
@@ -118,7 +116,7 @@ class SpamPattern(BasePattern):
         # 3. "Subject:" Header
         logger.debug('>>> 3. SUBJECT CHECKS:')
 
-        features = ['len','style','score','checksum','encoding']
+        features = ('len','style','score','checksum','encoding')
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
         if self.msg.get("Subject"):
@@ -128,14 +126,16 @@ class SpamPattern(BasePattern):
             # check the length of subj in chars, unicode str was normilised by Unicode NFC rule, i.e.
             # use a single code point if possible, spams still use very short subjects like ">>:\r\n", or
             # very long
-            if len(unicode_subj)< self.MAX_SUBJ_LEN or len(unicode_subj)> self.MIN_SUBJ_LEN:
-                features_dict['subj_len'] = 1
+
+            features_dict['subj_len'] = len(unicode_subj)
+            #if len(unicode_subj)< self.MAX_SUBJ_LEN or len(unicode_subj)> self.MIN_SUBJ_LEN:
+            #    features_dict['subj_len'] = 1
 
             # check the origin of RE: and FW: prefixes in "Subject:" header value, according to RFC 5322 rules
             prefix_heads_map = {
                                     'RE' : ['In-Reply-To', 'Thread(-.*)?', 'References'],
                                     'FW' : ['(X-)?Forward']
-                                }
+            }
 
             for k in prefix_heads_map.iterkeys():
                 if re.match(ur''+k+'\s*:', unicode_subj, re.I):
@@ -185,7 +185,7 @@ class SpamPattern(BasePattern):
         # 4. Assert the absence of "List-*:" headers + some RFC 5322 compliences checks for other common headers
         logger.debug('>>> 4. LIST_CHECKS + ORIGINATOR_CHECKS:')
 
-        list_features = ['list', 'sender', 'preamble', 'disp-notification']
+        list_features = ('list', 'sender', 'preamble', 'disp-notification')
         list_features_dict = dict(map(lambda x,y: (x,y), list_features, [BasePattern.INIT_SCORE]*len(list_features)))
         logger.debug('\t----->'+str(list_features_dict))
 
@@ -237,7 +237,7 @@ class SpamPattern(BasePattern):
         # 7. MIME-headers checks
         logger.debug('>>> 7. MIME_CHECKS:')
 
-        mime_features = [ 'mime_score', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score' ]
+        mime_features = ('mime_score', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score')
         mime_dict = dict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
         if self.msg.get('MIME-Version') and not self.msg.is_multipart():
@@ -248,7 +248,7 @@ class SpamPattern(BasePattern):
             attach_regs = [
                                 r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
                                 r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
-                            ]
+            ]
 
             mime_skeleton = self._get_mime_struct_()
             #mime_skeleton = BasePattern.get_mime_struct(self)
@@ -260,8 +260,9 @@ class SpamPattern(BasePattern):
             # defines by count of inline attachements
             mime_dict['in_score'] = in_score
 
-            if BasePattern.get_nest_level(self) > NEST_LEVEL_THRESHOLD:
-                mime_dict['nest_level'] = score
+            mime_dict['nest_level'] = BasePattern.get_nest_level(self)
+            #if BasePattern.get_nest_level(self) > NEST_LEVEL_THRESHOLD:
+            #    mime_dict['nest_level'] = score
 
             mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
 
@@ -274,8 +275,8 @@ class SpamPattern(BasePattern):
         urls_list = BasePattern.get_url_list(self)
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-        features = ['url_upper', 'repetitions', 'punicode', 'domain_name_level', 'url_avg_len', \
-                    'onMouseOver', 'hex', 'at_sign']
+        features = ('url_upper', 'repetitions', 'punicode', 'domain_name_level', 'url_avg_len', \
+                    'onMouseOver', 'hex', 'at_sign')
         # URL_UPPER: presense of elements in upper-case in URL
         # REPETITIONS: presense of repetitions like:
         # PUNICODE: respectively (very often for russian spams)
@@ -347,10 +348,8 @@ class SpamPattern(BasePattern):
             if filter(lambda l: len(l)>1, map(lambda url: re.findall(repet_regex,url,re.I), urls)):
                 features_dict['repetitions'] = 1
 
-
-
         else:
-            basics = ['url_score', 'distinct_count', 'sender_count']
+            basics = ('url_score', 'distinct_count', 'sender_count')
             basic_features_dict = dict(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
@@ -403,14 +402,14 @@ class SpamPattern(BasePattern):
 
 
         features = ('html_score', 'text_score', 'table_checksum')
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list,  tags_map)))
+        features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list, tags_map)))
         features_dict['text_score'] += self.get_text_parts_metrics(score, regexp_list)
 
         vector_dict.update(features_dict)
 
         #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
 
-        return (vector_dict)
+        return vector_dict
 
 
 if __name__ == "__main__":
@@ -423,7 +422,7 @@ if __name__ == "__main__":
 
     try:
         pattern = SpamPattern(msg)
-        vector = test.run(score)
+        vector = pattern.run(score)
         logger.debug(vector)
 
 

@@ -25,6 +25,7 @@ class BasePattern(object):
     Base parent class for created all other four pattern classes.
     Provides access to some pre-parsed attributes of msg.
     """
+
     INIT_SCORE = 0
     MIN_TOKEN_LEN = 3
     NEST_LEVEL_THRESHOLD = 2
@@ -34,7 +35,7 @@ class BasePattern(object):
 
     # just for debugging new regexp on the fly
     @staticmethod
-    def _get_regexp_(regexp_list, compilation_flag=0):
+    def _get_regexp_(regexp_list, compilation_flag=None):
         compiled_list = []
 
         for exp in regexp_list:
@@ -265,26 +266,9 @@ class BasePattern(object):
 
         return html_score, text_score, html_checksum
 
-    def get_body_entropy_metrics():
-        metrics = (parts_compress_ratio, max_part_entropy)
-        metrics = [INIT_SCORE]*len(metrics)
-        # PARTS_COMPRESS_RATIO ? (compress only pure text lines):
-        # probably will be very high for infos and nets, cause they all have in bodies:
-        # ...
-        #   multipart/alternative
-        #       text/plain
-        #       text/html
-        # ...
-        # for bodies with one or more parts - will be some expected values in expected boundaries
-        # (high for hams, not so high - for spams)
-        # parts, which contain absolutely the same text => high redunduncy => low entropy => good compression
-        # investigate more about the efficiancy of compression algos on short text pieces, LZW 12bit ?
-        # http://www.pal-blog.de/entwicklung/perl/compressing-test-for-short-strings.html
-        #
-        # MAX_PART_ENTROPY ? (maybe... calculate on fly for each line into the current text part and each time keep the max,
-        # it has to have some distribution of peak values for different classes)
-
-        return(metrics)
+    def get_body_compress_ratio(self, pt1,pt2):
+        # look at NLTK first !
+        return compress_ratio
 
 
 class PatternFactory(object):
