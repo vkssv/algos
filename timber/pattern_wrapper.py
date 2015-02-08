@@ -7,6 +7,10 @@ from urlparse import urlparse
 from operator import add
 from collections import defaultdict, namedtuple
 
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
@@ -29,6 +33,7 @@ class BasePattern(object):
     INIT_SCORE = 0
     MIN_TOKEN_LEN = 3
     NEST_LEVEL_THRESHOLD = 2
+    LANG = 'english'
  
     def __init__(self, msg):
         self.msg = msg
@@ -36,6 +41,12 @@ class BasePattern(object):
     # just for debugging new regexp on the fly
     @staticmethod
     def _get_regexp_(regexp_list, compilation_flag=None):
+        '''
+        @param regexp_list: list of scary regexes
+        @param compilation_flag: re.U, etc
+        :return: list of compiled RE.objects, faster and easy for checking this trash
+        '''
+        # todo: also make it as iterator
         compiled_list = []
 
         for exp in regexp_list:
@@ -47,65 +58,15 @@ class BasePattern(object):
 
             compiled_list.append(exp)
 
-        return(compiled_list)
-
-    def _get_text_parts_(self):
-    # todo: make this as normal people do with yield, ужас просто
-    # returns list of text body's parts: each in one unicode line
-        #encodings = {
-        #                'quoted-printable'  : lambda payload: quoprimime.body_decode(payload),
-        #                'base64'            : lambda payload: base64mime.body_decode(payload)
-        #            }
-
-        self.text_parts = []
-
-        decoded_line = ''
-        parts_iterator = iterators.typed_subpart_iterator(self.msg)
-
-        while(True):
-            try:
-                part = next(parts_iterator)
-                #logger.debug('TEXT PART:')
-                #logger.debug(part)
-
-            except StopIteration as err:
-                break
-
-            if part:
-                decoded_line = part.get_payload(decode=True)
-                #logger.debug(part.get_content_charset())
-
-
-                #if part.get('Content-Transfer-Encoding') in encodings.keys():
-                #    f = encodings.get(part.get('Content-Transfer-Encoding'))
-                #    decoded_line = f(decoded_line)
-
-                #logger.debug('decoded_line: >'.upper()+str((decoded_line,))+'<')
-                #logger.debug('Type of line >>>>>>>>>'+str(type(decoded_line)))
-
-                charset_map = {'x-sjis': 'shift_jis'}
-                # Python2.7 => try to decode all lines from their particular charsets to unicode,
-                # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
-                for charset in (part.get_content_charset(), part.get_charset()):
-                    if charset:
-                        if charset in charset_map.keys():
-                            charset =  charset_map.get(charset)
-
-                        #logger.debug(charset)
-                        decoded_line = decoded_line.decode(charset, 'replace')
-                        break
-
-                if not len(decoded_line.strip()):
-                    continue
-
-                self.text_parts.append((decoded_line, part.get_content_type()))
-
-        return (self.text_parts)
+        return compiled_list
 
     def _get_mime_struct_(self):
+        '''
+        :return:
+        '''
         logger.debug("IN get_mime_struct")
         self.mime_parts= defaultdict(list)
-        
+
         mime_heads = ['Content-Type', 'Content-Transfer-Encoding', 'Content-Id', 'Content-Disposition',\
                       'Content-Description','Content-Class']
 
@@ -136,19 +97,102 @@ class BasePattern(object):
         self.mime_parts = dict([(k,tuple(v)) for k,v in self.mime_parts.items()])
         logger.debug("DICT"+str(self.mime_parts))
 
-        return(self.mime_parts)
+        return self.mime_parts
+
+    def _get_text_mime_part_(self):
+        '''
+        :return: list of tuples with full decoded text/mime parts,
+                    i.e. transport decoding + charset decoding, if lines are
+                    not in utf-8
+        '''
+        lang = LANG
+        parts_iterator = iterators.typed_subpart_iterator(self.msg)
+        while(True):
+            try:
+                part = next(parts_iterator)
+                #logger.debug('TEXT PART:')
+                #logger.debug(part)
+            except StopIteration as err:
+                break
+
+            if part:
+                # can't use assert here, cause it can return empty lines
+                decoded_line = part.get_payload(decode=True)
+                #logger.debug(part.get_content_charset())
+
+                # partial support of asian encodings, just to decode in UTF without exceptions
+                charset_map = {'x-sjis': 'shift_jis'}
+                langs_map = {
+                                'russian':  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin(-)?5'],
+                                'french' :  ['ISO_8859-([19]','Latin(-)?[19]','CP819', 'windows-1252']
+                }
+
+                # Python2.7 => try to decode all lines from their particular charsets to unicode,
+                # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
+
+                for charset in (part.get_content_charset(), part.get_charset()):
+                    if charset and charset.lower() != 'utf-8':
+                        if charset in charset_map.keys():
+                            charset =  charset_map.get(charset)
+                            lang = 'asian'
+
+                        else:
+                            for lang in langs_map.iterkeys():
+                                if filter(lambda ch: re.match(ch, charset, re.I), langs_map.get(lang))
+                                    break
+
+                        #logger.debug(charset)
+                        decoded_line = decoded_line.decode(charset, 'replace')
+                        break
+
+                if not len(decoded_line.strip()):
+                    continue
+
+                yield(decoded_line, part.get_content_type(), lang)
+
+    def _get_pure_text_part_(self, stemmer, lines_generator=list()):
+        '''
+        @param stemmer: StemmerClass from nltk
+        @param lines_generator: iterator object with tuples(fully_decoded_line, text/mime_type),
+                a line per text/mime part
+        :return: iterator with pure stemmed tokens lists, a list per text/mime part
+        '''
+
+        raw_text_parts = self._get_text_mime_parts_()
+
+        langs = ('english', 'french', 'russian')
+        stopworders = (set(stopwords.words(lang)) for lang in langs)
+        stemmers = (SnowballStemmer(lang) for lang in langs)
+
+        nltk_obj =  namedtuple('nltk_obj','stop stem')
+        nltk_obj_dict = dict(zip(langs, nltk_obj(stopworders, stemmers)))
+
+        while(True):
+            raw_line, mime_type, lang = next(raw_text_parts)
+            if 'html' in mime_type:
+                soup = BeautifulSoup(raw_part)
+                if not soup.body:
+                    continue
+                raw_line = ''.join(list(soup.body.strings))
+
+            t_list = tokenizer.tokenize(raw_line)
+            pure_list = [word for word in words if word not in nltk_obj_dict.get(lang).stop]
+            pure_list = [word for word in pure_list if word not in nltk_obj_dict.get(LANG).stem]
+
+            yield pure_list
 
     def get_rcvds(self, rcvds_num=0):
         # parse all RCVD headers by default if rcvds_num wasn't defined
         self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received')])[ -1*rcvds_num : ]
-        return (self.parsed_rcvds)
+
+        return self.parsed_rcvds
 
     def get_nest_level(self):
 
         mime_parts = self._get_mime_struct_()
         self.level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
 
-        return(self.level)
+        return self.level
 
     def get_url_list(self):
 
@@ -192,7 +236,7 @@ class BasePattern(object):
         text_score = self.INIT_SCORE
         lines = []
         if not lines_generator:
-            all_text_parts = self._get_text_parts_()
+            all_text_parts = self._get_pure_text_part_()
             if not all_text_parts:
                 return text_score
 
@@ -209,8 +253,8 @@ class BasePattern(object):
         (html_score, text_score, html_checksum) = [self.INIT_SCORE]*3
         attr_value_pair = namedtuple('attr_value_pair','name value')
 
-        all_text_parts = self._get_text_parts_()
-        if not all_text_parts:
+        all_mime_parts = self._get_text_mime_part_()
+        if not all_mime_parts:
             return html_score, text_score, html_checksum
 
         logger.debug('TEXT_PARTS: '+str(all_text_parts))
@@ -234,7 +278,6 @@ class BasePattern(object):
                 reg = re.compile(ur'<[a-z]*/[a-z]*>',re.I)
                 # todo: investigate the order of elems within included generators
                 html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(), re.M)))
-
 
                 soup_attrs_list = filter(lambda t: t, [soup.body.table.find_all(tag) for tag in tags_map.iterkeys()])
                 logger.debug('soup_attrs_list: '+str(soup_attrs_list))
@@ -266,9 +309,10 @@ class BasePattern(object):
 
         return html_score, text_score, html_checksum
 
-    def get_body_compress_ratio(self, pt1,pt2):
-        # look at NLTK first !
-        return compress_ratio
+    def get_body_compress_ratio():
+        all_text_parts = self._get_pure_text_part_()
+
+        return compress_ratio=42
 
 
 class PatternFactory(object):
@@ -286,6 +330,7 @@ class PatternFactory(object):
             raise
 
         return (current_obj(msg))
+
 
 MetaPattern = PatternFactory()
 
