@@ -105,7 +105,7 @@ class BasePattern(object):
                     i.e. transport decoding + charset decoding, if lines are
                     not in utf-8
         '''
-        lang = LANG
+        lang = self.LANG
         parts_iterator = iterators.typed_subpart_iterator(self.msg)
         while(True):
             try:
@@ -177,7 +177,7 @@ class BasePattern(object):
 
             t_list = tokenizer.tokenize(raw_line)
             pure_list = [word for word in words if word not in nltk_obj_dict.get(lang).stop]
-            pure_list = [word for word in pure_list if word not in nltk_obj_dict.get(LANG).stem]
+            pure_list = [word for word in pure_list if word not in nltk_obj_dict.get(self.LANG).stem]
 
             yield pure_list
 
@@ -250,24 +250,18 @@ class BasePattern(object):
 
     def get_html_parts_metrics(self, score, regs_list, tags_map):
 
-        (html_score, text_score, html_checksum) = [self.INIT_SCORE]*3
+        (html_score, html_checksum) = [self.INIT_SCORE]*3
         attr_value_pair = namedtuple('attr_value_pair','name value')
 
         all_mime_parts = self._get_text_mime_part_()
         if not all_mime_parts:
-            return html_score, text_score, html_checksum
+            return html_score, html_checksum
 
         logger.debug('TEXT_PARTS: '+str(all_text_parts))
         html_skeleton = list()
-        for mime_text_part, content_type in all_text_parts:
+        for mime_text_part, content_type, lang in all_text_parts:
             if 'html' in content_type:
                 soup = BeautifulSoup(mime_text_part)
-                if not soup.body:
-                    continue
-
-                # analyze pure text content within tags
-                text_score += self.get_text_parts_metrics(score, regs_list, soup.body.stripped_string)
-
                 if not soup.body.table:
                     continue
 
@@ -293,10 +287,9 @@ class BasePattern(object):
                     continue
 
                 soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
-                    #expected_attrs_dict = tags_map.get(tag)
                 compiled_regexp_list = self._get_regexp_(tags_map.get(tag), re.U)
-                pairs = list()
 
+                pairs = list()
                 for key_attr in compiled_regexp_list: #expected_attrs_dict:
                     pairs = filter(lambda pair: key_attr.match(pair.name, re.I), soup_attrs_list)
                     check_values = list()
