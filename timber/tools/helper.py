@@ -7,6 +7,7 @@ from email import iterators, base64mime, quoprimime
 from bs4 import BeautifulSoup
 from collections import OrderedDict, defaultdict, Counter
 from itertools import repeat
+from nltk import FreqDist
 
 
 # define needed functions
@@ -192,6 +193,7 @@ def get_url_list(msg, d_name, tags_list):
     return(url_list, tags_stat)
 
 
+
 if __name__ == "__main__":
     usage = "usage: %prog [ training_directory | file ] -b"
     parser = argparse.ArgumentParser(prog='helper')
@@ -230,6 +232,8 @@ if __name__ == "__main__":
         header_counts_list = []
         urls_count_list = []
         urls_lens = []
+        total_h = 0
+        msg_count = 0
 
         for sample_path in pathes:
             with open(sample_path, 'rb') as f:
@@ -280,6 +284,14 @@ if __name__ == "__main__":
 
             logger.info('NEST LEVEL: '+str(get_nest_level(msg)))
 
+            tokens_list = map(itemgetter(1), msg.items())
+
+
+
+            total_h += headers_ent(msg.keys())
+            msg_count +=1
+            logger.info('HEADS_H: '+str(headers_ent(msg.keys())))
+
             header_counts_list.append(len(msg.keys()))
 
             heads_list = msg.keys()
@@ -328,6 +340,7 @@ if __name__ == "__main__":
             heads = [ i[0] for i in common_heads_list ]
             unique = tuple(set([ i[0] for i in common_heads_list ]))
             unique_list = list(zip(tuple([heads.count(u) for u in unique]),unique))
+            logger.info('AVG H: '+str(total_h/msg_count))
 
             unique_list.sort()
 
@@ -339,6 +352,7 @@ if __name__ == "__main__":
             logger.debug('AVG URL LIST LEN: '+str(float(sum(urls_count_list))/float(len(urls_count_list))))
             logger.debug('AVG URL LEN: '+str(float(sum(urls_lens))/float(len(urls_lens))))
             logger.debug('AVG HEADS COUNT: '+str(float(sum(header_counts_list))/float(len(header_counts_list))))
+
 
 
             for t in tags.keys():

@@ -15,6 +15,8 @@ from collections import defaultdict, OrderedDict
 
 from pattern_wrapper import MetaPattern
 
+from sklearn.ensemble import RandomForestClassifier
+
 
 
 #PYTHON_VERSION=(2,7)
@@ -145,6 +147,8 @@ if __name__ == "__main__":
 
                     vector_x = vectorize(sample_path, label, args.score)
                     logger.debug('----->'+str(vector_x))
+                    vector_x = normilize(vector_x)
+                    logger.debug('----->'+str(vector_x))
                     X[label].append(vector_x)
             else:
 
@@ -153,6 +157,8 @@ if __name__ == "__main__":
                 X[args.category].append(vector_x)
 
         logger.debug(X)
+        clf = RandomForestClassifier(n_estimators=10)
+        
 
     except StopIteration as details:
         pass

@@ -66,22 +66,22 @@ def get_mime_crc(mime_skeleton_dict, excluded_args_list=['boundary=','charset=']
         items = reduce(add,items)
         checksum = binascii.crc32(''.join([''.join(i) for i in items]))
 
-    return(checksum)
+    return checksum
 
 def get_trace_crc(rcvds_vect):
 
-    #logger.debug('rcvds_vect:'+str(rcvds_vect))
+    logger.debug('rcvds_vect:'+str(rcvds_vect))
     traces_dict = {}
 
     for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
-        #logger.debug(rcvd_line)
+        logger.debug(rcvd_line)
         trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
         trace = trace.strip().lower()
         trace = binascii.crc32(trace)
 
         traces_dict['rcvd_'+str(n)] = trace
 
-    return (traces_dict)
+    return traces_dict
 
 def get_addr_values(head_value=''):
     logger.debug('+++++>'+str(head_value))

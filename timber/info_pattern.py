@@ -332,7 +332,7 @@ class InfoPattern(BasePattern):
 
         vector_dict.update(features_dict)
 
-        #vector_dict['e_compress'] = BasePattern.get_body_parts_entropy(self)
+        vector_dict['body_compres_ratio'] = self.get_text_compress_ratio()
 
         return vector_dict
 

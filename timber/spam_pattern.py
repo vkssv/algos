@@ -64,10 +64,10 @@ class SpamPattern(BasePattern):
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
         for rule in rcvd_rules:
             if filter(lambda l: re.search(rule, l), rcvds):
-                vector_dict ["trace_rule"] = 1
+                vector_dict ["rcvd_rules"] += score
 
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in rcvds])
+        rcvd_vect = tuple([r.partition('by')[0] for r in rcvds]) # ???
 
         logger.debug(rcvd_vect)
         vector_dict.update(common.get_trace_crc(rcvd_vect))
@@ -407,7 +407,9 @@ class SpamPattern(BasePattern):
 
         vector_dict.update(features_dict)
 
-        #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
+        vector_dict['body_avg_entropy'] = self.get_text_parts_avg_entropy()
+        vector_dict['compress_ratio'] =
+
 
         return vector_dict
 

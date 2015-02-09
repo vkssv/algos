@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys, os, importlib, logging, re, binascii
+import sys, os, importlib, logging, re, binascii, zlib
 
 from email import iterators
 from urlparse import urlparse
@@ -33,7 +33,7 @@ class BasePattern(object):
     INIT_SCORE = 0
     MIN_TOKEN_LEN = 3
     NEST_LEVEL_THRESHOLD = 2
-    LANG = 'english'
+    LANG = None
  
     def __init__(self, msg):
         self.msg = msg
@@ -107,6 +107,8 @@ class BasePattern(object):
         '''
         lang = self.LANG
         parts_iterator = iterators.typed_subpart_iterator(self.msg)
+        part=''
+
         while(True):
             try:
                 part = next(parts_iterator)
@@ -123,8 +125,8 @@ class BasePattern(object):
                 # partial support of asian encodings, just to decode in UTF without exceptions
                 charset_map = {'x-sjis': 'shift_jis'}
                 langs_map = {
-                                'russian':  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin(-)?5'],
-                                'french' :  ['ISO_8859-([19]','Latin(-)?[19]','CP819', 'windows-1252']
+                                'ru':  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin(-)?5'],
+                                'fr' :  ['ISO_8859-([19]','Latin(-)?[19]','CP819', 'windows-1252']
                 }
 
                 # Python2.7 => try to decode all lines from their particular charsets to unicode,
@@ -147,6 +149,14 @@ class BasePattern(object):
 
                 if not len(decoded_line.strip()):
                     continue
+
+                if not lang and filter(lambda lang_header: re.match(r'(*-)?Language)', lang_header), map(itemgetter(0),msg.items())):
+                    # j'ai de la chance ))
+                    lang = filter(lambda lang_header: re.match(r'(*-)?Language)', lang_header), map(itemgetter(0),msg.items()))[-1:]
+                    lang = msg.get(''.join(lang)).split('-')[:1]
+
+                elif not lang:
+                    lang = 'english'
 
                 yield(decoded_line, part.get_content_type(), lang)
 
@@ -176,8 +186,12 @@ class BasePattern(object):
                 raw_line = ''.join(list(soup.body.strings))
 
             t_list = tokenizer.tokenize(raw_line)
-            pure_list = [word for word in words if word not in nltk_obj_dict.get(lang).stop]
-            pure_list = [word for word in pure_list if word not in nltk_obj_dict.get(self.LANG).stem]
+            if lang != 'english':
+                langs = list(lang)
+
+            for i in langs:
+                pure_list = [word for word in words if word not in nltk_obj_dict.get(i).stop]
+                pure_list = [word for word in pure_list if word not in nltk_obj_dict.get(i).stem]
 
             yield pure_list
 
@@ -300,16 +314,33 @@ class BasePattern(object):
         # logger.debug('HTML CLOSED:'+str(list(html_skeleton)))
         table_checksum = binascii.crc32(''.join(html_skeleton))
 
-        return html_score, text_score, html_checksum
+        return html_score, html_checksum
 
-    def get_body_compress_ratio():
+    def get_text_parts_avg_entropy(self):
+
+        # just for fun
+        total_h = self.INIT_SCORE
         all_text_parts = self._get_pure_text_part_()
+        n = len(all_text_parts)
 
-        return compress_ratio=42
+        while(all_text_parts):
+            tokens = next(all_text_parts)
+            freqdist = FreqDist(tokens)
+            probs = [freqdist.freq(l) for l in FreqDist(tokens)]
+            total_h += -sum([p * math.log(p,2) for p in probs])
+
+        return (total_h/n)
+
+    def get_text_compress_ratio(self):
+
+        all_text_parts = list(self._get_pure_text_part_())
+        if all_text_parts:
+            all_text = ''.join(reduce(add,all_text_parts))
+            return float(len(zlib.compress(all_text)))/len(all_text)
 
 
 class PatternFactory(object):
-    """ Factory for creating on the fly set of rules for desired pattern class, terrible """
+    """ Factory for creating Frankenstines on the fly """
 
     def New(self, msg, label):
         #logger.debug(label)

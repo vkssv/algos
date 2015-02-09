@@ -297,7 +297,9 @@ class NetsPattern(BasePattern):
         features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list, tags_map)))
         features_dict['text_score'] += self.get_text_parts_metrics(score, regexp_list)
         vector_dict.update(features_dict)
-        #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
+
+        vector_dict['body_compres_ratio'] = self.get_text_compress_ratio()
+
 
         return vector_dict
 
