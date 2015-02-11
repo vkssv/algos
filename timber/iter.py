@@ -26,42 +26,46 @@ except ImportError:
 
 def _get_text_mime_part_(msg):
 
-    lang = None
-    parts_iterator = iterators.typed_subpart_iterator(msg)
-    part=''
-    while(True):
-        try:
-            part = next(parts_iterator)
-            #logger.debug('TEXT PART:')
-            #logger.debug(part)
-        except StopIteration as err:
-            break
+    charset_map = {'x-sjis': 'shift_jis'}
+    langs_map = {
+                    'ru':  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin-?5'],
+                    'fr':  ['ISO_8859-[19]','Latin-?[19]','CP819', 'windows-1252']
+    }
 
-        if part:
-                # can't use assert here, cause it can return empty lines
-            decoded_line = part.get_payload(decode=True)
-                #logger.debug(part.get_content_charset())
+    for p in iterators.typed_subpart_iterator(msg):
+        decoded_line = p.get_payload(decode=True)
+        lang = ''
+        # partial support of asian encodings, just to decode in UTF without exceptions
 
-                # partial support of asian encodings, just to decode in UTF without exceptions
-            charset_map = {'x-sjis': 'shift_jis'}
-            langs_map = {
-                                'ru':  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin(-)?5'],
-                                'fr':  ['ISO_8859-([19]','Latin(-)?[19]','CP819', 'windows-1252']
-            }
 
-                # Python2.7 => try to decode all lines from their particular charsets to unicode,
-                # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
+            # Python2.7 => try to decode all lines from their particular charsets to unicode,
+            # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
 
-            for charset in (part.get_content_charset(), part.get_charset()):
-                if charset and charset.lower() != 'utf-8':
-                    if charset in charset_map.keys():
-                        charset =  charset_map.get(charset)
-                        lang = 'jis'
+        for charset in (p.get_content_charset(), p.get_charset()):
+            if charset and charset.lower() != 'utf-8':
+                if charset in charset_map.keys():
+                    charset =  charset_map.get(charset)
+                    lang = 'jis'
 
-                    else:
-                        for lang in langs_map.iterkeys():
-                            if filter(lambda ch: re.match(ch, charset, re.I), langs_map.get(lang)):
+                break
+
+        # so we know the charset and can decode
+        decoded_line = decoded_line.decode(charset, 'replace')
+        if not len(decoded_line.strip()):
+            continue
+
+        # 3. determine lang, three attempts:
+        while not lang:
+            for lang in langs_map.iterkeys():
+
+                if filter(lambda ch: re.match(ch, charset, re.I), langs_map.get(lang)):
+                                logger.debug('LANG from charset: '+lang)
                                 break
+            lang = filter(lambda lang_header: re.match(r'(Accept|Content)-Language', lang_header), map(itemgetter(0),msg.items()))[-1:]
+            lang = msg.get(''.join(lang)).split('-')[:1]
+            if lang:
+                break
+
 
                     #logger.debug(charset)
                     decoded_line = decoded_line.decode(charset, 'replace')
@@ -70,10 +74,8 @@ def _get_text_mime_part_(msg):
             if not len(decoded_line.strip()):
                 continue
 
-            if not lang and filter(lambda lang_header: re.match(r'(*-)?Language)', lang_header), map(itemgetter(0),msg.items())):
-
-                # j'ai de la chance ))
-                lang = filter(lambda lang_header: re.match(r'(*-)?Language)', lang_header), map(itemgetter(0),msg.items()))[-1:]
+            if not lang:
+                lang = filter(lambda lang_header: re.match(r'(Accept|Content)-Language', lang_header), map(itemgetter(0),msg.items()))[-1:]
                 lang = msg.get(''.join(lang)).split('-')[:1]
 
             elif not lang:
