@@ -2,7 +2,6 @@
 
 import sys, os, importlib, logging, re, binascii, zlib
 
-from email import iterators
 from urlparse import urlparse
 from operator import add
 from collections import defaultdict, namedtuple
@@ -20,23 +19,21 @@ except ImportError:
     print('Can\'t find bs4 module, probably, it isn\'t installed.')
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
+from msg_wrapper import BeautifulBody
+
 # todo: implement container class,
 # which will keep list of objects of any type except of None
 # or empty subsequences
 
-class BasePattern(object):
+class BasePattern(BeautifulBody):
     """
     Base parent class for created all other four pattern classes.
-    Provides access to some pre-parsed attributes of msg.
+    Provides some basic chekcs for email's bodies.
     """
 
     INIT_SCORE = 0
     MIN_TOKEN_LEN = 3
     NEST_LEVEL_THRESHOLD = 2
-    LANG = None
- 
-    def __init__(self, msg):
-        self.msg = msg
 
     # just for debugging new regexp on the fly
     @staticmethod
@@ -59,191 +56,6 @@ class BasePattern(object):
             compiled_list.append(exp)
 
         return compiled_list
-
-    def _get_mime_struct_(self):
-        '''
-        :return:
-        '''
-        logger.debug("IN get_mime_struct")
-        self.mime_parts= defaultdict(list)
-
-        mime_heads = ['Content-Type', 'Content-Transfer-Encoding', 'Content-Id', 'Content-Disposition',\
-                      'Content-Description','Content-Class']
-
-        for part in self.msg.walk():
-
-            part_key = 'text/plain'
-            # default initialization, but expected that Content-Type always goes first in MIME-headers set for body's part?
-            # so I always will have non-default value in else branch for normal emails
-            # can't find any info in RFCs 2045/2046... about MIME-headers order ((
-            for head in filter(lambda n: part.keys().count(n), mime_heads):
-
-                if head == 'Content-Type':
-
-                    part_key = part.get(head)
-                    part_key = part_key.partition(';')[0].strip()
-                    added_value = (re.sub(part_key+';','',part.get(head).strip(),re.M)).strip()
-                    logger.debug('VAL'+str(added_value))
-
-                    self.mime_parts[part_key].append(added_value.lower())
-                    #part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
-
-                else:
-                    self.mime_parts[part_key].append(part.get(head).strip())
-                    #part_dict[head] = part.get(head).strip()
-
-        #dself.mime_parts[(part_key.partition(';')[0]).strip()] = part_dict
-        logger.debug("DEF_DICT"+str(self.mime_parts))
-        self.mime_parts = dict([(k,tuple(v)) for k,v in self.mime_parts.items()])
-        logger.debug("DICT"+str(self.mime_parts))
-
-        return self.mime_parts
-
-    def _get_text_mime_part_(self):
-        '''
-        :return: list of tuples with full decoded text/mime parts,
-                    i.e. transport decoding + charset decoding, if lines are
-                    not in utf-8
-        '''
-        lang = self.LANG
-        parts_iterator = iterators.typed_subpart_iterator(self.msg)
-        part=''
-
-        while(True):
-            try:
-                part = next(parts_iterator)
-                #logger.debug('TEXT PART:')
-                #logger.debug(part)
-            except StopIteration as err:
-                break
-
-            if part:
-                # can't use assert here, cause it can return empty lines
-                decoded_line = part.get_payload(decode=True)
-                #logger.debug(part.get_content_charset())
-
-                # partial support of asian encodings, just to decode in UTF without exceptions
-                charset_map = {'x-sjis': 'shift_jis'}
-                langs_map = {
-                                'ru':  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin(-)?5'],
-                                'fr' :  ['ISO_8859-([19]','Latin(-)?[19]','CP819', 'windows-1252']
-                }
-
-                # Python2.7 => try to decode all lines from their particular charsets to unicode,
-                # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
-
-                for charset in (part.get_content_charset(), part.get_charset()):
-                    if charset and charset.lower() != 'utf-8':
-                        if charset in charset_map.keys():
-                            charset =  charset_map.get(charset)
-                            lang = 'asian'
-
-                        else:
-                            for lang in langs_map.iterkeys():
-                                if filter(lambda ch: re.match(ch, charset, re.I), langs_map.get(lang))
-                                    break
-
-                        #logger.debug(charset)
-                        decoded_line = decoded_line.decode(charset, 'replace')
-                        break
-
-                if not len(decoded_line.strip()):
-                    continue
-
-                if not lang and filter(lambda lang_header: re.match(r'(*-)?Language)', lang_header), map(itemgetter(0),msg.items())):
-                    # j'ai de la chance ))
-                    lang = filter(lambda lang_header: re.match(r'(*-)?Language)', lang_header), map(itemgetter(0),msg.items()))[-1:]
-                    lang = msg.get(''.join(lang)).split('-')[:1]
-
-                elif not lang:
-                    lang = 'english'
-
-                yield(decoded_line, part.get_content_type(), lang)
-
-    def _get_pure_text_part_(self, stemmer, lines_generator=list()):
-        '''
-        @param stemmer: StemmerClass from nltk
-        @param lines_generator: iterator object with tuples(fully_decoded_line, text/mime_type),
-                a line per text/mime part
-        :return: iterator with pure stemmed tokens lists, a list per text/mime part
-        '''
-
-        raw_text_parts = self._get_text_mime_parts_()
-
-        langs = ('english', 'french', 'russian')
-        stopworders = (set(stopwords.words(lang)) for lang in langs)
-        stemmers = (SnowballStemmer(lang) for lang in langs)
-
-        nltk_obj =  namedtuple('nltk_obj','stop stem')
-        nltk_obj_dict = dict(zip(langs, nltk_obj(stopworders, stemmers)))
-
-        while(True):
-            raw_line, mime_type, lang = next(raw_text_parts)
-            if 'html' in mime_type:
-                soup = BeautifulSoup(raw_part)
-                if not soup.body:
-                    continue
-                raw_line = ''.join(list(soup.body.strings))
-
-            t_list = tokenizer.tokenize(raw_line)
-            if lang != 'english':
-                langs = list(lang)
-
-            for i in langs:
-                pure_list = [word for word in words if word not in nltk_obj_dict.get(i).stop]
-                pure_list = [word for word in pure_list if word not in nltk_obj_dict.get(i).stem]
-
-            yield pure_list
-
-    def get_rcvds(self, rcvds_num=0):
-        # parse all RCVD headers by default if rcvds_num wasn't defined
-        self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received')])[ -1*rcvds_num : ]
-
-        return self.parsed_rcvds
-
-    def get_nest_level(self):
-
-        mime_parts = self._get_mime_struct_()
-        self.level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
-
-        return self.level
-
-    def get_url_list(self):
-
-        text_parts = self._get_text_parts_()
-        #logger.debug('TEXT_PARTS: '+str(text_parts))
-        self.url_list = []
-
-        for line, content_type in text_parts:
-            # parse by lines
-            if 'html' in content_type:
-                soup = BeautifulSoup(line)
-                if soup.a:
-                    # TODO: create deeply parsing with cool bs4 methods
-                    self.url_list.extend([unicode(x) for x in soup.a])
-            else:
-                url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
-                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
-
-        logger.debug("URL LIST:")
-        for i in self.url_list:
-            logger.debug('-------------')
-            logger.debug(i)
-        if self.url_list:
-            # to do: fix this shame (there is nothing more permanent, then some temporary peaces of shame in your simple code ()
-            self.url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(').strip('<').strip('>') for s in self.url_list ]
-
-            parsed_urls = []
-            for y in self.url_list:
-                try:
-                    parsed_urls.append(urlparse(y))
-                except Exception as err:
-                    logger.error(str(err))
-                    continue
-
-            self.url_list = parsed_urls
-
-        return(self.url_list)
 
     def get_text_parts_metrics(self, score, regs_list, lines_generator=list()):
 
