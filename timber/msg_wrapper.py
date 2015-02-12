@@ -30,21 +30,22 @@ class BeautifulBody(object):
     something like BeautifulSoup objects from bs4.
     """
     LANG = 'en'
+    LANGS_LIST = ('en', 'fr', 'ru')
 
     def __init__(self, msg):
-        self.msg = msg
+        self._msg_ = msg
 
     def _get_mime_struct_(self):
         '''
         :return:
         '''
         logger.debug("IN get_mime_struct")
-        self.mime_parts= defaultdict(list)
+        self._mime_parts_= defaultdict(list)
 
         mime_heads = ['Content-Type', 'Content-Transfer-Encoding', 'Content-Id', 'Content-Disposition',\
                       'Content-Description','Content-Class']
 
-        for part in self.msg.walk():
+        for part in self._msg_.walk():
 
             part_key = 'text/plain'
             # default initialization, but expected that Content-Type always goes first in MIME-headers set for body's part?
@@ -59,19 +60,19 @@ class BeautifulBody(object):
                     added_value = (re.sub(part_key+';','',part.get(head).strip(),re.M)).strip()
                     logger.debug('VAL'+str(added_value))
 
-                    self.mime_parts[part_key].append(added_value.lower())
+                    self._mime_parts_[part_key].append(added_value.lower())
                     #part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
 
                 else:
-                    self.mime_parts[part_key].append(part.get(head).strip())
+                    self._mime_parts_[part_key].append(part.get(head).strip())
                     #part_dict[head] = part.get(head).strip()
 
         #dself.mime_parts[(part_key.partition(';')[0]).strip()] = part_dict
-        logger.debug("DEF_DICT"+str(self.mime_parts))
-        self.mime_parts = dict([(k,tuple(v)) for k,v in self.mime_parts.items()])
-        logger.debug("DICT"+str(self.mime_parts))
+        logger.debug("DEF_DICT"+str(self._mime_parts_))
+        self._mime_parts_ = dict([(k,tuple(v)) for k,v in self._mime_parts_.items()])
+        logger.debug("DICT"+str(self._mime_parts_))
 
-        return self.mime_parts
+        return self._mime_parts_
 
     def _get_text_mime_part_(self):
         '''
@@ -89,7 +90,7 @@ class BeautifulBody(object):
                         'jis'   :  ['shift_jis']
         }
 
-        for p in iterators.typed_subpart_iterator(msg):
+        for p in iterators.typed_subpart_iterator(self._msg_):
             decoded_line = p.get_payload(decode=True)
 
             # determine charset:
@@ -119,31 +120,29 @@ class BeautifulBody(object):
                     yield(decoded_line, p.get_content_type(), lang)
 
             # from r'(Content|Accept)-Language' headers
-            l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0),msg.items()))[-1:]
+            l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0), self._msg_.items()))[-1:]
             if l:
-                lang = ''.join(msg.get(''.join(l)).split('-')[:1])
+                lang = ''.join(_msg_.get(''.join(l)).split('-')[:1])
 
             yield(decoded_line, p.get_content_type(), lang)
 
-    def _get_pure_text_part_(self, stemmer, lines_generator=list()
-    ):
+    def _get_text_part_ngrams_(self):
         '''
-        @param stemmer: StemmerClass from nltk
-        @param lines_generator: iterator object with tuples(fully_decoded_line, text/mime_type),
-                a line per text/mime part
         :return: iterator with pure stemmed tokens lists, a list per text/mime part
         '''
 
-        raw_text_parts = self._get_text_mime_parts_()
 
-        langs = ('english', 'french', 'russian')
-        stopworders = (set(stopwords.words(lang)) for lang in langs)
-        stemmers = (SnowballStemmer(lang) for lang in langs)
+
+
+        stopworders = (set(stopwords.words(lang)) for lang in self.LANGS_LIST)
+        stemmers = (SnowballStemmer(lang) for lang in self.LANGS_LIST)
 
         nltk_obj =  namedtuple('nltk_obj','stop stem')
         nltk_obj_dict = dict(zip(langs, nltk_obj(stopworders, stemmers)))
+        Regtokenizer = RegexpTokenizer("[a-zA-Z'éèî]+")
 
-        while(True):
+
+        for pt in self._get_text_mime_part_():
             raw_line, mime_type, lang = next(raw_text_parts)
             if 'html' in mime_type:
                 soup = BeautifulSoup(raw_part)
@@ -151,8 +150,9 @@ class BeautifulBody(object):
                     continue
                 raw_line = ''.join(list(soup.body.strings))
 
+
             t_list = tokenizer.tokenize(raw_line)
-            if lang != 'english':
+            if lang != 'en':
                 langs = list(lang)
 
             for i in langs:
@@ -163,7 +163,7 @@ class BeautifulBody(object):
 
     def _get_rcvds_(self, rcvds_num=0):
         # parse all RCVD headers by default if rcvds_num wasn't defined
-        self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received')])[ -1*rcvds_num : ]
+        self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self._msg_.get_all('Received')])[ -1*rcvds_num : ]
 
         return self.parsed_rcvds
 
