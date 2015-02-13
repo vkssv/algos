@@ -57,20 +57,18 @@ class BasePattern(BeautifulBody):
 
         return compiled_list
 
-    def get_text_parts_metrics(self, score, regs_list, lines_generator=list()):
+    def get_text_parts_metrics(self, score, regs_list, sent_list=list()):
 
         text_score = self.INIT_SCORE
-        lines = []
-        if not lines_generator:
-            all_text_parts = self._get_pure_text_part_()
-            if not all_text_parts:
-                return text_score
 
-            compiled_regs_list = self._get_regexp_(regs_list, re.U)
-            for mime_text_part, content_type in all_text_parts:
-                if 'plain' in content_type and mime_text_part.strip():
-                    for regexp_obj in compiled_regs_list:
-                        text_score += len(filter(lambda line: regexp_obj.search(line,re.I), mime_text_part.split('\r\n')))
+        if not sent_list and not self._get_sent_vect_():
+            return text_score
+        elif not sent_list:
+            sent_lists = list(self._get_sent_vect_())
+
+        compiled_regs_list = self._get_regexp_(regs_list, re.U)
+        for reg_obj in compiled_regs_list:
+            text_score += len(filter(lambda : reg_obj.search(sentence,re.I), sent_lists))
 
         return text_score
 
@@ -132,8 +130,8 @@ class BasePattern(BeautifulBody):
 
         # just for fun
         total_h = self.INIT_SCORE
-        all_text_parts = self._get_pure_text_part_()
-        n = len(all_text_parts)
+        all_text_parts = self._get_stemmed_tokens_vect_()
+        n = len(list(all_text_parts))
 
         while(all_text_parts):
             tokens = next(all_text_parts)
@@ -145,7 +143,7 @@ class BasePattern(BeautifulBody):
 
     def get_text_compress_ratio(self):
 
-        all_text_parts = list(self._get_pure_text_part_())
+        all_text_parts = list(self._get_stemmed_tokens_vect_())
         if all_text_parts:
             all_text = ''.join(reduce(add,all_text_parts))
             return float(len(zlib.compress(all_text)))/len(all_text)

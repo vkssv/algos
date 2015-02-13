@@ -9,9 +9,21 @@ from urlparse import urlparse
 from operator import add, itemgetter
 from collections import defaultdict, namedtuple
 
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    print('Can\'t find bs4 module, probably, it isn\'t installed.')
+    print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
+
+LANG = 'english'
+LANGS_LIST = ('english', 'french', 'russian')
 
 
-def _get_lang_(msg):
+def _get_text_mime_part_(msg):
 
     charset_map = {'x-sjis': 'shift_jis'}
     # partial support of asian encodings, just to decode in UTF without exceptions
@@ -45,7 +57,7 @@ def _get_lang_(msg):
 
         # determine lang:
         # from charset attribute in Content-Type
-        lang = 'en'
+        lang = LANG
         for l in langs_map.iterkeys():
             if filter(lambda ch: re.match(ch, charset, re.I), langs_map.get(l)):
                 lang = l
@@ -58,3 +70,41 @@ def _get_lang_(msg):
 
         yield(decoded_line, p.get_content_type(), lang)
 
+def _get_stemmed_tokens_vect_(msg):
+        '''
+        :return: iterator with pure stemmed tokens lists, a list per text/mime part
+        '''
+        reg_tokenizer = RegexpTokenizer('\s+', gaps=True)
+
+        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in LANGS_LIST])
+        for k in stopwords_dict.iterkeys():
+            print(">>>> "+str(stopwords_dict.get(k)))
+
+        for pt in tuple(_get_text_mime_part_(msg)):
+            raw_line, mime_type, lang = pt
+            print('line: '+raw_line)
+            print('mime: '+mime_type)
+            print('lang: '+lang)
+            if 'html' in mime_type:
+                soup = BeautifulSoup(raw_line)
+                if not soup.body:
+                    continue
+                raw_line = ''.join(list(soup.body.strings))
+
+            tokens = tuple(token.lower() for token in reg_tokenizer.tokenize(raw_line))
+
+            print("tokens: "+str(tokens))
+            if lang == LANG:
+                # check that it's really english
+
+                tokens_set = set(tokens)
+
+                lang_ratios = filter(lambda x,y: (x, len(tokens_set.intersection(y))), stopwords_dict.items())
+                #max_ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[:1]
+                print(sorted(lang_ratios, key=itemgetter(1), reverse=True))
+                lang, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[:1]
+                print('determ lang: '+lang)
+
+            tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
+            tokens = tuple(word for word in tokens if word not in SnowballStemmer(lang))
+            yield tokens

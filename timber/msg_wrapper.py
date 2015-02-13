@@ -7,7 +7,7 @@ from urlparse import urlparse
 from operator import add
 from collections import defaultdict, namedtuple
 
-from nltk.tokenize import RegexpTokenizer, 
+from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 
@@ -29,8 +29,8 @@ class BeautifulBody(object):
     Base class for simplified work with email.message objects,
     something like BeautifulSoup objects from bs4.
     """
-    LANG = 'en'
-    LANGS_LIST = ('en', 'fr', 'ru')
+    LANG = 'english'
+    LANGS_LIST = ('english', 'french', 'russian')
 
     def __init__(self, msg):
         self._msg_ = msg
@@ -76,18 +76,17 @@ class BeautifulBody(object):
 
     def _get_text_mime_part_(self):
         '''
-        :return: list of tuples with full decoded text/mime parts,
-                    i.e. transport decoding + charset decoding, if lines are
-                    not in utf-8
+        :return: generator of tuples ( < line of decoded text/mime part >, < mime type >, < lang > );
+                    performs full decoding, i.e. from transport encoding + charset
         '''
         # partial support of asian encodings, just to decode in UTF without exceptions
         # and normilize with NFC form: one unicode ch per symbol
         charset_map = {'x-sjis': 'shift_jis'}
 
         langs_map = {
-                        'ru'    :  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin-?5'],
-                        'fr'    :  ['ISO_8859-[19]','Latin-?[19]','CP819', 'windows-1252'],
-                        'jis'   :  ['shift_jis']
+                        'russian'   :  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin-?5'],
+                        'french'    :  ['ISO_8859-[19]','Latin-?[19]','CP819', 'windows-1252'],
+                        'jis'       :  ['shift_jis']
         }
 
         for p in iterators.typed_subpart_iterator(self._msg_):
@@ -122,45 +121,56 @@ class BeautifulBody(object):
             # from r'(Content|Accept)-Language' headers
             l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0), self._msg_.items()))[-1:]
             if l:
-                lang = ''.join(_msg_.get(''.join(l)).split('-')[:1])
+                names_map = {'ru':'russian','fr':'french'}
+                lang = names_map.get(''.join(_msg_.get(''.join(l)).split('-')[:1]))
 
             yield(decoded_line, p.get_content_type(), lang)
 
-    def _get_text_part_ngrams_(self):
+    def _get_stemmed_tokens_vect_(self):
         '''
-        :return: iterator with pure stemmed tokens lists, a list per text/mime part
+        :return: generator of stemmed tokens for text/mime parts;
+                    also clears from stop-words, respectively
+                    the lang of current text/mime part
         '''
 
         reg_tokenizer = RegexpTokenizer('\s+', gaps=True)
-        sent_tokenizer =
 
+        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self.LANGS_LIST])
+        for k in stopwords_dict.iterkeys():
+            logger.debug(">>>> "+str(stopwords_dict.get(k)))
 
-        stopworders = (set(stopwords.words(lang)) for lang in self.LANGS_LIST)
-        stemmers = (SnowballStemmer(lang) for lang in self.LANGS_LIST)
-
-        nltk_obj =  namedtuple('nltk_obj','stop stem')
-        nltk_obj_dict = dict(zip(langs, nltk_obj(stopworders, stemmers)))
-        RegTokenizer = RegexpTokenizer("[a-zA-Z'éèî]+")
-
-
-        for pt in self._get_text_mime_part_():
-            raw_line, mime_type, lang = next(raw_text_parts)
+        for pt in tuple(_get_text_mime_part_(self.msg)):
+            raw_line, mime_type, lang = pt
+            logger.debug('line: '+raw_line)
+            logger.debug('mime: '+mime_type)
+            logger.debug('lang: '+lang)
             if 'html' in mime_type:
-                soup = BeautifulSoup(raw_part)
+                soup = BeautifulSoup(raw_line)
                 if not soup.body:
                     continue
                 raw_line = ''.join(list(soup.body.strings))
 
+            tokens = tuple(token.lower() for token in reg_tokenizer.tokenize(raw_line))
 
-            t_list = tokenizer.tokenize(raw_line)
-            if lang != 'en':
-                langs = list(lang)
+            logger.debug("tokens: "+str(tokens))
+            if lang == self.LANG:
+                # check that it's really english
 
-            for i in langs:
-                pure_list = [word for word in words if word not in nltk_obj_dict.get(i).stop]
-                pure_list = [word for word in pure_list if word not in nltk_obj_dict.get(i).stem]
+                tokens_set = set(tokens)
 
-            yield pure_list
+                # fix it
+                lang_ratios = filter(lambda x,y: (x, len(tokens_set.intersection(y))), stopwords_dict.items())
+                #max_ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[:1]
+                logger.debug(sorted(lang_ratios, key=itemgetter(1), reverse=True))
+                lang, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[:1]
+                logger.debug('determ lang: '+lang)
+
+            tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
+            tokens = tuple(word for word in tokens if word not in SnowballStemmer(lang))
+            yield tokens
+
+    def _get_sent_vect_(self):
+        pass
 
     def _get_rcvds_(self, rcvds_num=0):
         # parse all RCVD headers by default if rcvds_num wasn't defined
