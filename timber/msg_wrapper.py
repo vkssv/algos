@@ -7,7 +7,7 @@ from urlparse import urlparse
 from operator import add
 from collections import defaultdict, namedtuple
 
-from nltk.tokenize import RegexpTokenizer
+from nltk.tokenize import RegexpTokenizer, 
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 
@@ -131,7 +131,8 @@ class BeautifulBody(object):
         :return: iterator with pure stemmed tokens lists, a list per text/mime part
         '''
 
-
+        reg_tokenizer = RegexpTokenizer('\s+', gaps=True)
+        sent_tokenizer =
 
 
         stopworders = (set(stopwords.words(lang)) for lang in self.LANGS_LIST)
@@ -139,7 +140,7 @@ class BeautifulBody(object):
 
         nltk_obj =  namedtuple('nltk_obj','stop stem')
         nltk_obj_dict = dict(zip(langs, nltk_obj(stopworders, stemmers)))
-        Regtokenizer = RegexpTokenizer("[a-zA-Z'éèî]+")
+        RegTokenizer = RegexpTokenizer("[a-zA-Z'éèî]+")
 
 
         for pt in self._get_text_mime_part_():
