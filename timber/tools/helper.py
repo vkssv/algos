@@ -7,6 +7,7 @@ from email import iterators, base64mime, quoprimime
 from bs4 import BeautifulSoup
 from collections import OrderedDict, defaultdict, Counter
 from itertools import repeat
+from operator import itemgetter
 from nltk import FreqDist
 
 
@@ -288,9 +289,9 @@ if __name__ == "__main__":
 
 
 
-            total_h += headers_ent(msg.keys())
-            msg_count +=1
-            logger.info('HEADS_H: '+str(headers_ent(msg.keys())))
+            #total_h += headers_ent(msg.keys())
+            #msg_count +=1
+            #logger.info('HEADS_H: '+str(headers_ent(msg.keys())))
 
             header_counts_list.append(len(msg.keys()))
 
@@ -340,7 +341,7 @@ if __name__ == "__main__":
             heads = [ i[0] for i in common_heads_list ]
             unique = tuple(set([ i[0] for i in common_heads_list ]))
             unique_list = list(zip(tuple([heads.count(u) for u in unique]),unique))
-            logger.info('AVG H: '+str(total_h/msg_count))
+            #logger.info('AVG H: '+str(total_h/msg_count))
 
             unique_list.sort()
 
