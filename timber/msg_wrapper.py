@@ -10,15 +10,18 @@ import sys, os, importlib, logging, re, binascii, unicodedata
 
 from email import iterators
 from urlparse import urlparse
-from operator import add
+from operator import add, itemgetter
 from collections import defaultdict, namedtuple
 
-from nltk.tokenize import RegexpTokenizer
+from nltk.tokenize import WordPunctTokenizer
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(filename)s: %(message)s')
+ch = logging.StreamHandler(sys.stdout)
+logger.addHandler(ch)
 
 try:
     from bs4 import BeautifulSoup
@@ -35,23 +38,24 @@ class BeautifulBody(object):
     Base class for simplified work with email.message objects,
     some kind of BeautifulSoup objects from bs4.
     """
-    LANG = 'english'
-    LANGS_LIST = ('english', 'french', 'russian')
+    _LANG = 'english'
+    _LANGS_LIST = ('english', 'french', 'russian')
+    _CHARSET = 'utf-8'
 
     def __init__(self, msg):
-        self._msg_ = msg
+        self._msg = msg
 
     def _get_mime_struct_(self):
         """
         :return:
         """
-        logger.debug("IN get_mime_struct")
+        #logger.debug("in _get_mime_struct_()")
         self._mime_parts_= defaultdict(list)
 
         mime_heads = ['Content-Type', 'Content-Transfer-Encoding', 'Content-Id', 'Content-Disposition',\
                       'Content-Description','Content-Class']
 
-        for part in self._msg_.walk():
+        for part in self._msg.walk():
 
             part_key = 'text/plain'
             # default initialization, but expected that Content-Type always goes first in MIME-headers set for body's part?
@@ -64,7 +68,6 @@ class BeautifulBody(object):
                     part_key = part.get(head)
                     part_key = part_key.partition(';')[0].strip()
                     added_value = (re.sub(part_key+';','',part.get(head).strip(),re.M)).strip()
-                    logger.debug('VAL'+str(added_value))
 
                     self._mime_parts_[part_key].append(added_value.lower())
                     #part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
@@ -73,8 +76,6 @@ class BeautifulBody(object):
                     self._mime_parts_[part_key].append(part.get(head).strip())
                     #part_dict[head] = part.get(head).strip()
 
-        #dself.mime_parts[(part_key.partition(';')[0]).strip()] = part_dict
-        logger.debug("DEF_DICT"+str(self._mime_parts_))
         self._mime_parts_ = dict([(k,tuple(v)) for k,v in self._mime_parts_.items()])
         logger.debug("DICT"+str(self._mime_parts_))
 
@@ -85,28 +86,29 @@ class BeautifulBody(object):
         :return: generator of tuples ( < line of decoded text/mime part >, < mime type >, < lang > );
                     performs full decoding, i.e. from transport encoding + charset
         """
-        charset_map = {'x-sjis': 'shift_jis'}
+        charset_map = {'x-sjis': 'shift_jis'} # cause of str.decode() LookupError: unknown encoding: x-sjis
         # partial support of asian encodings, just to decode in UTF without exceptions
         # and normilize with NFC form: one unicode ch per symbol
         langs_map = {
-                        'ru'    :  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin-?5'],
-                        'fr'    :  ['ISO_8859-[19]','Latin-?[19]','CP819', 'windows-1252'],
-                        'jis'   :  ['shift_jis']
+                        'russian'   :  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin-?5'],
+                        'french'    :  ['ISO_8859-[19]','Latin-?[19]','CP819', 'windows-1252'],
+                        'jis'       :  ['shift_jis','ISO-2022-JP']
         }
 
-        for p in iterators.typed_subpart_iterator(self._msg_):
+        for p in iterators.typed_subpart_iterator(self._msg):
             decoded_line = p.get_payload(decode=True)
 
             # determine charset:
-            charset = 'utf-8'
-            for ch in (p.get_content_charset(), p.get_charset()):
-                if ch and ch.lower() != 'utf-8':
-                    if ch in charset_map.keys():
-                        charset =  charset_map.get(ch)
-                        break
-                    else:
-                        charset = ch
+            charset = self._CHARSET
 
+            for ch in tuple(ch for ch in (p.get_content_charset(), p.get_charset()) if ch):
+                if (ch != self._CHARSET) and (ch in charset_map.keys()):
+                    charset =  charset_map.get(ch)
+                    break
+                else:
+                    charset = ch
+
+            logger.debug("CH: "+str(charset))
             # Python2.7 => try to decode all lines from their particular charsets to unicode,
             # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
             decoded_line = decoded_line.decode(charset, 'replace')
@@ -117,16 +119,17 @@ class BeautifulBody(object):
 
             # determine lang:
             # from charset attribute in Content-Type
-            lang = self.LANG
+            lang = self._LANG
             for l in langs_map.iterkeys():
-                if filter(lambda ch: re.match(ch, charset, re.I), langs_map.get(l)):
+                print(l)
+                if filter(lambda ch: re.match(r''+ch, charset, re.I), langs_map.get(l)):
                     lang = l
                     yield(decoded_line, p.get_content_type(), lang)
 
             # from r'(Content|Accept)-Language' headers
-            l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0),self.msg.items()))[-1:]
+            l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0),self._msg.items()))[-1:]
             if l:
-                lang = ''.join(self._msg_.get(''.join(l)).split('-')[:1])
+                lang = ''.join(self._msg.get(''.join(l)).split('-')[:1])
 
             yield(decoded_line, p.get_content_type(), lang)
 
@@ -134,14 +137,15 @@ class BeautifulBody(object):
         """
         :return: iterator with pure stemmed tokens lists, a list per text/mime part
         """
-        reg_tokenizer = RegexpTokenizer('\s+', gaps=True)
+        tokenizer = WordPunctTokenizer()
+        #punct_extractor = RegexpTokenizer("[\w']+", gaps=True)
 
-        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self.LANGS_LIST])
+        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self._LANGS_LIST])
         for k in stopwords_dict.iterkeys():
             print(">>>> "+str(stopwords_dict.get(k)))
 
-        for pt in tuple(self._get_text_mime_part_()):
-            raw_line, mime_type, lang = pt
+        for raw_line, mime_type, lang in tuple(self._get_text_mime_part_()):
+
             print('line: '+raw_line)
             print('mime: '+mime_type)
             print('lang: '+lang)
@@ -151,22 +155,29 @@ class BeautifulBody(object):
                     continue
                 raw_line = ''.join(list(soup.body.strings))
 
-            tokens = tuple(token.lower() for token in reg_tokenizer.tokenize(raw_line))
+            tokens = tuple(token.lower() for token in tokenizer.tokenize(raw_line))
 
             print("tokens: "+str(tokens))
-            if lang == LANG:
+            if lang == self._LANG:
                 # check that it's really english
 
                 tokens_set = set(tokens)
+                lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
+                print(lang_ratios)
+                l, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[0]
+                if ratio:
+                    lang = l
 
-                lang_ratios = filter(lambda x,y: (x, len(tokens_set.intersection(y))), stopwords_dict.items())
-                #max_ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[:1]
-                print(sorted(lang_ratios, key=itemgetter(1), reverse=True))
-                lang, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[:1]
-                print('determ lang: '+lang)
+            # logger.debug('lang: '+lang)
 
-            tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
-            tokens = tuple(word for word in tokens if word not in SnowballStemmer(lang))
+            if lang in self._LANGS_LIST:
+                #todo: create stopwords list for jpn ,
+                tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
+                print('before stem: '+str(tokens))
+                tokens = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
+
+                #logger.debug("tokens list: "+str(tokens))
+
             yield tokens
 
     def _get_sentence_vect_(self):
@@ -180,7 +191,7 @@ class BeautifulBody(object):
     def _get_rcvds_(self, rcvds_num=0):
 
         # parse all RCVD headers by default if rcvds_num wasn't defined
-        self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self._msg_.get_all('Received')])[ -1*rcvds_num : ]
+        self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received')])[ -1*rcvds_num : ]
 
         return self.parsed_rcvds
 
@@ -193,11 +204,9 @@ class BeautifulBody(object):
 
     def _get_url_list_(self):
 
-        text_parts = self._get_text_parts_()
-        #logger.debug('TEXT_PARTS: '+str(text_parts))
-        self.url_list = []
+        self.url_list = list()
 
-        for line, content_type in text_parts:
+        for line, content_type, lang in list(self._get_text_mime_part_()):
             # parse by lines
             if 'html' in content_type:
                 soup = BeautifulSoup(line)
@@ -212,9 +221,9 @@ class BeautifulBody(object):
         for i in self.url_list:
             logger.debug('-------------')
             logger.debug(i)
-        if self.url_list:
-            # to do: fix this shame (there is nothing more permanent, then some temporary peaces of shame in your simple code ()
-            self.url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(').strip('<').strip('>') for s in self.url_list ]
+            if self.url_list:
+                # todo: fix this shame (there is nothing more permanent, then some temporary peaces of shame in your simple code ()
+                self.url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(').strip('<').strip('>') for s in self.url_list ]
 
             parsed_urls = []
             for y in self.url_list:
@@ -232,3 +241,4 @@ class BeautifulBody(object):
 if __name__ == "__main__":
     import doctest
     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
+

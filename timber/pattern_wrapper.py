@@ -21,9 +21,7 @@ except ImportError:
 
 from msg_wrapper import BeautifulBody
 
-# todo: implement container class,
-# which will keep list of objects of any type except of None
-# or empty subsequences
+
 
 class BasePattern(BeautifulBody):
     """
