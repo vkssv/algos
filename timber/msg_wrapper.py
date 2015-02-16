@@ -29,9 +29,6 @@ except ImportError:
     print('Can\'t find bs4 module, probably, it isn\'t installed.')
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
-# todo: implement container class,
-# which will keep list of objects of any type except of None
-# or empty subsequences
 
 class BeautifulBody(object):
     """
