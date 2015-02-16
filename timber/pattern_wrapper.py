@@ -59,10 +59,10 @@ class BasePattern(BeautifulBody):
 
         text_score = self.INIT_SCORE
 
-        if not sent_list and not self._get_sent_vect_():
+        if not sent_list and not self._get_sentences_():
             return text_score
         elif not sent_list:
-            sent_lists = list(self._get_sent_vect_())
+            sent_lists = list(self._get_sentences_())
 
         compiled_regs_list = self._get_regexp_(regs_list, re.U)
         for reg_obj in compiled_regs_list:
