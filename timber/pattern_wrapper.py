@@ -128,7 +128,7 @@ class BasePattern(BeautifulBody):
 
         # just for fun
         total_h = self.INIT_SCORE
-        all_text_parts = self._get_stemmed_tokens_vect_()
+        all_text_parts = self._get_stemmed_tokens_()
         n = len(list(all_text_parts))
 
         while(all_text_parts):
@@ -141,7 +141,7 @@ class BasePattern(BeautifulBody):
 
     def get_text_compress_ratio(self):
 
-        all_text_parts = list(self._get_stemmed_tokens_vect_())
+        all_text_parts = list(self._get_stemmed_tokens_())
         if all_text_parts:
             all_text = ''.join(reduce(add,all_text_parts))
             return float(len(zlib.compress(all_text)))/len(all_text)
