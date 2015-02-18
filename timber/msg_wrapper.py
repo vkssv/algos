@@ -128,7 +128,9 @@ class BeautifulBody(object):
 
         return(self.url_list)
 
-    def _get_text_mime_part_(self):
+    def
+
+        (self):
         """
         :return: generator of tuples ( decoded line , mime type , lang ) for each text/mime part
         """
@@ -143,6 +145,8 @@ class BeautifulBody(object):
 
         for p in iterators.typed_subpart_iterator(self._msg):
             decoded_line = p.get_payload(decode=True)
+            if decoded_line is None or len(decoded_line.strip()) == 0:
+                continue
 
             # determine charset:
             charset = self._CHARSET
@@ -159,7 +163,7 @@ class BeautifulBody(object):
             # Python2.7 => try to decode all lines from their particular charsets to unicode,
             # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
             decoded_line = decoded_line.decode(charset, 'replace')
-            if not decoded_line.strip():
+            if not len(decoded_line.strip()) == 0:
                 continue
 
             decoded_line = unicodedata.normalize('NFC', decoded_line)
@@ -177,6 +181,7 @@ class BeautifulBody(object):
             if l:
                 lang = ''.join(self._msg.get(''.join(l)).split('-')[:1])
 
+            # never returns empty line or None, dream-function!
             yield(decoded_line, p.get_content_type(), lang)
 
     def _get_sentences_(self):

@@ -22,7 +22,6 @@ except ImportError:
 from msg_wrapper import BeautifulBody
 
 
-
 class BasePattern(BeautifulBody):
     """
     Base parent class for created all other four pattern classes.
@@ -37,8 +36,8 @@ class BasePattern(BeautifulBody):
     @staticmethod
     def _get_regexp_(regexp_list, compilation_flag=None):
         '''
-        @param regexp_list: list of scary regexes
-        @param compilation_flag: re.U, etc
+        :param regexp_list: list of scary regexes
+        :param compilation_flag: re.U, etc
         :return: list of compiled RE.objects, faster and easy for checking this trash
         '''
         # todo: also make it as iterator
@@ -46,7 +45,7 @@ class BasePattern(BeautifulBody):
 
         for exp in regexp_list:
             #logger.debug(exp)
-            if compilation_flag:
+            if compilation_flag is not None:
                 exp = re.compile(exp, compilation_flag)
             else:
                 exp = re.compile(exp)
@@ -55,18 +54,15 @@ class BasePattern(BeautifulBody):
 
         return compiled_list
 
-    def get_text_parts_metrics(self, score, regs_list, sent_list=list()):
+    def get_text_parts_metrics(self, score, regs_list, sent_list=None):
 
         text_score = self.INIT_SCORE
 
-        if not sent_list and not self._get_sentences_():
-            return text_score
-        elif not sent_list:
+        if sent_list is None:
             sent_lists = list(self._get_sentences_())
 
-        compiled_regs_list = self._get_regexp_(regs_list, re.U)
-        for reg_obj in compiled_regs_list:
-            text_score += len(filter(lambda : reg_obj.search(sentence,re.I), sent_lists))
+        for reg_obj in self._get_regexp_(regs_list, re.U):
+            text_score += len(filter(lambda sentence: reg_obj.search(sentence,re.I), sent_lists))
 
         return text_score
 
@@ -95,10 +91,11 @@ class BasePattern(BeautifulBody):
                 # todo: investigate the order of elems within included generators
                 html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(), re.M)))
 
+                soup_attrs_list = (ch for ch in (p.get_content_charset(), p.get_charset()) if ch)
                 soup_attrs_list = filter(lambda t: t, [soup.body.table.find_all(tag) for tag in tags_map.iterkeys()])
                 logger.debug('soup_attrs_list: '+str(soup_attrs_list))
 
-                if not soup_attrs_list:
+                if soup_attrs_list:
                     continue
 
                 # analyze tags and their attributes
@@ -167,3 +164,6 @@ class PatternFactory(object):
 MetaPattern = PatternFactory()
 
 
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
