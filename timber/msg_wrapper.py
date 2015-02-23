@@ -7,7 +7,7 @@ which can be checked by rules (features-triggers) from each pattern_class.
 """
 
 import sys, os, importlib, logging, re, binascii, unicodedata
-
+import pdb
 from email import iterators
 from urlparse import urlparse
 from operator import add, itemgetter
@@ -56,7 +56,6 @@ class BeautifulBody(object):
         """
         :return: dict { mime_type  : [attribute : value] }
         """
-        #logger.debug("in _get_mime_struct_()")
         self._mime_parts_= defaultdict(list)
 
         mime_heads = ['Content-Type', 'Content-Transfer-Encoding', 'Content-Id', 'Content-Disposition',\
@@ -128,9 +127,7 @@ class BeautifulBody(object):
 
         return(self.url_list)
 
-    def
-
-        (self):
+    def  _get_text_mime_part_(self):
         """
         :return: generator of tuples ( decoded line , mime type , lang ) for each text/mime part
         """
@@ -142,10 +139,14 @@ class BeautifulBody(object):
                         'french'    :  ['ISO_8859-[19]','Latin-?[19]','CP819', 'windows-1252'],
                         'jis'       :  ['shift_jis','ISO-2022-JP']
         }
-
+        print(list(iterators.typed_subpart_iterator(self._msg)))
         for p in iterators.typed_subpart_iterator(self._msg):
+
             decoded_line = p.get_payload(decode=True)
+
+            logger.debug(decoded_line)
             if decoded_line is None or len(decoded_line.strip()) == 0:
+                print("hhh")
                 continue
 
             # determine charset:
@@ -158,16 +159,18 @@ class BeautifulBody(object):
                 else:
                     charset = ch
 
-            #logger.debug("charset: "+str(charset))
+            logger.debug("charset: "+str(charset))
 
             # Python2.7 => try to decode all lines from their particular charsets to unicode,
             # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
             decoded_line = decoded_line.decode(charset, 'replace')
-            if not len(decoded_line.strip()) == 0:
+            print(type(decoded_line))
+            print('after: '+str(decoded_line))
+            if len(decoded_line.strip()) == 0:
                 continue
 
             decoded_line = unicodedata.normalize('NFC', decoded_line)
-
+            print('hhhhh'+str(decoded_line))
             # determine lang:
             # from charset attribute in Content-Type
             lang = self._LANG
@@ -181,6 +184,8 @@ class BeautifulBody(object):
             if l:
                 lang = ''.join(self._msg.get(''.join(l)).split('-')[:1])
 
+
+
             # never returns empty line or None, dream-function!
             yield(decoded_line, p.get_content_type(), lang)
 
@@ -190,7 +195,7 @@ class BeautifulBody(object):
         """
         tokenizer = PunktSentenceTokenizer()
         for raw_line, mime_type, lang in tuple(self._get_text_mime_part_()):
-
+            print(raw_line, mime_type, lang)
             if 'html' in mime_type:
                 soup = BeautifulSoup(raw_line)
                 if not soup.body:
@@ -198,9 +203,15 @@ class BeautifulBody(object):
                 # cause exactly sentences are needed, soup.body.strings returns lines+0d0a
                 lines = tuple(soup.body.strings)
                 raw_line = ''.join(lines)
-                #logger.debug(raw_line)
+                logger.debug(raw_line)
+            print(raw_line)
+            print(tokenizer.tokenize(raw_line))
+            try:
+                sents = tuple(tokenizer.tokenize(raw_line))
+            except Exception as err:
+                sents = tuple(raw_line)
 
-            yield tuple(tokenizer.tokenize(raw_line))
+            yield sents
 
     def _get_stemmed_tokens_(self):
         """
@@ -213,24 +224,24 @@ class BeautifulBody(object):
         for pt in tuple(self._get_sentences_()):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add,tokens)
-            #logger.debug("tokens: "+str(tokens))
+            logger.debug("tokens: "+str(tokens))
             if lang == self._LANG:
                 # check that it's really english
                 tokens_set = set(tokens)
                 lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
-                #logger.debug(lang_ratios)
+                logger.debug(lang_ratios)
                 l, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[0]
                 if ratio:
                     lang = l
 
-                # logger.debug('lang: '+lang)
+                logger.debug('lang: '+lang)
 
             if lang in self._LANGS_LIST:
                 #todo: create stopwords list for jpn ,
                 tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
-                #logger.debug('before stem: '+str(tokens))
+                logger.debug('before stem: '+str(tokens))
                 tokens = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
-                #logger.debug("tokens list: "+str(tokens))
+                logger.debug("tokens list: "+str(tokens))
 
             yield tokens
 
