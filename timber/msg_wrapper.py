@@ -38,8 +38,10 @@ class BeautifulBody(object):
     _LANG = 'english'
     _LANGS_LIST = ('english', 'french', 'russian')
     _CHARSET = 'utf-8'
+    _MAX_NEST_LEVEL = 50
 
     def __init__(self, msg):
+
         self._msg = msg
 
     def _get_rcvds_(self, rcvds_num=0):

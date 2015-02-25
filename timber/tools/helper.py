@@ -293,7 +293,7 @@ if __name__ == "__main__":
             #msg_count +=1
             #logger.info('HEADS_H: '+str(headers_ent(msg.keys())))
 
-            header_counts_list.append(len(msg.keys()))
+            header_counts_list.append(msg.__len__())
 
             heads_list = msg.keys()
             common_heads_list.extend([(name, heads_list.count(name)) for name in heads_list])
