@@ -81,7 +81,7 @@ class BasePattern(BeautifulBody):
 
         return text_score
 
-    def get_html_parts_metrics(self, score, regs_list, tags_map):
+    def get_html_parts_metrics(self, score, regs_list, tags_map, mime_parts_list=None):
         '''
         :param score:
         :param regs_list:
@@ -91,17 +91,20 @@ class BasePattern(BeautifulBody):
 
         (html_score, html_checksum) = [self.INIT_SCORE]*2
         attr_value_pair = namedtuple('attr_value_pair','name value')
+        html_skeleton = list()
+
         print("regs_list: "+str(regs_list))
         print("tags_map: "+str(tags_map))
+        if mime_parts_list is None:
+            mime_parts_list = self._get_text_mime_part_()
+            logger.debug('TEXT_PARTS: '+str(self._get_text_mime_part_()))
 
-        all_mime_parts = self._get_text_mime_part_()
-        print(list(all_mime_parts))
-        if not all_mime_parts:
-            return html_score, html_checksum
+        while(True):
+            try:
+                mime_text_part, content_type, lang = next(mime_parts_list)
+            except StopIteration as err:
+                break
 
-        logger.debug('TEXT_PARTS: '+str(all_text_parts))
-        html_skeleton = list()
-        for mime_text_part, content_type, lang in all_text_parts:
             print(">>>>"+str(mime_text_part))
             print(">>>>"+str(content_type))
             print(">>>"+str(lang))
@@ -147,9 +150,10 @@ class BasePattern(BeautifulBody):
                         print(check_values)
                         html_score += score*len(check_values)
 
+
         # logger.debug('HTML CLOSED:'+str(list(html_skeleton)))
-        table_checksum = binascii.crc32(''.join(html_skeleton))
-        print(table_checksum)
+        html_checksum = binascii.crc32(''.join(html_skeleton))
+        print(html_checksum)
         return html_score, html_checksum
 
     def get_text_parts_avg_entropy(self):

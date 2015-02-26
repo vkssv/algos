@@ -17,11 +17,13 @@ from nltk.tokenize import WordPunctTokenizer, PunktSentenceTokenizer
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 
+from timber_exceptions import NaturesError
+
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(filename)s: %(message)s')
-ch = logging.StreamHandler(sys.stdout)
-logger.addHandler(ch)
+#ch = logging.StreamHandler(sys.stdout)
+#logger.addHandler(ch)
 
 try:
     from bs4 import BeautifulSoup
@@ -37,10 +39,20 @@ class BeautifulBody(object):
     """
     _LANG = 'english'
     _LANGS_LIST = ('english', 'french', 'russian')
-    _CHARSET = 'utf-8'
-    _MAX_NEST_LEVEL = 50
+    _CHARSET = 'ascii'
+    _MAX_NEST_LEVEL = 30
 
     def __init__(self, msg):
+
+        be_picky = [
+                        (lambda y: y > 0, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much!'), \
+                        (lambda y: y, lambda m: m.defects,' I don\'t eat this!')
+                    ]
+
+        for whim, f, text in be_picky:
+            y=f(msg) # cause don't want to calculate it again in exception's text
+            if whim(y):
+                raise NaturesError(str(y)+text)
 
         self._msg = msg
 
@@ -133,7 +145,7 @@ class BeautifulBody(object):
         """
         :return: generator of tuples ( decoded line , mime type , lang ) for each text/mime part
         """
-        charset_map = {'x-sjis': 'shift_jis'} # cam meet this name for shift_jis => x-sjis
+        charset_map = {'x-sjis': 'shift_jis'} # can meet this name for shift_jis => x-sjis
         # partial support of asian encodings, just to decode in UTF without exceptions
         # and normilize with NFC form: one unicode ch per symbol
         langs_map = {
@@ -141,14 +153,13 @@ class BeautifulBody(object):
                         'french'    :  ['ISO_8859-[19]','Latin-?[19]','CP819', 'windows-1252'],
                         'jis'       :  ['shift_jis','ISO-2022-JP']
         }
-        print(list(iterators.typed_subpart_iterator(self._msg)))
+
         for p in iterators.typed_subpart_iterator(self._msg):
 
             decoded_line = p.get_payload(decode=True)
 
             logger.debug(decoded_line)
             if decoded_line is None or len(decoded_line.strip()) == 0:
-                print("hhh")
                 continue
 
             # determine charset:
@@ -186,9 +197,6 @@ class BeautifulBody(object):
             if l:
                 lang = ''.join(self._msg.get(''.join(l)).split('-')[:1])
 
-
-
-            # never returns empty line or None, dream-function!
             yield(decoded_line, p.get_content_type(), lang)
 
     def _get_sentences_(self):
