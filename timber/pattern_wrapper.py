@@ -147,7 +147,6 @@ class BasePattern(BeautifulBody):
                     check_values = list()
                     if pairs:
                         check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
-                        print(check_values)
                         html_score += score*len(check_values)
 
 

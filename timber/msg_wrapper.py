@@ -48,7 +48,7 @@ class BeautifulBody(object):
 
             be_picky = [
                         (lambda y: y > self._MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
-                        (lambda y: y, lambda m: m.defects,' I don\'t eat this!')
+                        (lambda y: y, lambda m: m.defects,' I don\'t eat such emails, !')
                     ]
 
             for whim, f, text in be_picky:
