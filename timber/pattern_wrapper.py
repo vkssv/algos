@@ -97,7 +97,6 @@ class BasePattern(BeautifulBody):
         print("tags_map: "+str(tags_map))
         if mime_parts_list is None:
             mime_parts_list = self._get_text_mime_part_()
-            logger.debug('TEXT_PARTS: '+str(self._get_text_mime_part_()))
 
         while(True):
             try:
@@ -105,7 +104,7 @@ class BasePattern(BeautifulBody):
             except StopIteration as err:
                 break
 
-            print(">>>>"+str(mime_text_part))
+            print(type(mime_text_part))
             print(">>>>"+str(content_type))
             print(">>>"+str(lang))
             if 'html' in content_type:
@@ -121,7 +120,6 @@ class BasePattern(BeautifulBody):
                 # todo: investigate the order of elems within included generators
                 html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(soup.body.table.prettify(), re.M)))
 
-                soup_attrs_list = (ch for ch in (p.get_content_charset(), p.get_charset()) if ch)
                 soup_attrs_list = filter(lambda t: t, [soup.body.table.find_all(tag) for tag in tags_map.iterkeys()])
                 logger.debug('soup_attrs_list: '+str(soup_attrs_list))
 
@@ -137,6 +135,7 @@ class BasePattern(BeautifulBody):
 
                 soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
                 print(soup_attrs_list)
+                print('type of parsing line in reg_obj: '+type(tags_map.get(tag)))
                 compiled_regexp_list = self._get_regexp_(tags_map.get(tag), re.U)
 
                 pairs = list()
@@ -144,6 +143,7 @@ class BasePattern(BeautifulBody):
                     print(key_attr)
                     pairs = filter(lambda pair: key_attr.match(pair.name, re.I), soup_attrs_list)
                     print(pairs)
+
                     check_values = list()
                     if pairs:
                         check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)

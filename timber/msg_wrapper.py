@@ -26,7 +26,7 @@ formatter = logging.Formatter('%(filename)s: %(message)s')
 #logger.addHandler(ch)
 
 try:
-    from bs4 import BeautifulSoup
+    from bs4 import BeautifulSoup, UnicodeDammit
 except ImportError:
     print('Can\'t find bs4 module, probably, it isn\'t installed.')
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
@@ -39,20 +39,22 @@ class BeautifulBody(object):
     """
     _LANG = 'english'
     _LANGS_LIST = ('english', 'french', 'russian')
-    _CHARSET = 'ascii'
+    _CHARSET = 'utf-8'
     _MAX_NEST_LEVEL = 30
 
     def __init__(self, msg):
 
-        be_picky = [
-                        (lambda y: y > 0, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much!'), \
+        if msg.is_multipart():
+
+            be_picky = [
+                        (lambda y: y > self._MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
                         (lambda y: y, lambda m: m.defects,' I don\'t eat this!')
                     ]
 
-        for whim, f, text in be_picky:
-            y=f(msg) # cause don't want to calculate it again in exception's text
-            if whim(y):
-                raise NaturesError(str(y)+text)
+            for whim, f, text in be_picky:
+                y=f(msg) # cause don't want to calculate it again in exception's text
+                if whim(y):
+                    raise NaturesError(str(y)+text)
 
         self._msg = msg
 
@@ -145,52 +147,31 @@ class BeautifulBody(object):
         """
         :return: generator of tuples ( decoded line , mime type , lang ) for each text/mime part
         """
-        charset_map = {'x-sjis': 'shift_jis'} # can meet this name for shift_jis => x-sjis
+
         # partial support of asian encodings, just to decode in UTF without exceptions
         # and normilize with NFC form: one unicode ch per symbol
         langs_map = {
                         'russian'   :  ['koi8','windows-1251','cp866', 'ISO_8859-5','Latin-?5'],
                         'french'    :  ['ISO_8859-[19]','Latin-?[19]','CP819', 'windows-1252'],
-                        'jis'       :  ['shift_jis','ISO-2022-JP']
+                        'jis'       :  ['shift_jis','ISO-2022-JP','big5']
         }
 
         for p in iterators.typed_subpart_iterator(self._msg):
-
-            decoded_line = p.get_payload(decode=True)
+            decoded_line = None
+            if p.get('Content-Transfer-Encoding'):
+                dammit = UnicodeDammit(p.get_payload(decode='True'), is_html=False)
+                decoded_line = dammit.unicode_markup
 
             logger.debug(decoded_line)
             if decoded_line is None or len(decoded_line.strip()) == 0:
                 continue
 
-            # determine charset:
-            charset = self._CHARSET
-
-            for ch in tuple(ch for ch in (p.get_content_charset(), p.get_charset()) if ch):
-                if (ch != self._CHARSET) and (ch in charset_map.keys()):
-                    charset =  charset_map.get(ch)
-                    break
-                else:
-                    charset = ch
-
-            logger.debug("charset: "+str(charset))
-
-            # Python2.7 => try to decode all lines from their particular charsets to unicode,
-            # add U+FFFD, 'REPLACEMENT CHARACTER' if faces with UnicodeDecodeError
-            decoded_line = decoded_line.decode(charset, 'replace')
-            print(type(decoded_line))
-            print('after: '+str(decoded_line))
-            if len(decoded_line.strip()) == 0:
-                continue
-
-            decoded_line = unicodedata.normalize('NFC', decoded_line)
-            print('hhhhh'+str(decoded_line))
-            # determine lang:
-            # from charset attribute in Content-Type
             lang = self._LANG
-            for l in langs_map.iterkeys():
-                if filter(lambda ch: re.match(r''+ch, charset, re.I), langs_map.get(l)):
-                    lang = l
-                    yield(decoded_line, p.get_content_type(), lang)
+            if dammit.original_encoding:
+                for l in langs_map.iterkeys():
+                    if filter(lambda ch: re.match(r''+ch, dammit.original_encoding, re.I), langs_map.get(l)):
+                        lang = l
+                        yield(decoded_line, p.get_content_type(), lang)
 
             # from r'(Content|Accept)-Language' headers
             l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0),self._msg.items()))[-1:]
@@ -247,7 +228,7 @@ class BeautifulBody(object):
                 logger.debug('lang: '+lang)
 
             if lang in self._LANGS_LIST:
-                #todo: create stopwords list for jpn ,
+                #todo: create stopwords list for jis ,
                 tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
                 logger.debug('before stem: '+str(tokens))
                 tokens = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
