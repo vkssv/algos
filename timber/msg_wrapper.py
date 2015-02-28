@@ -145,6 +145,7 @@ class BeautifulBody(object):
 
     def  _get_text_mime_part_(self):
         """
+        generator of tuples with decoded text/mime part's line and metainfo
         :return: generator of tuples ( decoded line , mime type , lang ) for each text/mime part
         """
 
@@ -162,7 +163,7 @@ class BeautifulBody(object):
                 dammit = UnicodeDammit(p.get_payload(decode='True'), is_html=False)
                 decoded_line = dammit.unicode_markup
 
-            logger.debug(decoded_line)
+            #logger.debug(decoded_line)
             if decoded_line is None or len(decoded_line.strip()) == 0:
                 continue
 
@@ -182,11 +183,12 @@ class BeautifulBody(object):
 
     def _get_sentences_(self):
         """
-        :return: sentences generator: tuple of sentences for each text/mime part
+        sentences generator
+        :return: tuple of sentences for each text/mime part
         """
         tokenizer = PunktSentenceTokenizer()
         for raw_line, mime_type, lang in tuple(self._get_text_mime_part_()):
-            print(raw_line, mime_type, lang)
+            #print(raw_line, mime_type, lang)
             if 'html' in mime_type:
                 soup = BeautifulSoup(raw_line)
                 if not soup.body:
@@ -194,9 +196,9 @@ class BeautifulBody(object):
                 # cause exactly sentences are needed, soup.body.strings returns lines+0d0a
                 lines = tuple(soup.body.strings)
                 raw_line = ''.join(lines)
-                logger.debug(raw_line)
-            print(raw_line)
-            print(tokenizer.tokenize(raw_line))
+                #logger.debug(raw_line)
+            #print(raw_line)
+            #print(tokenizer.tokenize(raw_line))
             try:
                 sents = tuple(tokenizer.tokenize(raw_line))
             except Exception as err:
@@ -206,7 +208,8 @@ class BeautifulBody(object):
 
     def _get_stemmed_tokens_(self):
         """
-        :return: generator of stemmed tokens for each text/mime part
+        tokens generator
+        :return: stemmed tokens tuple (keeps token's order) for each text/mime part
         """
         tokenizer = WordPunctTokenizer()
         #punct_extractor = RegexpTokenizer("[\w']+", gaps=True)
@@ -215,24 +218,24 @@ class BeautifulBody(object):
         for pt in tuple(self._get_sentences_()):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add,tokens)
-            logger.debug("tokens: "+str(tokens))
+            #logger.debug("tokens: "+str(tokens))
             if lang == self._LANG:
                 # check that it's really english
                 tokens_set = set(tokens)
                 lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
-                logger.debug(lang_ratios)
+                #logger.debug(lang_ratios)
                 l, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[0]
                 if ratio:
                     lang = l
 
-                logger.debug('lang: '+lang)
+                #logger.debug('lang: '+lang)
 
             if lang in self._LANGS_LIST:
                 #todo: create stopwords list for jis ,
                 tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
-                logger.debug('before stem: '+str(tokens))
+                #logger.debug('before stem: '+str(tokens))
                 tokens = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
-                logger.debug("tokens list: "+str(tokens))
+                #logger.debug("tokens list: "+str(tokens))
 
             yield tokens
 

@@ -311,7 +311,8 @@ class InfoPattern(BasePattern):
         regexp_list = [
                         ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring|look|blog|spot)',
                         ur'(news|letter|discount|sale|info|unsubscribe|bonus|ads|market)',
-                        ur'((social)?media|partage|share|actu|publicité|télécharger|download)'
+                        ur'((social)?media|partage|share|actu|publicité|télécharger|download)',
+                        ur'(RECOMMENDA)'
         ]
 
         tags_map = {
@@ -322,7 +323,7 @@ class InfoPattern(BasePattern):
                         },
                         'span'  :{
                                     'style' : 'color\s?:\s?(\w{3,10}|#[a-z0-9]{3,6})',
-                                    'class' : '\[\'.*\'\]'
+                                    'class' : '(\[\'.*\'\]|recommenda.*)'
                         }
         }
 
