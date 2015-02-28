@@ -39,20 +39,20 @@ class NetsPattern(BasePattern):
                             'Delivered-To', 'Authentication-Results', 'DKIM-Signature','Content-Type'
                             ]
 
-        vector_dict.update(common.get_all_heads_crc(self.msg.items(), excluded_heads))
+        vector_dict.update(common.get_all_heads_crc(self._msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
-        vector_dict ["traces_num"] = self.msg.keys().count('Received')
+        vector_dict ["traces_num"] = self._msg.keys().count('Received')
         logger.debug('\t----->'+str(vector_dict))
 
 
         # 2. "To:", "SMTP RCPT TO:" Headers
         logger.debug('>>> 2. DESTINATOR CHECKS:')
-        vector_dict['to'] = common.basic_rcpts_checker(score ,self.msg.get_all('Received'), self.msg.get_all('To'))
+        vector_dict['to'] = common.basic_rcpts_checker(score ,self._msg.get_all('Received'), self._msg.get_all('To'))
 
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern.get_rcvds(self, RCVDS_NUM)])
+        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern._get_rcvds_(self, RCVDS_NUM)])
         logger.debug(rcvd_vect)
         vector_dict.update(common.get_trace_crc(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
@@ -61,7 +61,7 @@ class NetsPattern(BasePattern):
         # 3. DMARC checks
         logger.debug('>>> 3. SPF/DKIM_CHECKS:')
 
-        dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
+        dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self._msg.items(), score)
         vector_dict.update(dmarc_dict_checks)
 
         # take the name from DKIM heads, it's very expensive for spammers to sign their bulk
@@ -85,7 +85,7 @@ class NetsPattern(BasePattern):
         heads_pattern = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|Auto-Response-Suppress)$'
         known_senders = [r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow']
 
-        heads_score, known_mailer_flag = common.basic_headers_cheker(heads_pattern, known_senders, self.msg.items(), score)
+        heads_score, known_mailer_flag = common.basic_headers_cheker(heads_pattern, known_senders, self._msg.items(), score)
 
         vector_dict['emarket_heads_score'] = heads_score
         vector_dict['known_sender'] = known_mailer_flag
@@ -96,10 +96,10 @@ class NetsPattern(BasePattern):
         features = ('style', 'score', 'encoding', 'checksum')
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
-        if self.msg.get('Subject'):
+        if self._msg.get('Subject'):
 
             total_score = BasePattern.INIT_SCORE
-            unicode_subj, norm_words_list, encodings = common.get_subject(self.msg.get("Subject"))
+            unicode_subj, norm_words_list, encodings = common.get_subject(self._msg.get("Subject"))
 
             subject_rule = [
                                 # dingbats
@@ -146,8 +146,8 @@ class NetsPattern(BasePattern):
         vector_dict['from']=0
         logger.debug('\t----->'+str(vector_dict))
 
-        if self.msg.get('From'):
-            from_values = common.get_addr_values(self.msg.get('From'))[0]
+        if self._msg.get('From'):
+            from_values = common.get_addr_values(self._msg.get('From'))[0]
 
             if from_values:
                 vector_dict['from'] = binascii.crc32(reduce(add,from_values))
@@ -161,14 +161,14 @@ class NetsPattern(BasePattern):
 
         logger.debug('\t----->'+str(list_features_dict))
 
-        if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self.msg.keys()):
+        if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self._msg.keys()):
 
-            list_features_dict['basic_checks'] = common.basic_lists_checker(self.msg.items(), rcvd_vect, score)
+            list_features_dict['basic_checks'] = common.basic_lists_checker(self._msg.items(), rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
 
         # in general nets are very personal, so check Delivered-To may be a feature
-        keys = tuple(filter(lambda k: self.msg.get(k), ['Delivered-To','To']))
-        addr_dict = dict([(k, (common.get_addr_values(self.msg.get(k))[1])[0]) for k in keys])
+        keys = tuple(filter(lambda k: self._msg.get(k), ['Delivered-To','To']))
+        addr_dict = dict([(k, (common.get_addr_values(self._msg.get(k))[1])[0]) for k in keys])
         logger.debug('>>>>>'+str(addr_dict))
         if addr_dict.get('Delivered-To') and addr_dict.get('Delivered-To') != addr_dict.get('To'):
             list_features_dict['delivered'] = 1
@@ -183,7 +183,7 @@ class NetsPattern(BasePattern):
         mime_features = ('mime_score', 'checksum', 'att_score', 'att_count', 'nest_level')
         mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
 
-        if self.msg.is_multipart():
+        if self._msg.is_multipart():
             mime_dict['mime_score'] = score
 
             mime_skeleton = BasePattern._get_mime_struct_(self)
@@ -293,13 +293,10 @@ class NetsPattern(BasePattern):
                         }
         }
 
-        features = ('html_score', 'text_score', 'table_checksum')
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list, tags_map)))
-        features_dict['text_score'] += self.get_text_parts_metrics(score, regexp_list)
-        vector_dict.update(features_dict)
-
-        vector_dict['body_compres_ratio'] = self.get_text_compress_ratio()
-
+        vector_dict.update(dict(zip(('html_score','html_checksum'), self.get_html_parts_metrics(score, tags_map))))
+        vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
+        vector_dict['avg_ent'] = self.get_text_parts_avg_entropy()
+        vector_dict['mime_compres_ratio'] = self.get_text_compress_ratio()
 
         return vector_dict
 

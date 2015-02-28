@@ -13,7 +13,7 @@ import sys, os, logging, re, email, argparse, stat, tempfile, math
 from email.parser import Parser
 from collections import defaultdict, OrderedDict
 
-from pattern_wrapper import MetaPattern
+from franks_factory import MetaFrankenstein
 
 from sklearn.ensemble import RandomForestClassifier
 
@@ -52,9 +52,9 @@ def vectorize(doc_path, label, score):
 
     try:
 
-        checks_set = MetaPattern.New(msg, label)
+        Frankenstein = MetaFrankenstein.New(msg, label)
         logger.debug('\n\n\t CHECK_' + label.upper()+'\n')
-        vect_dict.update(checks_set.run(score))
+        vect_dict.update(Frankenstein.run(score))
 
     except Exception as details:
         logger.error(str(details))

@@ -41,25 +41,25 @@ class SpamPattern(BasePattern):
                             'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
                             ]
-        logger.debug(str(self.msg.items()))
-        vector_dict.update(common.get_all_heads_crc(self.msg.items(), excluded_heads))
+        logger.debug(str(self._msg.items()))
+        vector_dict.update(common.get_all_heads_crc(self._msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
-        vector_dict ["traces_num"] = self.msg.keys().count('Received')
+        vector_dict ["traces_num"] = self._msg.keys().count('Received')
         logger.debug('\t----->'+str(vector_dict))
 
         # basic parsing and dummy checks with regexps (takes only first n_rcvds headers)
 
 
-        vector_dict ["trace_rule"] = INIT_SCORE
+        vector_dict ["trace_rule"] = self.INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
         rcvd_rules = [
                         r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
                         r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch)'
         ]
 
-        rcvds = self.get_rcvds(RCVDS_NUM)
+        rcvds = self._get_rcvds_(self.RCVDS_NUM)
         print('TYPE:'+str(type(rcvds)))
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
         for rule in rcvd_rules:
@@ -82,7 +82,7 @@ class SpamPattern(BasePattern):
         vector_dict ['to'] = BasePattern.INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
 
-        to_values, to_addrs = common.get_addr_values(self.msg.get('To'))
+        to_values, to_addrs = common.get_addr_values(self._msg.get('To'))
         if to_values and filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), to_values):
             vector_dict['to'] += score
             logger.debug('\t----->'+str(vector_dict))
@@ -119,10 +119,10 @@ class SpamPattern(BasePattern):
         features = ('len','style','score','checksum','encoding')
         features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
-        if self.msg.get("Subject"):
+        if self._msg.get("Subject"):
 
             total_score = INIT_SCORE
-            unicode_subj, norm_words_list, encodings = common.get_subject(self.msg.get("Subject"), MIN_TOKEN_LEN)
+            unicode_subj, norm_words_list, encodings = common.get_subject(self._msg.get("Subject"), MIN_TOKEN_LEN)
             # check the length of subj in chars, unicode str was normilised by Unicode NFC rule, i.e.
             # use a single code point if possible, spams still use very short subjects like ">>:\r\n", or
             # very long
@@ -141,7 +141,7 @@ class SpamPattern(BasePattern):
                 if re.match(ur''+k+'\s*:', unicode_subj, re.I):
                     heads_list  = prefix_heads_map.get(k)
 
-                    for h_name in self.msg.keys():
+                    for h_name in self._msg.keys():
                         found_heads = filter(lambda reg: re.match(reg,h_name,re.I),h_name)
                         total_score += (len(prefix_heads_map.get(k)) - len(found_heads))*score
 
@@ -189,18 +189,18 @@ class SpamPattern(BasePattern):
         list_features_dict = dict(map(lambda x,y: (x,y), list_features, [BasePattern.INIT_SCORE]*len(list_features)))
         logger.debug('\t----->'+str(list_features_dict))
 
-        if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.msg.keys()):
+        if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
             # this unique spam author respects RFC 2369, his creation deservs more attentive check
-            list_features_dict['list'] = common.basic_lists_checker(self.msg.items(), rcvd_vect, score)
+            list_features_dict['list'] = common.basic_lists_checker(self._msg.items(), rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
 
-        elif (self.msg.keys().count('Sender') and self.msg.keys().count('From')):
+        elif (self._msg.keys().count('Sender') and self._msg.keys().count('From')):
             # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
             # MUA didn't generate Sender field cause of redundancy
             list_features_dict ['sender'] = score
             logger.debug('\t----->'+str(list_features_dict))
 
-        if self.msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self.msg.preamble,re.I):
+        if self._msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self._msg.preamble,re.I):
 
             list_features_dict ['preamble'] = score
             logger.debug('\t----->'+str(list_features_dict))
@@ -208,7 +208,7 @@ class SpamPattern(BasePattern):
         vector_dict.update(list_features_dict)
         logger.debug('\t----->'+str(list_features_dict))
 
-        if (self.msg.keys()).count('Disposition-Notification-To'):
+        if (self._msg.keys()).count('Disposition-Notification-To'):
             vector_dict ['disp-notification'] = score
             logger.debug('\t----->'+str(vector_dict))
 
@@ -216,7 +216,7 @@ class SpamPattern(BasePattern):
         # that's very typically for unconditional spam
         logger.debug('>>> 5. SPF/DKIM_CHECKS:')
 
-        dmarc_dict, dkim_domain = common.basic_dmarc_checker(self.msg.items(), score)
+        dmarc_dict, dkim_domain = common.basic_dmarc_checker(self._msg.items(), score)
         vector_dict.update(dmarc_dict)
 
 
@@ -226,8 +226,8 @@ class SpamPattern(BasePattern):
         vector_dict['from_checksum']=0
         logger.debug('\t----->'+str(vector_dict))
 
-        if self.msg.get('From'):
-            from_values = common.get_addr_values(self.msg.get('From'))[0]
+        if self._msg.get('From'):
+            from_values = common.get_addr_values(self._msg.get('From'))[0]
 
             if from_values:
                 vector_dict['from_checksum'] = binascii.crc32(reduce(add,from_values[:1]))
@@ -238,12 +238,12 @@ class SpamPattern(BasePattern):
         logger.debug('>>> 7. MIME_CHECKS:')
 
         mime_features = ('mime_score', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score')
-        mime_dict = dict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
+        mime_dict = dict(zip(mime_features, [INIT_SCORE]*len(mime_features)))
 
-        if self.msg.get('MIME-Version') and not self.msg.is_multipart():
+        if self._msg.get('MIME-Version') and not self._msg.is_multipart():
             mime_dict['mime_score'] = score
 
-        elif self.msg.is_multipart():
+        elif self._msg.is_multipart():
 
             attach_regs = [
                                 r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
@@ -307,7 +307,7 @@ class SpamPattern(BasePattern):
             ]
 
             regs_for_txt_pt = [
-                                ur'(click|here|link|login|update|confirm|legilize|now|buy|online)+',
+                                ur'(click|here|link|login|update|confirm|legilize|now|buy|online|movie|s0x(room|boat)?)+',
                                 ur'(Free|Shipping|Options|Pills|Every?|Order|Best|Deal|Today|Now|Contact|Pay|go)+',
                                 ur'(Ccылк|Курс|Цен|Посмотреть|Каталог|Здесь|Сюда|Регистрация|бесплатное|участие|на\s+сайт|подробн)',
                                 ur'(горяч|скидк|отписаться|отказаться)',
@@ -400,16 +400,12 @@ class SpamPattern(BasePattern):
                         }
         }
 
-
-        features = ('html_score', 'text_score', 'table_checksum')
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list, tags_map)))
-        features_dict['text_score'] += self.get_text_parts_metrics(score, regexp_list)
-
-        vector_dict.update(features_dict)
-
-        vector_dict['body_avg_entropy'] = self.get_text_parts_avg_entropy()
-        vector_dict['compress_ratio'] =
-
+        # todo: don't inheritate SpamPattern from BasePattern,
+        # just ask in BasePattern rules and regexes from this one, same from all others
+        vector_dict.update(dict(zip(('html_score','html_checksum'), self.get_html_parts_metrics(score, tags_map))))
+        vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
+        vector_dict['avg_ent'] = self.get_text_parts_avg_entropy()
+        vector_dict['mime_compres_ratio'] = self.get_text_compress_ratio()
 
         return vector_dict
 

@@ -41,10 +41,10 @@ class HamPattern(BasePattern):
         features = ('len','style','score')
         features_dict = OrderedDict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
 
-        if self.msg.get('Subject'):
+        if self._msg.get('Subject'):
 
             total_score = INIT_SCORE
-            unicode_subj, norm_words_list, encodings = common.get_subject(self.msg.get("Subject"), MIN_TOKEN_LEN)
+            unicode_subj, norm_words_list, encodings = common.get_subject(self._msg.get("Subject"), MIN_TOKEN_LEN)
 
             features_dict['subj_len'] = len(unicode_subj)
             #if self.MIN_SUBJ_LEN < len(unicode_subj) < self.MAX_SUBJ_LEN:
@@ -90,7 +90,7 @@ class HamPattern(BasePattern):
                                 ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
             ]
 
-            rcvds = BasePattern.get_rcvds(self, self.RCVDS_NUM)
+            rcvds = BasePattern._get_rcvds_(self, self.RCVDS_NUM)
             rcvd_vect = tuple([r.partition('by')[0] for r in rcvds])
 
             d, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
@@ -132,16 +132,11 @@ class HamPattern(BasePattern):
                         ur'(баланс|детали|выписк|прикреплен|(набор\s)?.*услуг).*'
         ]
 
+        vector_dict.update(dict(zip(('html_score','html_checksum'), self.get_html_parts_metrics(score, tags_map))))
+        vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
+        vector_dict['avg_ent'] = self.get_text_parts_avg_entropy()
+        vector_dict['mime_compres_ratio'] = self.get_text_compress_ratio()
 
-        features = ('html_score', 'text_score', 'table_checksum')
-
-        features_dict = Counter(zip(features, self.get_html_parts_metrics(score, regexp_list, tags_map)))
-
-        features_dict['text_score'] += self.get_text_parts_metrics(score, regexp_list)
-
-        vector_dict.update(features_dict)
-
-        #vector_dict['entropy'] = BasePattern.get_body_parts_entropy(self)
         return vector_dict
 
 
