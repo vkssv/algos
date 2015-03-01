@@ -8,21 +8,17 @@ from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
 
-INIT_SCORE = self.INIT_SCORE
-
 #formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
 class NetsPattern(BasePattern):
     """
-    Pattern class for build vectors, based on typical features of the
-    notifications from SNs ( call them "nets" ):
+    Pattern class for build vectors, based on typical
+    SN-notifications features ( call them "nets" ):
 
         -- if email looks like notification from SN, it's vector will contain
-            values, which are mostly don't equal to zero ;
-        -- vector will contain almoust only zeros, if email doesn't
-            have these sets of features ;
+            values, which are mostly don't equal to zeros ;
     """
     RCVDS_NUM = 3
 
@@ -85,7 +81,7 @@ class NetsPattern(BasePattern):
         heads_pattern = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|Auto-Response-Suppress)$'
         known_senders = [r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow']
 
-        heads_score, known_mailer_flag = self.basic_headers_cheker(heads_pattern, known_senders, self._msg.items(), score)
+        heads_score, known_mailer_flag = self.get_headers_metrics(heads_pattern, known_senders, self._msg.items(), score)
 
         vector_dict['emarket_heads_score'] = heads_score
         vector_dict['known_sender'] = known_mailer_flag
@@ -257,7 +253,7 @@ class NetsPattern(BasePattern):
             length_list = [ len(url) for url in [ obj.geturl() for obj in urls_list ]]
             urls_dict['avg_length'] = math.ceil((float(sum(length_list)))/float(len(urls_list)))
 
-            obj_list = [url.__getattribute__('path') for url in urls_list]
+            obj_list = [ url.__getattribute__('path') for url in urls_list ]
             if math.ceil(float(len(set(obj_list)))/float(len(urls_list))) < 1.0:
                 urls_dict['path_sim'] = score
 
@@ -295,8 +291,6 @@ class NetsPattern(BasePattern):
 
         vector_dict.update(dict(zip(('html_score','html_checksum'), self.get_html_parts_metrics(score, tags_map))))
         vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
-        vector_dict['avg_ent'] = self.get_text_parts_avg_entropy()
-        vector_dict['mime_compres_ratio'] = self.get_text_compress_ratio()
 
         return vector_dict
 

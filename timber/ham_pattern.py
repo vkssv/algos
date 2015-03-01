@@ -7,9 +7,6 @@ from collections import OrderedDict, Counter
 
 from pattern_wrapper import BasePattern
 
-INIT_SCORE = self.INIT_SCORE
-
-
 #formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -17,14 +14,11 @@ logger.setLevel(logging.DEBUG)
 
 class HamPattern(BasePattern):
     """
-    Pattern class for build vectors, based on features,
-    which are more suitable for transactional emails,
-    i.e. correspondance from banks, e-shops, bills, etc:
-
-        -- if the email looks like ham, it's vector will contain
-            values, which are mostly don't equal to zero ;
-        -- vector will contain mostly zeros, if the email doesn't
-            have these sets of features ;
+    Pattern class for build vectors, based on features
+    suitable for transactional emails : msgs from banks,
+    e-shops, bills, etc:
+    -- if email looks like ham, it's vector will contain
+        values, mostly don't equal to zeros ;
     """
 
     #MAX_SUBJ_LEN = 5
@@ -134,8 +128,6 @@ class HamPattern(BasePattern):
 
         vector_dict.update(dict(zip(('html_score','html_checksum'), self.get_html_parts_metrics(score, tags_map))))
         vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
-        vector_dict['avg_ent'] = self.get_text_parts_avg_entropy()
-        vector_dict['mime_compres_ratio'] = self.get_text_compress_ratio()
 
         return vector_dict
 

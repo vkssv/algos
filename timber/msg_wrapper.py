@@ -32,9 +32,28 @@ except ImportError:
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 
+class lazyproperty:
+    '''
+    decorator for once-computed methods, cause for test-emails
+    4 patterns will be created, all are inheritated from
+    one base class
+    '''
+
+    def __init__(self, func):
+        self.func = func
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return self
+        else:
+            setattr(instance, self.func.__name__, value)
+
+        return val
+
+
 class BeautifulBody(object):
     """
-    Base class for simple life with email.message objects,
+    Base class for happy life with email.message objects,
     some kind of BeautifulSoup objects from bs4.
     """
     _LANG = 'english'
@@ -58,8 +77,11 @@ class BeautifulBody(object):
 
         self._msg = msg
 
-
     def _get_lang_(self, tokens_list):
+        '''
+        :param tokens_list:
+        :return: 42
+        '''
         lang == self._LANG
 
         stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self._LANGS_LIST])
@@ -74,57 +96,22 @@ class BeautifulBody(object):
 
     def _get_rcvds_(self, rcvds_num=0):
         """
-        :param rcvds_num:
+        :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
         :return: left parts of Received header's values, everything before ';'
         """
         # parse all RCVD headers by default if rcvds_num wasn't defined
-        self.parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received')])[ -1*rcvds_num : ]
+        parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received')])[ -1*rcvds_num : ]
 
-        return self.parsed_rcvds
+        return parsed_rcvds
 
-    def _get_trace_crc_(rcvds_vect):
+    def _get_addr_values_(self, header_value=None):
+        '''
+        :param header_value:
+        :return:
+        '''
+        if head_value is None:
+            head_value = self._msg.get('To')
 
-        logger.debug('rcvds_vect:'+str(rcvds_vect))
-        traces_dict = {}
-
-        for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
-            logger.debug(rcvd_line)
-            trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
-            trace = trace.strip().lower()
-            trace = binascii.crc32(trace)
-
-            traces_dict['rcvd_'+str(n)] = trace
-
-        return traces_dict
-
-    # excluded_list=['Received', 'From', 'Date', 'X-.*']
-    # header_value_list = [(header1,value1),...(headerN, valueN)] = msg.items() - save the order of heads
-    def _get_all_heads_crc_(header_value_list, excluded_list = None):
-
-        vect = dict.fromkeys(['heads_crc','values_crc'])
-        logger.debug("header_value_list >>"+str(header_value_list))
-
-        # just to play with itemgetter ))
-        heads_vector = tuple(map(itemgetter(0), header_value_list))
-        heads_dict = dict(header_value_list)
-
-        if excluded_list:
-            for ex_head in excluded_list:
-                # can use match - no new lines in r_name
-                heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
-
-        values_vector = tuple([heads_dict.get(k) for k in heads_vector])
-        #logger.debug('values_vector'+str(values_vector))
-        # save the last word
-        values_vector = tuple([value.split()[-1:] for value in values_vector[:]])
-        #logger.debug('values_vector --->'+str(values_vector))
-
-        vect['heads_crc'] = binascii.crc32(''.join(heads_vector))
-        vect['values_crc'] = binascii.crc32(''.join(reduce(add,values_vector)))
-
-        return (vect)
-
-    def _get_addr_values_(head_value=''):
         logger.debug('+++++>'+str(head_value))
         for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9-]{1,63}(?:\.[\w]{2,4})+',re.I)
 
@@ -151,13 +138,19 @@ class BeautifulBody(object):
         # names are raw encoded strings
         return(tuple(names),tuple(addrs))
 
-    def _get_smtp_domain_(rcvds):
-    # get sender domain from the first (by trace) RCVD-field, e.g. SMTP MAIL FROM: value
+    @lazyproperty
+    def _get_smtp_domain_(self):
+        '''
+        :return: sender's domain from the first Received-field
+        "...Ah, it is easy to deceive me!...
+            I long to be deceived myself!...A. Pushkin"
+        '''
 
         regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
         orig_domain = ''
 
-        l = filter(lambda value: regexp.search(value), rcvds)
+        l = filter(lambda value: regexp.search(value), self._get_rcvds_())
+        logger.debug(l) # check that regexp matched exactlu first
         if l:
             orig_domain = reduce(add,l)
             print('+++++++++++++++++++++++++++++++++++++++')
@@ -166,9 +159,9 @@ class BeautifulBody(object):
             orig_domain = orig_domain.strip('.').strip('@').strip('=').strip()
             print('ORIG_DOMAINS: '+str(orig_domain))
 
-        return(orig_domain)
+        return orig_domain
 
-
+    @lazyproperty
     def _get_decoded_subj_(self):
         '''
         don't use vector-form of calculations for quick transport-decoding
@@ -182,7 +175,7 @@ class BeautifulBody(object):
         parts_list = decode_header(self._msg.get('Subject'))
         logger.debug('parts >>>>>'+str(subj_parts))
         subj_line = u''
-        encodings_list = []
+        encodings_list = list()
 
         for pair in parts_list:
             dummit_obj = None
@@ -196,34 +189,19 @@ class BeautifulBody(object):
                 if dammit_obj is None:
                     continue
 
-            subj_line += dummit_obj.unicode_markup+u' '
+            subj_line += dummit_obj.unicode_markup + u' '
             encodings_list.append(dummit_obj.original_encoding)
 
-        subj_tokens = tuple(subj.split())
-        lang = self._get_lang_(subj_tokens)
+        tokens = tuple(subj_line.split())
+        lang = self._get_lang_(self._subj_tokens)
         if lang in self._LANGS_LIST:
-            subj_tokens = tuple(word for word in  subj_tokens if word not in stopwords.words(lang))
+            tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
             logger.debug('before stem: '+str(tokens))
-            subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in subj_tokens)
+            subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
 
         return (subj_line, subj_tokens, encodings_list)
 
-    def _get_mime_crc_(mime_skeleton_dict, excluded_args_list=['boundary=','charset=']):
-
-        checksum = 0
-        logger.debug('EXL:'+str(excluded_args_list))
-
-        items = mime_skeleton_dict.items()
-
-        for prefix in excluded_args_list:
-            items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in items]
-
-        if items:
-            items = reduce(add,items)
-            checksum = binascii.crc32(''.join([''.join(i) for i in items]))
-
-        return checksum
-
+    @lazyproperty
     def _get_mime_struct_(self):
         """
         :return: dict { mime_type  : [attribute : value] }
@@ -259,16 +237,21 @@ class BeautifulBody(object):
 
         return self._mime_parts_
 
+    @lazyproperty
     def _get_nest_level_(self):
+        '''
+        :return: MIME-nesting level
+        '''
 
         mime_parts = self._get_mime_struct_()
-        self.level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
+        level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
 
-        return self.level
+        return level
 
+    @lazyproperty
     def _get_url_list_(self):
 
-        self.url_list = list()
+        url_list = list()
 
         for line, content_type, lang in list(self._get_text_mime_part_()):
             # parse by lines
@@ -276,28 +259,28 @@ class BeautifulBody(object):
                 soup = BeautifulSoup(line)
                 if soup.a:
                     # TODO: create deeply parsing with cool bs4 methods
-                    self.url_list.extend([unicode(x) for x in soup.a])
+                    url_list.extend([unicode(x) for x in soup.a])
             else:
                 url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
-                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
+                url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
 
         #logger.debug("URL LIST:")
-        for i in self.url_list:
-            if self.url_list:
+        for i in url_list:
+            if url_list:
                 # todo: fix this shame (there is nothing more permanent, then some temporary peaces of shame in your simple code ()
-                self.url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(').strip('<').strip('>') for s in self.url_list ]
+                url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(').strip('<').strip('>') for s in self.url_list ]
 
-            parsed_urls = []
-            for y in self.url_list:
+            parsed_urls = list()
+            for y in url_list:
                 try:
                     parsed_urls.append(urlparse(y))
                 except Exception as err:
                     logger.error(str(err))
                     continue
 
-            self.url_list = parsed_urls
+            url_list = parsed_urls
 
-        return(self.url_list)
+        return url_list
 
     def  _get_text_mime_part_(self):
         """

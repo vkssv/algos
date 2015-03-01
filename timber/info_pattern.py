@@ -9,9 +9,6 @@ from collections import OrderedDict, Counter
 
 from pattern_wrapper import BasePattern
 
-INIT_SCORE = self.INIT_SCORE
-#NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
-
 # formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -19,13 +16,11 @@ logger.setLevel(logging.DEBUG)
 
 class InfoPattern(BasePattern):
     """
-    Pattern class for build vectors, based on typical features of the
-    advertising legal emails and news-letters ( call them "infos" ):
+    Pattern class for build vectors, based on typical newsletters
+    and ads-mails features :
 
         -- if email looks like news-letter, it's vector will contain
-            values, which are mostly don't equal to zero ;
-        -- vector will contain almoust only zeros, if email doesn't
-            have these sets of features ;
+            values, which are mostly don't equal to zeros ;
     """
     #MAX_SUBJ_LEN = 2
     #MIN_SUBJ_LEN = 7
@@ -330,8 +325,6 @@ class InfoPattern(BasePattern):
 
         vector_dict.update(dict(zip(('html_score','html_checksum'), self.get_html_parts_metrics(score, tags_map))))
         vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
-        vector_dict['avg_ent'] = self.get_text_parts_avg_entropy()
-        vector_dict['mime_compres_ratio'] = self.get_text_compress_ratio()
 
         return vector_dict
 

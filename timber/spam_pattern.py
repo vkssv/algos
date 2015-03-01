@@ -6,12 +6,7 @@ import os, sys, logging, re, binascii, math
 
 from operator import add
 from collections import OrderedDict, Counter, namedtuple
-
-
 from pattern_wrapper import BasePattern
-
-INIT_SCORE = self.INIT_SCORE
-#NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
 
 # formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
@@ -20,13 +15,10 @@ logger.setLevel(logging.DEBUG)
 class SpamPattern(BasePattern):
     """
     Pattern class for build vectors, based on typical spam's features:
-        -- if email looks like unconditional spam, it's vector will contain
-            different values, which are mostly don't equal to zero ;
-        -- vector will contain mostly zeros, if email isn't an unconditional spam ;
+    -- if email looks like unconditional spam, it's vector will contain
+        values, which are mostly don't equal to zeros ;
     """
 
-    #MAX_SUBJ_LEN = 5
-    #MIN_SUBJ_LEN = 70
     RCVDS_NUM = 2
 
     def run(self, score):
@@ -397,15 +389,13 @@ class SpamPattern(BasePattern):
                         }
         }
 
-        # todo: don't inheritate SpamPattern from BasePattern,
-        # just ask in BasePattern rules and regexes from this one, same from all others
-        vector_dict.update(dict(zip(('html_score','html_checksum'), self.get_html_parts_metrics(score, tags_map))))
+        # todo: ask about this acrh problem : repeate 2 lines in each class or
+        # call these functions with method_getter() in random_forest namespace + __get_atribute__()
+        # for args
+        vector_dict.update(dict(zip(('html_score', 'html_checksum'), self.get_html_parts_metrics(score, tags_map))))
         vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
-        vector_dict['avg_ent'] = self.get_text_parts_avg_entropy()
-        vector_dict['mime_compres_ratio'] = self.get_text_compress_ratio()
 
         return vector_dict
-
 
 if __name__ == "__main__":
 

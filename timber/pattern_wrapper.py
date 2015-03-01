@@ -23,14 +23,13 @@ except ImportError:
     print('Can\'t find bs4 module, probably, it isn\'t installed.')
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
-from msg_wrapper import BeautifulBody
-
+from msg_wrapper import BeautifulBody, lazyproperty
 
 class BasePattern(BeautifulBody):
     """
     Base parent class for created all other four pattern classes.
     Provides some basic checks and metrics for email's headers and bodies.
-    Keeps Frankenstain's DNAs.
+    Keeps Frankenstein's DNAs.
     """
 
     INIT_SCORE = 0
@@ -41,7 +40,7 @@ class BasePattern(BeautifulBody):
         '''
         :param regexp_list: list of scary regexes
         :param compilation_flag: re.U, re.M, etc
-        :return: list of compiled RE.objects, for check this trash faster and easier
+        :return: list of compiled RE.objects, check this trash faster and easier
         '''
         # todo: also make it as iterator
         compiled_list = []
@@ -57,44 +56,100 @@ class BasePattern(BeautifulBody):
 
         return compiled_list
 
-    def get_headers_metrics(head_pattern, known_mailers, header_value_list, score):
+    def get_trace_crc(self, rcvds_num=0):
+        '''
+        :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
+        :return: dict {'rcvd_N': CRC32 } from line, formed by parsed values,
+                 parser is interested only in servers IPs-literals, domains, etc
+        '''
+        rcvds_vect = self._get_rcvds_(rcvds_num)
+        logger.debug('rcvds_vect:'+str(rcvds_vect))
+        traces_dict = {}
 
-        typical_heads_score = INIT_SCORE
-        known_mailer_flag = INIT_SCORE
+        for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
+            logger.debug(rcvd_line)
+            trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
+            trace = trace.strip().lower()
+            trace = binascii.crc32(trace)
+
+            traces_dict['rcvd_'+str(n)] = trace
+
+        return traces_dict
+
+    def get_all_heads_crc(self, excluded_list = None):
+        '''
+        :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
+        :return: ( CRC32 from headers names, CRC32 from values - don't use )
+        '''
+
+        logger.debug(self._msg.items())
+
+        heads_vector = tuple(map(itemgetter(0), self._msg.items()))
+        heads_dict = dict(self._msg.items())
+
+        if excluded_list:
+            for ex_head in excluded_list:
+                # can use match - no new lines in r_name
+                heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
+
+        values_vector = tuple([heads_dict.get(k) for k in heads_vector])
+        # logger.debug('values_vector'+str(values_vector))
+        # save the last word
+        values_vector = tuple([value.split()[-1:] for value in values_vector[:]])
+        # logger.debug('values_vector --->'+str(values_vector))
+
+        heads_crc = binascii.crc32(''.join(heads_vector))
+        values_crc = binascii.crc32(''.join(reduce(add,values_vector)))
+
+        return (heads_crc, values_crc)
+
+    def get_headers_metrics(self, head_pattern, known_mailers, score):
+        '''
+        :param head_pattern: one more regexp list with SN-headers names (X-FACEBOOK-PRIORITY, etc)
+        :param known_mailers: X-Mailer: ZuckMail
+        :param score:
+        :return: ( penalizing score, Zuck-IsHere-Flag )
+        '''
+
+        typical_heads_score = self.INIT_SCORE
+        known_mailer_flag = self.INIT_SCORE
         header = namedtuple('header','name value')
 
         header_value_list = [header(*pair) for pair in header_value_list]
         headers_list = [i.name for i in header_value_list]
 
         emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), headers_list))
-        typical_heads_score += len(emarket_heads)*score
+        emarket_heads_score += len(emarket_heads)*score
 
         mailer_header = ''.join(filter(lambda h: re.match(r'^x-mailer$', h, re.I), headers_list))
 
-
-        if dict(header_value_list).get(mailer_header):
-            x_mailer =  dict(header_value_list).get(mailer_header)
+        if dict(self._msg_items()).get(mailer_header):
+            x_mailer =  dict(self._msg_items()).get(mailer_header)
             if filter(lambda reg: re.search(reg, x_mailer, re.I), known_mailers):
                 known_mailer_flag = score
 
-        return(typical_heads_score, known_mailer_flag)
+        return (emarket_heads_score, known_mailer_flag)
 
-    def get_dmarc_metrics(header_value_list, score, required_heads_list=[]):
+    def get_dmarc_metrics(self, score, required_heads_list=None):
+        '''
+        :param score:
+        :param required_heads_list: for those, who are searching smth special
+        :return: ( DMARC metrics dict, sender's domain from DKIM )
+        '''
 
-        if not required_heads_list:
-
+        if required_heads_list is None:
             required_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
 
-        dmarc_dict = dict(map(lambda x,y: (x,y),required_heads,[INIT_SCORE]*len(required_heads)))
+        dmarc_dict = dict(zip(required_heads,[self.INIT_SCORE]*len(required_heads)))
         logger.debug(str(dmarc_dict))
         dkim_domain = ''
-        heads_dict = dict(header_value_list)
+        heads_dict = dict(self._msg.items())
 
-        # according to RFC 7001, this header has to be included
+        # RFC 7001, this header has to be included
         if not (heads_dict.keys()).count('Authentication-Results'):
             return(dmarc_dict, dkim_domain)
 
-        total = []
+        total = list()
         for h in dmarc_dict.iterkeys():
             dkims = filter(lambda z: re.search(h, z), heads_dict.keys())
             total.extend(dkims)
@@ -126,14 +181,17 @@ class BasePattern(BeautifulBody):
 
         return(dmarc_dict, dkim_domain)
 
-    # TODO: add support the comparation of addrs vectors,
-    # so now in general in commercial infos only one rcpt in To field
-    # but in software email-discussions there are always many rcpts in To !
-    def get_rcpts_metrics(score, traces_values_list, to_values_list):
+    def get_rcpts_metrics(self, traces_values_list, to_values_list, score):
+        '''
+        :param score:
+        :param traces_values_list: rcpts addresses from Received:
+        :param to_values_list: values from To:, Cc:, Bcc:
+        :return: penilizing score for rcpts-headers values
+        '''
 
-        rcpt_score = INIT_SCORE
+        rcpt_score = self.INIT_SCORE
 
-        to_values, to_addrs = _get_addr_values_(to_values_list)
+        to_values, to_addrs = self._get_addr_values_(to_values_list)
         logger.debug(">>to_addrs: "+str(to_addrs))
         parsed_rcvds = [rcvd.partition(';')[0] for rcvd in traces_values_list]
         # todo: check - maybe not need list
@@ -147,24 +205,30 @@ class BasePattern(BeautifulBody):
         if to_addrs and smtp_to and smtp_to.group(0) == to_addrs[0]:
             rcpt_score+= score
 
-
         return(rcpt_score)
+        # TODO: add support the comparation of addrs vectors,
+        # so now in general in commercial infos only one rcpt in To field
+        # in software email-discussions there are always many rcpts in To !
 
-    def get_lists_metrics(header_value_list, rcvds, score):
+    def get_lists_metrics(self, score):
+        '''
+        :param score:
+        :return: penilizing score for List-* headers
+        '''
         # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
         # have to be checked with antiphishing service
-        unsubscribe_score = INIT_SCORE
+        unsubscribe_score = self.INIT_SCORE
         body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
 
         #logger.debug('\t=====>'+str(header_value_list))
-        heads_dict = dict(header_value_list)
+        heads_dict = dict(self._msg.items())
 
         # try to get sender domain from RCVD headers,
         # use header_value_list to obtain
         # exactly the first rcvd header,
         # order makes sense here
 
-        sender_domain = get_smtp_domain(rcvds)
+        sender_domain = self._get_smtp_domain_()
         if not sender_domain:
             body_from.search(heads_dict.get('From'))
             # try to get it from From: header value
@@ -192,33 +256,41 @@ class BasePattern(BeautifulBody):
             if not filter(lambda reg: re.search(reg, uri, re.M), patterns):
                 unsubscribe_score += score
 
-        return (unsubscribe_score)
+        return unsubscribe_score
 
-    # returns score
-    def get_subjects_metrics(line_in_unicode, subj_regs, score):
+    def get_subjects_metrics(self, subj_regs, score):
+        '''
+        :param subj_regs:
+        :param score:
+        :return: ( penalizing score for Subj, count of tokens in Upper case and in Title)
+        cause russian unconditional spam is more complicated than abusix, "made with love",
+        I would say
+        '''
 
         # check by regexp rules
-        total_score = INIT_SCORE
-        logger.debug('line: '+line_in_unicode)
-        line = re.sub(ur'[\\\|\/\*]', '', line_in_unicode)
-        logger.debug('line after: '+line_in_unicode)
-
+        total_score = self.INIT_SCORE
+        line, tokens, encodings = self._get_decoded_subj_()
+        #line = re.sub(ur'[\\\|\/\*]', '', line)
+        logger.debug('line : '+line)
 
         regs = self._get_regexp_(subj_regs, re.U)
         matched = filter(lambda r: r.search(line, re.I), regs)
-        logger.debug(str(matched))
+
         total_score += score*len(matched)
-
-        words = [w for w in line.split()]
-
-        upper_words_count = len(filter(lambda w: w.isupper(),words))
-        title_words_count = len(filter(lambda w: w.istitle(),words))
+        upper_words_count = len(filter(lambda w: w.isupper(),tokens))
+        title_words_count = len(filter(lambda w: w.istitle(),tokens))
 
         return (total_score, upper_words_count, title_words_count)
 
-    def get_url_metrics(parsed_links_list, rcvds, score, domain_regs, text_regs):
+    def get_url_metrics(self, domain_regs, text_regs, score):
+        '''
+        :param domain_regs: regexp list for URL's domains
+        :param text_regs: regexp list for text and tags around URL
+        :param score:
+        :return: dict with metrics, list of domains from URL's
+        '''
         # domain_regs, regs - lists of compiled RE objects
-        logger.debug('our list: '+str(parsed_links_list))
+        logger.debug('our list: '+str())
 
         basics = ['url_count', 'url_score', 'distinct_count', 'sender_count']
         basic_features = Counter(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
@@ -276,7 +348,27 @@ class BasePattern(BeautifulBody):
 
         return(dict(basic_features), netloc_list)
 
-    def get_text_parts_metrics(self, score, regs_list, sent_list=None):
+    def get_mime_crc(self, excluded_atrs_list=['boundary=','charset=']):
+        '''
+        :param excluded_atrs_list: values of uninteresting mime-attrs
+        :return: 42
+        '''
+
+        checksum = self.INIT_SCORE
+        logger.debug('EXL:'+str(excluded_atrs_list))
+
+        items = self._get_mime_struct_.items()
+
+        for prefix in excluded_args_list:
+            items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in items]
+
+        if items:
+            items = reduce(add,items)
+            checksum = binascii.crc32(''.join([''.join(i) for i in items]))
+
+        return checksum
+
+    def get_text_parts_metrics(self, regs_list, score, sent_list=None):
         '''
         Maps input regexp list to each sentence one by one
         :return: penalising score, gained by sentenses
@@ -302,7 +394,7 @@ class BasePattern(BeautifulBody):
 
         return text_score
 
-    def get_html_parts_metrics(self, score, tags_map, mime_parts_list=None):
+    def get_html_parts_metrics(self, tags_map, score, mime_parts_list=None):
         '''
         1. from the last text/html part creates HTML-body skeleton from end-tags,
             takes checksum from it, cause spammer's and info's/net's HTML patterns
@@ -376,12 +468,17 @@ class BasePattern(BeautifulBody):
         #logger.debug('HTML CLOSED:'+str(list(html_skeleton)))
         html_checksum = binascii.crc32(''.join(html_skeleton))
         print(html_checksum)
+
         return tuple(html_score, html_checksum)
 
+    @lazyproperty
     def get_text_parts_avg_entropy(self):
+        '''
+        for fun
+        :return:
+        '''
 
-        # just for fun
-        (total_h, n) = [self.INIT_SCORE]*2
+        (self.total_h, n) = [self.INIT_SCORE]*2
         # todo: make n-grams
         for tokens in self._get_stemmed_tokens_():
             n +=1
@@ -391,10 +488,15 @@ class BasePattern(BeautifulBody):
             total_h += -sum([p * math.log(p,2) for p in probs])
             total_h = total_h/n
 
-        return total_h
+        return self.total_h
 
+    @lazyproperty
     def get_text_compress_ratio(self):
-
+        '''
+        maybe
+        :return: compress ratio of stemmed text-strings from
+        all text/mime-parts
+        '''
         compressed_ratio = 0
         all_text_parts = list(self._get_stemmed_tokens_())
         for x in all_text_parts:
@@ -402,13 +504,18 @@ class BasePattern(BeautifulBody):
         if all_text_parts:
             all_text = ''.join(reduce(add,all_text_parts))
             print(type(all_text))
-            compressed_ratio = float(len(zlib.compress(all_text.encode(self._CHARSET))))/len(all_text)
-            return compressed_ratio
+            self.compressed_ratio = float(len(zlib.compress(all_text.encode(self._CHARSET))))/len(all_text)
 
+        return self.compressed_ratio
 
-    def get_attach_metrics(mime_parts_list, reg_list, score):
+    def get_attach_metrics(self, mime_parts_list, reg_list, score):
+        '''
+        :param mime_parts_list:
+        :param reg_list:
+        :param score:
+        :return: (attach_count, score, score, gained by inline attachements)
+        '''
 
-        # mime_parts_list - list with mime-parts dictionaries
         attach_score = INIT_SCORE
 
         mime_values_list = reduce(add, mime_parts_list)
