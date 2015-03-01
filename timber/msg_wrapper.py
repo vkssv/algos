@@ -58,6 +58,20 @@ class BeautifulBody(object):
 
         self._msg = msg
 
+
+    def _get_lang_(self, tokens_list):
+        lang == self._LANG
+
+        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self._LANGS_LIST])
+        tokens_set = set(tokens_list)
+        lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
+        logger.debug(lang_ratios)
+        l, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[0]
+        if ratio:
+            lang = l
+
+        return lang
+
     def _get_rcvds_(self, rcvds_num=0):
         """
         :param rcvds_num:
@@ -155,39 +169,44 @@ class BeautifulBody(object):
         return(orig_domain)
 
 
-    def _get_subject_(subj_line, token_len = MIN_TOKEN_LEN):
+    def _get_decoded_subj_(self):
+        '''
+        don't use vector-form of calculations for quick transport-decoding
+        and unicoding metamorphoses, cause it could be exceptions on each
+        step, so consequently cycling
+        :return:
+        '''
 
-        logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
-        subj_parts = decode_header(subj_line)
+        #logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
+        assert self._msg.get('Subject')
+        parts_list = decode_header(self._msg.get('Subject'))
         logger.debug('parts >>>>>'+str(subj_parts))
-        subj = u''
+        subj_line = u''
         encodings_list = []
-        for p in subj_parts:
-            logger.debug(p)
+
+        for pair in parts_list:
+            dummit_obj = None
             line, encoding = p
-            logger.debug('enc:'+str(encoding))
-            logger.debug(line)
-            if encoding:
-                line = line.decode(encoding,'replace')
-                encodings_list.append(encoding)
-            else:
-                try:
-                    line = line.decode('utf-8')
-                    encodings_list.append('utf-8')
-                except UnicodeDecodeError as err:
-                    logger.warning('Can\'t decode Subject\'s part: "'+line+'", it will be skipped.')
+            try:
+                dummit_obj = UnicodeDammit(line, [encoding], is_html=False)
+
+            except Exception as err:
+                #logger.debug(err)
+                #logger.debug('>>> Please, add this to Kunstkamera')
+                if dammit_obj is None:
                     continue
 
-            subj+=line
-        # force decode to utf
+            subj_line += dummit_obj.unicode_markup+u' '
+            encodings_list.append(dummit_obj.original_encoding)
 
-        words_list = tuple(subj.split())
-        # remove short tockens
-        words_list = filter(lambda s: len(s)>token_len, words_list[:])
-        if not encodings_list:
-            encodings_list = ['ascii']
+        subj_tokens = tuple(subj.split())
+        lang = self._get_lang_(subj_tokens)
+        if lang in self._LANGS_LIST:
+            subj_tokens = tuple(word for word in  subj_tokens if word not in stopwords.words(lang))
+            logger.debug('before stem: '+str(tokens))
+            subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in subj_tokens)
 
-        return(unicodedata.normalize('NFC',subj), words_list, encodings_list)
+        return (subj_line, subj_tokens, encodings_list)
 
     def _get_mime_crc_(mime_skeleton_dict, excluded_args_list=['boundary=','charset=']):
 
@@ -359,21 +378,15 @@ class BeautifulBody(object):
         """
         tokenizer = WordPunctTokenizer()
         #punct_extractor = RegexpTokenizer("[\w']+", gaps=True)
-        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self._LANGS_LIST])
 
+        # todo: while true ? amneisic ?
         for pt in tuple(self._get_sentences_()):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add,tokens)
             logger.debug("tokens: "+str(tokens))
             if lang == self._LANG:
                 # check that it's really english
-                tokens_set = set(tokens)
-                lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
-                logger.debug(lang_ratios)
-                l, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[0]
-                if ratio:
-                    lang = l
-
+                lang = self._get_lang_(tokens)
                 logger.debug('lang: '+lang)
 
             if lang in self._LANGS_LIST:

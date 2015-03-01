@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for hams. """
 
-import os, sys, logging, common, math
+import os, sys, logging, math
 from collections import OrderedDict, Counter
 
 from pattern_wrapper import BasePattern
 
-INIT_SCORE = BasePattern.INIT_SCORE
-MIN_TOKEN_LEN = BasePattern.MIN_TOKEN_LEN
+INIT_SCORE = self.INIT_SCORE
+
 
 #formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
@@ -44,7 +44,7 @@ class HamPattern(BasePattern):
         if self._msg.get('Subject'):
 
             total_score = INIT_SCORE
-            unicode_subj, norm_words_list, encodings = common.get_subject(self._msg.get("Subject"), MIN_TOKEN_LEN)
+            unicode_subj, norm_words_list, encodings = self._get_decoded_subj_(self._msg.get("Subject"), MIN_TOKEN_LEN)
 
             features_dict['subj_len'] = len(unicode_subj)
             #if self.MIN_SUBJ_LEN < len(unicode_subj) < self.MAX_SUBJ_LEN:
@@ -56,7 +56,7 @@ class HamPattern(BasePattern):
                                 ur'от\s+[\w\.-]{3,10}\s+(счет|отчет|выписка|электронный\s+(билет)?)'
             ]
 
-            subj_score, upper_words_num, title_words_num = common.basic_subjects_checker(unicode_subj, subject_rule, score)
+            subj_score, upper_words_num, title_words_num = self.get_subjects_metrics(unicode_subj, subject_rule, score)
 
             #features_dict['subj_style'] = title_words_num
 
@@ -68,7 +68,7 @@ class HamPattern(BasePattern):
         # 2. check urls
         logger.debug('>>> 2. URL_CHECKS:')
 
-        urls_list = BasePattern.get_url_list(self)
+        urls_list = self._get_url_list_(self)
         urls_features = ('avg_length', 'query_absence', 'url_score')
         urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
 
@@ -90,10 +90,10 @@ class HamPattern(BasePattern):
                                 ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
             ]
 
-            rcvds = BasePattern._get_rcvds_(self, self.RCVDS_NUM)
+            rcvds = self._get_rcvds_(self, self.RCVDS_NUM)
             rcvd_vect = tuple([r.partition('by')[0] for r in rcvds])
 
-            d, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
+            d, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, domain_regs, regs)
             urls_dict['url_score'] = d.get('url_score')
 
             queries_count = float(len(filter(lambda line: line, [ u.query for u in urls_list ])))

@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 """ Keeps and applies vectorising rules for nets. """
 
-import os, sys, logging, common, re, binascii, string, math
+import os, sys, logging, re, binascii, string, math
 
 from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
 
-INIT_SCORE = BasePattern.INIT_SCORE
+INIT_SCORE = self.INIT_SCORE
 
 #formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
@@ -39,7 +39,7 @@ class NetsPattern(BasePattern):
                             'Delivered-To', 'Authentication-Results', 'DKIM-Signature','Content-Type'
                             ]
 
-        vector_dict.update(common.get_all_heads_crc(self._msg.items(), excluded_heads))
+        vector_dict.update(self._get_all_heads_crc_(self._msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
@@ -49,19 +49,19 @@ class NetsPattern(BasePattern):
 
         # 2. "To:", "SMTP RCPT TO:" Headers
         logger.debug('>>> 2. DESTINATOR CHECKS:')
-        vector_dict['to'] = common.basic_rcpts_checker(score ,self._msg.get_all('Received'), self._msg.get_all('To'))
+        vector_dict['to'] = self.get_rcpts_metrics(score ,self._msg.get_all('Received'), self._msg.get_all('To'))
 
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern._get_rcvds_(self, RCVDS_NUM)])
+        rcvd_vect = tuple([r.partition('by')[0] for r in self._get_rcvds_(self, RCVDS_NUM)])
         logger.debug(rcvd_vect)
-        vector_dict.update(common.get_trace_crc(rcvd_vect))
+        vector_dict.update(self._get_trace_crc_(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
 
 
         # 3. DMARC checks
         logger.debug('>>> 3. SPF/DKIM_CHECKS:')
 
-        dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self._msg.items(), score)
+        dmarc_dict_checks, dkim_domain = self.get_dmarc_metrics(self._msg.items(), score)
         vector_dict.update(dmarc_dict_checks)
 
         # take the name from DKIM heads, it's very expensive for spammers to sign their bulk
@@ -85,7 +85,7 @@ class NetsPattern(BasePattern):
         heads_pattern = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|Auto-Response-Suppress)$'
         known_senders = [r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow']
 
-        heads_score, known_mailer_flag = common.basic_headers_cheker(heads_pattern, known_senders, self._msg.items(), score)
+        heads_score, known_mailer_flag = self.basic_headers_cheker(heads_pattern, known_senders, self._msg.items(), score)
 
         vector_dict['emarket_heads_score'] = heads_score
         vector_dict['known_sender'] = known_mailer_flag
@@ -98,8 +98,8 @@ class NetsPattern(BasePattern):
 
         if self._msg.get('Subject'):
 
-            total_score = BasePattern.INIT_SCORE
-            unicode_subj, norm_words_list, encodings = common.get_subject(self._msg.get("Subject"))
+            total_score = self.INIT_SCORE
+            unicode_subj, norm_words_list, encodings = self._get_decoded_subj_(self._msg.get("Subject"))
 
             subject_rule = [
                                 # dingbats
@@ -119,7 +119,7 @@ class NetsPattern(BasePattern):
                             ]
 
 
-            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_rule, score)
+            subj_score, upper_flag, title_flag = self.get_subject_metrics(unicode_subj, subject_rule, score)
             # almoust all words in subj string are Titled
             if (len(norm_words_list) - title_flag ) < 5:
                 features_dict['subj_style'] = 1
@@ -147,7 +147,7 @@ class NetsPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = common.get_addr_values(self._msg.get('From'))[0]
+            from_values = self._get_addr_values_(self._msg.get('From'))[0]
 
             if from_values:
                 vector_dict['from'] = binascii.crc32(reduce(add,from_values))
@@ -163,12 +163,12 @@ class NetsPattern(BasePattern):
 
         if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self._msg.keys()):
 
-            list_features_dict['basic_checks'] = common.basic_lists_checker(self._msg.items(), rcvd_vect, score)
+            list_features_dict['basic_checks'] = self.get_list_metrics(self._msg.items(), rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
 
         # in general nets are very personal, so check Delivered-To may be a feature
         keys = tuple(filter(lambda k: self._msg.get(k), ['Delivered-To','To']))
-        addr_dict = dict([(k, (common.get_addr_values(self._msg.get(k))[1])[0]) for k in keys])
+        addr_dict = dict([(k, (self._get_addr_values_(self._msg.get(k))[1])[0]) for k in keys])
         logger.debug('>>>>>'+str(addr_dict))
         if addr_dict.get('Delivered-To') and addr_dict.get('Delivered-To') != addr_dict.get('To'):
             list_features_dict['delivered'] = 1
@@ -186,7 +186,7 @@ class NetsPattern(BasePattern):
         if self._msg.is_multipart():
             mime_dict['mime_score'] = score
 
-            mime_skeleton = BasePattern._get_mime_struct_(self)
+            mime_skeleton = self._get_mime_struct_(self)
 
             # some particular rules for SN emails
             # presence of typical mime-parts for infos
@@ -207,13 +207,13 @@ class NetsPattern(BasePattern):
             ]
 
             logger.debug(str(mime_skeleton))
-            count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
+            count, att_score, in_score = self.get_attach_metrics(mime_skeleton.values(), attach_regs, score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
-            mime_dict['checksum'] = common.get_mime_crc(mime_skeleton)
+            mime_dict['checksum'] = self._get_mime_crc_(mime_skeleton)
 
             # helps to outline difference between spams, which were made very similar to nets
-            mime_dict['nest_level'] = BasePattern.get_nest_level(self)
+            mime_dict['nest_level'] = self._get_nest_level_()
             #if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
             #    mime_dict['nest_level'] = score
 
@@ -225,7 +225,7 @@ class NetsPattern(BasePattern):
         # 9. URL CHECKS
         logger.debug('>>> 9. URL_CHECKS:')
 
-        urls_list = BasePattern.get_url_list(self)
+        urls_list = self._get_url_list_(self)
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
         if urls_list:
 
@@ -245,7 +245,7 @@ class NetsPattern(BasePattern):
 
                     ]
 
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
+            basic_features_dict, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, domain_regs, regs)
 
             urls_features = ('path_sim', 'ascii', 'avg_length')
             urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))

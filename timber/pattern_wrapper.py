@@ -34,8 +34,6 @@ class BasePattern(BeautifulBody):
     """
 
     INIT_SCORE = 0
-    MIN_TOKEN_LEN = 3
-    NEST_LEVEL_THRESHOLD = 2
 
     # just for debugging new regexps
     @staticmethod
@@ -135,7 +133,7 @@ class BasePattern(BeautifulBody):
 
         rcpt_score = INIT_SCORE
 
-        to_values, to_addrs = get_addr_values(to_values_list)
+        to_values, to_addrs = _get_addr_values_(to_values_list)
         logger.debug(">>to_addrs: "+str(to_addrs))
         parsed_rcvds = [rcvd.partition(';')[0] for rcvd in traces_values_list]
         # todo: check - maybe not need list
@@ -206,7 +204,7 @@ class BasePattern(BeautifulBody):
         logger.debug('line after: '+line_in_unicode)
 
 
-        regs = BasePattern._get_regexp_(subj_regs, re.U)
+        regs = self._get_regexp_(subj_regs, re.U)
         matched = filter(lambda r: r.search(line, re.I), regs)
         logger.debug(str(matched))
         total_score += score*len(matched)
@@ -257,7 +255,7 @@ class BasePattern(BeautifulBody):
 
         # url_score, distinct_count, sender_count
         reg = namedtuple('reg', 'for_dom_pt for_txt_pt')
-        compiled = reg(*(BasePattern._get_regexp_(l, re.I) for l in (domain_regs, text_regs)))
+        compiled = reg(*(self._get_regexp_(l, re.I) for l in (domain_regs, text_regs)))
 
         if netloc_list:
 
@@ -408,7 +406,7 @@ class BasePattern(BeautifulBody):
             return compressed_ratio
 
 
-    def basic_attach_checker(mime_parts_list, reg_list, score):
+    def get_attach_metrics(mime_parts_list, reg_list, score):
 
         # mime_parts_list - list with mime-parts dictionaries
         attach_score = INIT_SCORE

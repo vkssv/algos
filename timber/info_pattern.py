@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 """ Keeps and applies vectorising rules for infos. """
 
-import os, sys, logging, common, re, binascii, math, string
+import os, sys, logging, re, binascii, math, string
 
 from operator import add
 from collections import OrderedDict, Counter
 
 from pattern_wrapper import BasePattern
 
-INIT_SCORE = BasePattern.INIT_SCORE
+INIT_SCORE = self.INIT_SCORE
 #NEST_LEVEL_THRESHOLD = BasePattern.NEST_LEVEL_THRESHOLD
 
 # formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
@@ -42,7 +42,7 @@ class InfoPattern(BasePattern):
                             'Received', 'Subject', 'From', 'Date', 'Received-SPF', 'To', 'Content-Type',\
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
                           ]
-        vector_dict.update(common.get_all_heads_crc(self._msg.items(), excluded_heads))
+        vector_dict.update(self._get_all_heads_crc_(self._msg.items(), excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
@@ -50,9 +50,9 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in BasePattern._get_rcvds_(self)])
+        rcvd_vect = tuple([r.partition('by')[0] for r in self._get_rcvds_(self)])
         logger.debug(rcvd_vect)
-        vector_dict.update(common.get_trace_crc(rcvd_vect))
+        vector_dict.update(self._get_trace_crc_(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
 
 
@@ -60,12 +60,12 @@ class InfoPattern(BasePattern):
         logger.debug('>>> 2. DESTINATOR CHECKS:')
 
         # check that rcpt from trace field and To the same and the one (in general)
-        vector_dict['to'] = common.basic_rcpts_checker(score, self._msg.get_all('Received'), self._msg.get_all('To'))
+        vector_dict['to'] = self.get_rcpts_metrics(score, self._msg.get_all('Received'), self._msg.get_all('To'))
 
 
         logger.debug('>>> 3. SPF/DKIM_CHECKS:')
-        logger.debug('>>>'+str(common.basic_dmarc_checker(self._msg.items(), score)))
-        dmarc_dict_checks, dkim_domain = common.basic_dmarc_checker(self._msg.items(), score)
+        logger.debug('>>>'+str(self.get_dmarc_metrics(self._msg.items(), score)))
+        dmarc_dict_checks, dkim_domain = self.get_dmarc_metrics(self._msg.items(), score)
         logger.debug(str(dmarc_dict_checks))
         vector_dict.update(dmarc_dict_checks)
         vector_dict['dmarc'] = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I),self._msg.keys()))
@@ -77,7 +77,7 @@ class InfoPattern(BasePattern):
         heads_pattern = r'^X-(EM(ID|MAIL|V-.*)|SG-.*|(rp)?campaign(id)?)$'
         known_senders = [r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver']
 
-        heads_score, known_mailer_flag = common.basic_headers_cheker(heads_pattern, known_senders, self._msg.items(), score)
+        heads_score, known_mailer_flag = self.basic_headers_cheker(heads_pattern, known_senders, self._msg.items(), score)
 
         vector_dict['emarket_heads_score'] = heads_score
         vector_dict['known_sender'] = known_mailer_flag
@@ -91,7 +91,7 @@ class InfoPattern(BasePattern):
         if self._msg.get('Subject'):
 
             total_score = INIT_SCORE
-            unicode_subj, norm_words_list, encodings = common.get_subject(self._msg.get("Subject"))
+            unicode_subj, norm_words_list, encodings = self._get_decoded_subj_(self._msg.get("Subject"))
 
             subject_regs = [
                                 ur'([\u25a0-\u29ff]|)', # dingbats
@@ -117,7 +117,7 @@ class InfoPattern(BasePattern):
                                 ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}'
                             ]
 
-            subj_score, upper_flag, title_flag = common.basic_subjects_checker(unicode_subj, subject_regs, score)
+            subj_score, upper_flag, title_flag = self.get_subject_metrics(unicode_subj, subject_regs, score)
             # almoust all words in subj string are Titled
             if (len(norm_words_list) - title_flag ) < 3:
                 features_dict['subj_style'] = 1
@@ -151,7 +151,7 @@ class InfoPattern(BasePattern):
 
         if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self._msg.keys()):
             # well, this unique spam author respects RFC 2369, his creation deservs more attentive check
-            list_features_dict['basic_checks'] = common.basic_lists_checker(self._msg.items(), rcvd_vect, score)
+            list_features_dict['basic_checks'] = self.get_list_metrics(self._msg.items(), rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
 
         # for old-school style emailings
@@ -159,9 +159,9 @@ class InfoPattern(BasePattern):
         list_features_dict['ext_checks'] = len(matched)
 
         keys = tuple(filter(lambda k: self._msg.get(k), ['From','Sender','Reply-To','Delivered-To','To']))
-        #addr_dict = dict([(k,common.get_addr_values(value)[1][0]) for k,value in zip(keys, tuple([self._msg.get(k) for k in keys]))])
-        logger.debug(str([ common.get_addr_values(self._msg.get(k)) for k in keys]))
-        addr_dict = dict([(k, (common.get_addr_values(self._msg.get(k))[1])[0]) for k in keys])
+        #addr_dict = dict([(k,self._get_addr_values_(value)[1][0]) for k,value in zip(keys, tuple([self._msg.get(k) for k in keys]))])
+        logger.debug(str([ self._get_addr_values_(self._msg.get(k)) for k in keys]))
+        addr_dict = dict([(k, (self._get_addr_values_(self._msg.get(k))[1])[0]) for k in keys])
         logger.debug('>>>>>'+str(addr_dict))
 
         if addr_dict.get('Sender') and addr_dict.get('Sender') != addr_dict.get('From'):
@@ -192,7 +192,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = common.get_addr_values(self._msg.get('From'))[0]
+            from_values = self._get_addr_values_(self._msg.get('From'))[0]
             logger.debug(str(from_values))
             logger.debug(str(type(from_values)))
 
@@ -218,7 +218,7 @@ class InfoPattern(BasePattern):
             if 'text/html' in first_content_type and re.search('utf-8',first_content_type,re.I):
                 mime_dict['mime_score'] += score
 
-            mime_skeleton = BasePattern._get_mime_struct_(self)
+            mime_skeleton = self._get_mime_struct_(self)
 
             logger.debug('MIME STRUCT: '+str(mime_skeleton))
 
@@ -226,7 +226,7 @@ class InfoPattern(BasePattern):
             if (mime_skeleton.keys()).count('text/html') and 'inline' in mime_skeleton.get('text/html'):
                 mime_dict['mime_score'] += score
 
-            mime_dict['checksum'] = common.get_mime_crc(mime_skeleton)
+            mime_dict['checksum'] = self._get_mime_crc_(mime_skeleton)
 
             logger.debug('\t----->'+str(vector_dict))
 
@@ -234,13 +234,13 @@ class InfoPattern(BasePattern):
                                 r'format\s?=\s?.fixed.'
             ]
 
-            count, att_score, in_score = common.basic_attach_checker(mime_skeleton.values(), attach_regs, score)
+            count, att_score, in_score = self.get_attach_metrics(mime_skeleton.values(), attach_regs, score)
             mime_dict['att_count'] = count
             mime_dict['att_score'] = att_score
             mime_dict['in_score'] = in_score
 
             # helps to outline difference between spams, which were made very similar to infos
-            mime_dict['nest_level'] = BasePattern.get_nest_level(self)
+            mime_dict['nest_level'] = self._get_nest_level_()
             #if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
             #    mime_dict['nest_level'] = score
 
@@ -250,7 +250,7 @@ class InfoPattern(BasePattern):
         # 8. check urls
         logger.debug('>>> 8. URL_CHECKS:')
 
-        urls_list = BasePattern.get_url_list(self)
+        urls_list = self._get_url_list_()
 
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
@@ -274,7 +274,7 @@ class InfoPattern(BasePattern):
                                 ur'(shop|magazin|collections+|lam|(mail_link_)?track(er)?|EMID=|EMV=|genders)'
                     ]
 
-            basic_features_dict, netloc_list = common.basic_url_checker(urls_list, rcvd_vect, score, domain_regs, regs)
+            basic_features_dict, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, domain_regs, regs)
 
             urls_features = ('query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii')
             # initialize OrderedDict exactly by this way cause of
