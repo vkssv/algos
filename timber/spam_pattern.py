@@ -1,6 +1,29 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-""" Keeps and applies vectorising rules for spams. """
+""" Keeps and applies vectorising rules for spams.
+
+    todo: refactor architecture of particular patterns (now it's shame, of course)
+    Real architecture of particular patterns modules should be like this:
+        class SpamPattern(BasePattern):
+
+            def __rule_1(self, *args, **kwargs):
+                ...
+                return metric1
+
+            def __rule_N(self, *args, **kwargs):
+                ...
+                return metricN
+
+            also need to generate and append new trigger-rules as methods to pattern class in runtime
+
+            def run(self, score):
+
+                features_vector.update[f_1] = self.__rule_1()
+                features_vector.update[f_N] = self.__rule_N()
+
+                return(features_vector)
+
+"""
 
 import os, sys, logging, re, binascii, math
 
@@ -8,7 +31,7 @@ from operator import add
 from collections import OrderedDict, Counter, namedtuple
 from pattern_wrapper import BasePattern
 
-# formatter_debug = logging.Formatter('%(message)s')
+#formatter_debug = logging.Formatter('%(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 
@@ -19,6 +42,7 @@ class SpamPattern(BasePattern):
         values, which are mostly don't equal to zeros ;
     """
 
+    # todo: from magic numbers to input arguments ! ( rather to config with sophisticated params )
     RCVDS_NUM = 2
 
     def run(self, score):
@@ -28,60 +52,57 @@ class SpamPattern(BasePattern):
         # 1. "Received:" Headers
         logger.debug('>>> 1. RCVD_CHECKS:')
 
-        # get crc32 of only unique headers and their values
+        # get crc32 of only unique headers and it's values
         excluded_heads = [
                             'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
-                            ]
+                         ]
+
         logger.debug(str(self._msg.items()))
-        vector_dict.update(self._get_all_heads_crc_(self._msg.items(), excluded_heads))
+        heads_crc, values_crc = self.get_all_heads_crc(excluded_heads)
+        logger.debug(str(heads_crc))
+        vector_dict['rcvd_heads_crc'] = heads_crc
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
-        vector_dict ["traces_num"] = self._msg.keys().count('Received')
+        vector_dict ["rcvd_traces_num"] = self._msg.keys().count('Received')
         logger.debug('\t----->'+str(vector_dict))
 
         # basic parsing and dummy checks with regexps (takes only first n_rcvds headers)
-
-
-        vector_dict ["trace_rule"] = self.INIT_SCORE
+        vector_dict ["rcvd_trace_rule"] = self.INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
         rcvd_rules = [
                         r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
                         r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch)'
         ]
 
-        rcvds = self._get_rcvds_(self.RCVDS_NUM)
+        rcvds = self.get_rcvds(self.RCVDS_NUM)
         print('TYPE:'+str(type(rcvds)))
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
         for rule in rcvd_rules:
             if filter(lambda l: re.search(rule, l), rcvds):
                 vector_dict ["rcvd_rules"] += score
 
-        # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in rcvds]) # ???
-
-        logger.debug(rcvd_vect)
-        vector_dict.update(self._get_trace_crc_(rcvd_vect))
+        vector_dict.update(self.get_trace_crc())
         logger.debug('\t----->'+str(vector_dict))
-
 
         # 2. "To:", "SMTP RCPT TO:" Headers
         logger.debug('>>> 2. DESTINATOR CHECKS:')
 
         # deep parsing and checks for some wellknown spammers tricks with To: header
-        vector_dict ['smtp_to'] = self.INIT_SCORE
-        vector_dict ['to'] = self.INIT_SCORE
-        logger.debug('\t----->'+str(vector_dict))
+        features = ('smtp_to','body_to')
+        features_dict = Counter(map(lambda x,y:('rcpt_'+x,y), features, [self.INIT_SCORE]*len(features)))
 
-        to_values, to_addrs = self._get_addr_values_(self._msg.get('To'))
+        logger.debug('\t----->'+str(features_dict))
+
+        to_values, to_addrs = self.get_addr_values()
         if to_values and filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), to_values):
-            vector_dict['to'] += score
-            logger.debug('\t----->'+str(vector_dict))
+            features_dict.update['smtp_to'] += score
+            logger.debug('\t----->'+str(features_dict))
 
         if not to_addrs:
-            vector_dict['to'] += score
-            logger.debug('\t----->'+str(vector_dict))
+            features_dict.update['body_to'] += score
+            logger.debug('\t----->'+str(features_dict))
 
         smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in rcvds]))
 
@@ -93,35 +114,29 @@ class SpamPattern(BasePattern):
                 #logger.debug(smtp_to)
 
                 if len(to_addrs) == 1 and smtp_to != to_addrs[0]:
-                    vector_dict['to'] += score
-                    logger.debug('\t----->'+str(vector_dict))
+                    features_dict.update['body_to'] += score
+                    logger.debug('\t----->'+str(features_dict))
 
                 elif len(to_addrs) > 2 and smtp_to != '<multiple recipients>':
-                    vector_dict['to'] += score
-                    logger.debug('\t----->'+str(vector_dict))
+                    features_dict.update['body_to'] += score
+                    logger.debug('\t----->'+str(features_dict))
 
         else:
-            vector_dict ['smtp_to'] += 1
-            logger.debug('\t----->'+str(vector_dict))
+            features_dict.update['smtp_to'] += 1
+            logger.debug('\t----->'+str(features_dict))
 
 
         # 3. "Subject:" Header
         logger.debug('>>> 3. SUBJECT CHECKS:')
 
         features = ('len','style','score','checksum','encoding')
-        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
+        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [self.INIT_SCORE]*len(features)))
 
         if self._msg.get("Subject"):
 
-            total_score = INIT_SCORE
-            unicode_subj, norm_words_list, encodings = self._get_decoded_subj_(self._msg.get("Subject"))
-            # check the length of subj in chars, unicode str was normilised by Unicode NFC rule, i.e.
-            # use a single code point if possible, spams still use very short subjects like ">>:\r\n", or
-            # very long
-
+            total_score = self.INIT_SCORE
+            unicode_subj, norm_words_list, encodings = self.get_decoded_subj()
             features_dict['subj_len'] = len(unicode_subj)
-            #if len(unicode_subj)< self.MAX_SUBJ_LEN or len(unicode_subj)> self.MIN_SUBJ_LEN:
-            #    features_dict['subj_len'] = 1
 
             # check the origin of RE: and FW: prefixes in "Subject:" header value, according to RFC 5322 rules
             prefix_heads_map = {
@@ -183,7 +198,7 @@ class SpamPattern(BasePattern):
 
         if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
             # this unique spam author respects RFC 2369, his creation deservs more attentive check
-            list_features_dict['list'] = self.get_list_metrics(self._msg.items(), rcvd_vect, score)
+            list_features_dict['list'] = self.get_list_metrics(rcvd_vect, score)
             logger.debug('\t----->'+str(list_features_dict))
 
         elif (self._msg.keys().count('Sender') and self._msg.keys().count('From')):
@@ -208,7 +223,7 @@ class SpamPattern(BasePattern):
         # that's very typically for unconditional spam
         logger.debug('>>> 5. SPF/DKIM_CHECKS:')
 
-        dmarc_dict, dkim_domain = self.get_dmarc_metrics(self._msg.items(), score)
+        dmarc_dict, dkim_domain = self.get_dmarc_metrics(score)
         vector_dict.update(dmarc_dict)
 
 
@@ -219,10 +234,10 @@ class SpamPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = self._get_addr_values_(self._msg.get('From'))[0]
+            from_values = self._get_addr_values_()
 
             if from_values:
-                vector_dict['from_checksum'] = binascii.crc32(reduce(add,from_values[:1]))
+                vector_dict['from_checksum'] = binascii.crc32(reduce(add, from_values[:1]))
                 logger.debug('\t----->'+str(vector_dict))
 
 
@@ -230,7 +245,7 @@ class SpamPattern(BasePattern):
         logger.debug('>>> 7. MIME_CHECKS:')
 
         mime_features = ('mime_score', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score')
-        mime_dict = dict(zip(mime_features, [INIT_SCORE]*len(mime_features)))
+        mime_dict = dict(zip(mime_features, [self.INIT_SCORE]*len(mime_features)))
 
         if self._msg.get('MIME-Version') and not self._msg.is_multipart():
             mime_dict['mime_score'] = score
@@ -242,7 +257,7 @@ class SpamPattern(BasePattern):
                                 r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
             ]
 
-            mime_skeleton = self._get_mime_struct_()
+            mime_skeleton = self.get_mime_struct()
             #mime_skeleton = BasePattern.get_mime_struct(self)
             logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
 
@@ -252,7 +267,7 @@ class SpamPattern(BasePattern):
             # defines by count of inline attachements
             mime_dict['in_score'] = in_score
 
-            mime_dict['nest_level'] = self._get_nest_level_()
+            mime_dict['nest_level'] = self.get_nest_level()
             mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
 
         vector_dict.update(mime_dict)
@@ -261,7 +276,7 @@ class SpamPattern(BasePattern):
         # 8. URL-checks
         logger.debug('>>> 8. URL_CHECKS:')
 
-        urls_list = self._get_url_list_(self)
+        urls_list = self.get_url_list()
         logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
         features = ('url_upper', 'repetitions', 'punicode', 'domain_name_level', 'url_avg_len', \

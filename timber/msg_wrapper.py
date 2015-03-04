@@ -8,7 +8,11 @@ which can be checked by rules (features-triggers) from each pattern_class.
 
 import sys, os, importlib, logging, re, binascii, unicodedata
 import pdb
-from email import iterators
+
+
+
+from email import iterators, header
+
 from urlparse import urlparse
 from operator import add, itemgetter
 from collections import defaultdict, namedtuple
@@ -21,7 +25,7 @@ from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s: %(message)s')
+#formatter = logging.Formatter('%(filename)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
@@ -55,11 +59,12 @@ class BeautifulBody(object):
     """
     Base class for happy life with email.message objects,
     some kind of BeautifulSoup objects from bs4.
+
     """
-    _LANG = 'english'
-    _LANGS_LIST = ('english', 'french', 'russian')
-    _CHARSET = 'utf-8'
-    _MAX_NEST_LEVEL = 30
+    __LANG = 'english'
+    __LANGS_LIST = ('english', 'french', 'russian')
+    #__CHARSET = 'utf-8'
+    __MAX_NEST_LEVEL = 30
 
     def __init__(self, msg):
 
@@ -77,14 +82,20 @@ class BeautifulBody(object):
 
         self._msg = msg
 
-    def _get_lang_(self, tokens_list):
+    # maybe change implementation in future
+    @property
+    def get_lang_(self):
+        return lang
+
+    @get_lang_.setter
+    def get_lang_(self, tokens_list):
         '''
         :param tokens_list:
         :return: 42
         '''
-        lang == self._LANG
+        lang = self.__LANG
 
-        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self._LANGS_LIST])
+        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self.__LANGS_LIST])
         tokens_set = set(tokens_list)
         lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
         logger.debug(lang_ratios)
@@ -94,28 +105,28 @@ class BeautifulBody(object):
 
         return lang
 
-    def _get_rcvds_(self, rcvds_num=0):
-        """
+    def get_rcvds(self, rcvds_num=0):
+        '''
         :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
         :return: left parts of Received header's values, everything before ';'
-        """
+        '''
         # parse all RCVD headers by default if rcvds_num wasn't defined
         parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received')])[ -1*rcvds_num : ]
 
         return parsed_rcvds
 
-    def _get_addr_values_(self, header_value=None):
+    def get_addr_values(self, header_value=None):
         '''
         :param header_value:
         :return:
         '''
-        if head_value is None:
-            head_value = self._msg.get('To')
+        if header_value is None:
+            header_value = self._msg.get('To')
 
-        logger.debug('+++++>'+str(head_value))
+        logger.debug('+++++>'+str(header_value))
         for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9-]{1,63}(?:\.[\w]{2,4})+',re.I)
 
-        h_value = tuple(decode_header(head_value))
+        h_value = tuple(header.decode_header(header_value))
         # don't use encoding info for translations, so don't keep it
         h_value = tuple([pair[0] for pair in h_value])
         logger.debug('+++++'+str(h_value))
@@ -136,10 +147,10 @@ class BeautifulBody(object):
         # either for To/CC/Bcc headers with many senders,
         # or for From/Sender
         # names are raw encoded strings
-        return(tuple(names),tuple(addrs))
+        return tuple(names),tuple(addrs)
 
     @lazyproperty
-    def _get_smtp_domain_(self):
+    def get_smtp_domain(self):
         '''
         :return: sender's domain from the first Received-field
         "...Ah, it is easy to deceive me!...
@@ -162,7 +173,7 @@ class BeautifulBody(object):
         return orig_domain
 
     @lazyproperty
-    def _get_decoded_subj_(self):
+    def get_decoded_subj(self):
         '''
         don't use vector-form of calculations for quick transport-decoding
         and unicoding metamorphoses, cause it could be exceptions on each
@@ -194,7 +205,7 @@ class BeautifulBody(object):
 
         tokens = tuple(subj_line.split())
         lang = self._get_lang_(self._subj_tokens)
-        if lang in self._LANGS_LIST:
+        if lang in self.__LANGS_LIST:
             tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
             logger.debug('before stem: '+str(tokens))
             subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
@@ -202,7 +213,7 @@ class BeautifulBody(object):
         return (subj_line, subj_tokens, encodings_list)
 
     @lazyproperty
-    def _get_mime_struct_(self):
+    def get_mime_struct(self):
         """
         :return: dict { mime_type  : [attribute : value] }
         """
@@ -238,7 +249,7 @@ class BeautifulBody(object):
         return self._mime_parts_
 
     @lazyproperty
-    def _get_nest_level_(self):
+    def get_nest_level(self):
         '''
         :return: MIME-nesting level
         '''
@@ -249,7 +260,7 @@ class BeautifulBody(object):
         return level
 
     @lazyproperty
-    def _get_url_list_(self):
+    def get_url_list(self):
 
         url_list = list()
 
@@ -282,11 +293,11 @@ class BeautifulBody(object):
 
         return url_list
 
-    def  _get_text_mime_part_(self):
-        """
+    def get_text_mime_part(self):
+        '''
         generator of tuples with decoded text/mime part's line and metainfo
         :return: generator of tuples ( decoded line , mime type , lang ) for each text/mime part
-        """
+        '''
         # partial support of asian encodings, just to decode in UTF without exceptions
         # and normilize with NFC form: one unicode ch per symbol
         langs_map = {
@@ -315,7 +326,7 @@ class BeautifulBody(object):
             if decoded_line is None or len(decoded_line.strip()) == 0:
                 continue
 
-            lang = self._LANG
+            lang = self.__LANG
             if dammit_obj.original_encoding:
                 for l in langs_map.iterkeys():
                     if filter(lambda ch: re.match(r''+ch, dammit_obj.original_encoding, re.I), langs_map.get(l)):
@@ -329,11 +340,11 @@ class BeautifulBody(object):
 
             yield(decoded_line, p.get_content_type(), lang)
 
-    def _get_sentences_(self):
-        """
+    def get_sentences(self):
+        '''
         sentences generator
         :return: tuple of sentences for each text/mime part
-        """
+        '''
         tokenizer = PunktSentenceTokenizer()
         for raw_line, mime_type, lang in tuple(self._get_text_mime_part_()):
             print(raw_line, mime_type, lang)
@@ -354,11 +365,11 @@ class BeautifulBody(object):
 
             yield sents
 
-    def _get_stemmed_tokens_(self):
-        """
+    def get_stemmed_tokens(self):
+        '''
         tokens generator
         :return: stemmed tokens tuple (keeps token's order) for each text/mime part
-        """
+        '''
         tokenizer = WordPunctTokenizer()
         #punct_extractor = RegexpTokenizer("[\w']+", gaps=True)
 
@@ -367,12 +378,12 @@ class BeautifulBody(object):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add,tokens)
             logger.debug("tokens: "+str(tokens))
-            if lang == self._LANG:
+            if lang == self.__LANG:
                 # check that it's really english
                 lang = self._get_lang_(tokens)
                 logger.debug('lang: '+lang)
 
-            if lang in self._LANGS_LIST:
+            if lang in self.__LANGS_LIST:
                 #todo: create stopwords list for jis ,
                 tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
                 logger.debug('before stem: '+str(tokens))

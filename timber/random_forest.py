@@ -18,7 +18,6 @@ from franks_factory import MetaFrankenstein
 from sklearn.ensemble import RandomForestClassifier
 
 
-
 #PYTHON_VERSION=(2,7)
 
 logger = logging.getLogger('')
@@ -112,7 +111,7 @@ if __name__ == "__main__":
     required_version = (2,7)
 
 
-    formatter = logging.Formatter('%(filename)s: %(message)s')
+    formatter = logging.Formatter(' --- %(filename)s --- \n %(message)s')
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), args.category+'.log'), mode = 'w')
@@ -171,10 +170,6 @@ if __name__ == "__main__":
         raise
 
 
-# todo: refactor architecture --> such check should be made in pattern_wrapper.py,
-# which initializes msg object only once and perfoms all checks for all patterns one by one.
-# spam/info/net/ham-classes have to became just conatiners for appropriate regexes sets,
-# some variables and maybe rules...(rules are the room for particular reflections)
 
 
 

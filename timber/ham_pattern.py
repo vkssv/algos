@@ -21,8 +21,6 @@ class HamPattern(BasePattern):
         values, mostly don't equal to zeros ;
     """
 
-    #MAX_SUBJ_LEN = 5
-    #MIN_SUBJ_LEN = 60
     RCVDS_NUM = 3
 
     def run(self, score):
@@ -33,12 +31,12 @@ class HamPattern(BasePattern):
         logger.debug('>>> 1. SUBJECT CHECKS:')
 
         features = ('len','style','score')
-        features_dict = OrderedDict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
+        features_dict = OrderedDict(map(lambda x,y: ('subj_'+x,y), features, [self.INIT_SCORE]*len(features)))
 
         if self._msg.get('Subject'):
 
-            total_score = INIT_SCORE
-            unicode_subj, norm_words_list, encodings = self._get_decoded_subj_(self._msg.get("Subject"), MIN_TOKEN_LEN)
+            total_score = self.INIT_SCORE
+            unicode_subj, norm_words_list, encodings = self.get_decoded_subj(self._msg.get("Subject"))
 
             features_dict['subj_len'] = len(unicode_subj)
             #if self.MIN_SUBJ_LEN < len(unicode_subj) < self.MAX_SUBJ_LEN:
@@ -62,9 +60,9 @@ class HamPattern(BasePattern):
         # 2. check urls
         logger.debug('>>> 2. URL_CHECKS:')
 
-        urls_list = self._get_url_list_(self)
+        urls_list = self.get_url_list()
         urls_features = ('avg_length', 'query_absence', 'url_score')
-        urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+        urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [__INIT_SCORE]*len(urls_features)))
 
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
@@ -84,7 +82,7 @@ class HamPattern(BasePattern):
                                 ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
             ]
 
-            rcvds = self._get_rcvds_(self, self.RCVDS_NUM)
+            rcvds = self.get_rcvds(self.RCVDS_NUM)
             rcvd_vect = tuple([r.partition('by')[0] for r in rcvds])
 
             d, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, domain_regs, regs)

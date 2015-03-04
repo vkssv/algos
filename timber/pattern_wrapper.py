@@ -3,8 +3,8 @@
 import sys, os, importlib, logging, re, binascii, zlib, math
 
 from urlparse import urlparse
-from operator import add
-from collections import defaultdict, namedtuple
+from operator import add, itemgetter
+from collections import defaultdict, namedtuple, Counter
 
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
@@ -13,9 +13,9 @@ from nltk.probability import FreqDist, ConditionalFreqDist
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s: %(message)s')
-ch = logging.StreamHandler(sys.stdout)
-logger.addHandler(ch)
+#formatter = logging.Formatter('%(filename)s: %(message)s')
+#ch = logging.StreamHandler(sys.stdout)
+#logger.addHandler(ch)
 
 try:
     from bs4 import BeautifulSoup, Comment
@@ -36,7 +36,7 @@ class BasePattern(BeautifulBody):
 
     # just for debugging new regexps
     @staticmethod
-    def _get_regexp_(regexp_list, compilation_flag=None):
+    def get_regexp_(regexp_list, compilation_flag=None):
         '''
         :param regexp_list: list of scary regexes
         :param compilation_flag: re.U, re.M, etc
@@ -62,7 +62,7 @@ class BasePattern(BeautifulBody):
         :return: dict {'rcvd_N': CRC32 } from line, formed by parsed values,
                  parser is interested only in servers IPs-literals, domains, etc
         '''
-        rcvds_vect = self._get_rcvds_(rcvds_num)
+        rcvds_vect = self.get_rcvds(rcvds_num)
         logger.debug('rcvds_vect:'+str(rcvds_vect))
         traces_dict = {}
 
@@ -100,6 +100,7 @@ class BasePattern(BeautifulBody):
 
         heads_crc = binascii.crc32(''.join(heads_vector))
         values_crc = binascii.crc32(''.join(reduce(add,values_vector)))
+
 
         return (heads_crc, values_crc)
 
@@ -191,7 +192,7 @@ class BasePattern(BeautifulBody):
 
         rcpt_score = self.INIT_SCORE
 
-        to_values, to_addrs = self._get_addr_values_(to_values_list)
+        to_values, to_addrs = self.get_addr_values(to_values_list)
         logger.debug(">>to_addrs: "+str(to_addrs))
         parsed_rcvds = [rcvd.partition(';')[0] for rcvd in traces_values_list]
         # todo: check - maybe not need list
@@ -228,7 +229,7 @@ class BasePattern(BeautifulBody):
         # exactly the first rcvd header,
         # order makes sense here
 
-        sender_domain = self._get_smtp_domain_()
+        sender_domain = self.get_smtp_domain()
         if not sender_domain:
             body_from.search(heads_dict.get('From'))
             # try to get it from From: header value
@@ -269,7 +270,7 @@ class BasePattern(BeautifulBody):
 
         # check by regexp rules
         total_score = self.INIT_SCORE
-        line, tokens, encodings = self._get_decoded_subj_()
+        line, tokens, encodings = self.get_decoded_subj()
         #line = re.sub(ur'[\\\|\/\*]', '', line)
         logger.debug('line : '+line)
 
@@ -322,12 +323,12 @@ class BasePattern(BeautifulBody):
 
         #print("NETLOC: >>>>>"+str(netloc_list))
 
-        sender_domain = get_smtp_domain(rcvds)
+        sender_domain = self.get_smtp_domain()
         pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
 
         # url_score, distinct_count, sender_count
         reg = namedtuple('reg', 'for_dom_pt for_txt_pt')
-        compiled = reg(*(self._get_regexp_(l, re.I) for l in (domain_regs, text_regs)))
+        compiled = reg(*(self.get_regexp(l, re.I) for l in (domain_regs, text_regs)))
 
         if netloc_list:
 
@@ -357,7 +358,7 @@ class BasePattern(BeautifulBody):
         checksum = self.INIT_SCORE
         logger.debug('EXL:'+str(excluded_atrs_list))
 
-        items = self._get_mime_struct_.items()
+        items = self.get_mime_struct.items()
 
         for prefix in excluded_args_list:
             items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in items]
@@ -381,8 +382,8 @@ class BasePattern(BeautifulBody):
         regs_list = self._get_regexp_(regs_list, re.M)
 
         if sent_list is None:
-            sents_generator = self._get_sentences_()
-            print("sent_lists >>"+str(self._get_sentences_()))
+            sents_generator = self.get_sentences()
+            print("sent_lists >>"+str(self.get_sentences()))
 
         while(True):
             try:
@@ -407,12 +408,12 @@ class BasePattern(BeautifulBody):
         '''
 
         (html_score, html_checksum) = [self.INIT_SCORE]*2
-        attr_value_pair = namedtuple('attr_value_pair','name value')
+        attr_value_pair = namedtuple('attr_value_pair', 'name value')
         html_skeleton = list()
 
         print("tags_map: "+str(tags_map))
         if mime_parts_list is None:
-            mime_parts_list = self._get_text_mime_part_()
+            mime_parts_list = self.get_text_mime_part()
 
         while(True):
             try:
@@ -480,7 +481,7 @@ class BasePattern(BeautifulBody):
 
         (self.total_h, n) = [self.INIT_SCORE]*2
         # todo: make n-grams
-        for tokens in self._get_stemmed_tokens_():
+        for tokens in self.get_stemmed_tokens():
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
@@ -498,7 +499,7 @@ class BasePattern(BeautifulBody):
         all text/mime-parts
         '''
         compressed_ratio = 0
-        all_text_parts = list(self._get_stemmed_tokens_())
+        all_text_parts = list(self.get_stemmed_tokens())
         for x in all_text_parts:
             print('>>>> '+str(x))
         if all_text_parts:
@@ -507,6 +508,11 @@ class BasePattern(BeautifulBody):
             self.compressed_ratio = float(len(zlib.compress(all_text.encode(self._CHARSET))))/len(all_text)
 
         return self.compressed_ratio
+
+
+    def get_text_parts_jaccard():
+        # nltk.jaccard_distance()
+        return 1.618
 
     def get_attach_metrics(self, mime_parts_list, reg_list, score):
         '''

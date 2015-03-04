@@ -20,7 +20,7 @@ class NetsPattern(BasePattern):
         -- if email looks like notification from SN, it's vector will contain
             values, which are mostly don't equal to zeros ;
     """
-    RCVDS_NUM = 3
+    __RCVDS_NUM = 3
 
     def run(self, score):
 
@@ -48,7 +48,7 @@ class NetsPattern(BasePattern):
         vector_dict['to'] = self.get_rcpts_metrics(score ,self._msg.get_all('Received'), self._msg.get_all('To'))
 
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in self._get_rcvds_(self, RCVDS_NUM)])
+        rcvd_vect = tuple([r.partition('by')[0] for r in self._get_rcvds_(self, __RCVDS_NUM)])
         logger.debug(rcvd_vect)
         vector_dict.update(self._get_trace_crc_(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))

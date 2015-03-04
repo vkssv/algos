@@ -37,7 +37,11 @@ class InfoPattern(BasePattern):
                             'Received', 'Subject', 'From', 'Date', 'Received-SPF', 'To', 'Content-Type',\
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
                           ]
+
         vector_dict.update(self._get_all_heads_crc_(self._msg.items(), excluded_heads))
+
+        vector_dict.update(self.get_all_heads_crc(excluded_heads))
+
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
@@ -45,7 +49,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in self._get_rcvds_(self)])
+        rcvd_vect = tuple([r.partition('by')[0] for r in self.get_rcvds()])
         logger.debug(rcvd_vect)
         vector_dict.update(self._get_trace_crc_(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
