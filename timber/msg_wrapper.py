@@ -71,7 +71,7 @@ class BeautifulBody(object):
         if msg.is_multipart():
 
             be_picky = [
-                        (lambda y: y > self._MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
+                        (lambda y: y > self.__MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
                         (lambda y: y, lambda m: m.defects,' I don\'t eat such emails, !')
                     ]
 
@@ -147,9 +147,9 @@ class BeautifulBody(object):
         # either for To/CC/Bcc headers with many senders,
         # or for From/Sender
         # names are raw encoded strings
-        return tuple(names),tuple(addrs)
+        return tuple(names), tuple(addrs)
 
-    @lazyproperty
+    #@lazyproperty
     def get_smtp_domain(self):
         '''
         :return: sender's domain from the first Received-field
@@ -172,7 +172,7 @@ class BeautifulBody(object):
 
         return orig_domain
 
-    @lazyproperty
+    #@lazyproperty
     def get_decoded_subj(self):
         '''
         don't use vector-form of calculations for quick transport-decoding
@@ -210,14 +210,14 @@ class BeautifulBody(object):
             logger.debug('before stem: '+str(tokens))
             subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
 
-        return (subj_line, subj_tokens, encodings_list)
+        return subj_line, subj_tokens, encodings_list
 
-    @lazyproperty
+    #@lazyproperty
     def get_mime_struct(self):
         """
         :return: dict { mime_type  : [attribute : value] }
         """
-        self._mime_parts_= defaultdict(list)
+        self._mime_parts = defaultdict(list)
 
         mime_heads = ['Content-Type', 'Content-Transfer-Encoding', 'Content-Id', 'Content-Disposition',\
                       'Content-Description','Content-Class']
@@ -236,35 +236,35 @@ class BeautifulBody(object):
                     part_key = part_key.partition(';')[0].strip()
                     added_value = (re.sub(part_key+';','',part.get(head).strip(),re.M)).strip()
 
-                    self._mime_parts_[part_key].append(added_value.lower())
+                    self._mime_parts[part_key].append(added_value.lower())
                     #part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
 
                 else:
-                    self._mime_parts_[part_key].append(part.get(head).strip())
+                    self._mime_parts[part_key].append(part.get(head).strip())
                     #part_dict[head] = part.get(head).strip()
 
-        self._mime_parts_ = dict([(k,tuple(v)) for k,v in self._mime_parts_.items()])
+        self._mime_parts = dict([(k,tuple(v)) for k,v in self._mime_parts.items()])
         #logger.debug("mime_dict: "+str(self._mime_parts_))
 
-        return self._mime_parts_
+        return self._mime_parts
 
-    @lazyproperty
+    #@lazyproperty
     def get_nest_level(self):
         '''
         :return: MIME-nesting level
         '''
 
-        mime_parts = self._get_mime_struct_()
+        mime_parts = self._get_mime_struct()
         level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
 
         return level
 
-    @lazyproperty
+    #@lazyproperty
     def get_url_list(self):
 
         url_list = list()
 
-        for line, content_type, lang in list(self._get_text_mime_part_()):
+        for line, content_type, lang in list(self._get_text_mime_part()):
             # parse by lines
             if 'html' in content_type:
                 soup = BeautifulSoup(line)

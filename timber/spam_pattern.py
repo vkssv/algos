@@ -73,7 +73,8 @@ class SpamPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
         rcvd_rules = [
                         r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
-                        r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch)'
+                        r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
+                        r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
         ]
 
         rcvds = self.get_rcvds(self.RCVDS_NUM)

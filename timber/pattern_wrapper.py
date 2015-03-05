@@ -79,7 +79,7 @@ class BasePattern(BeautifulBody):
     def get_all_heads_crc(self, excluded_list = None):
         '''
         :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
-        :return: ( CRC32 from headers names, CRC32 from values - don't use )
+        :return: <CRC32 from headers names>, <CRC32 from values> - don't use )
         '''
 
         logger.debug(self._msg.items())
@@ -101,15 +101,14 @@ class BasePattern(BeautifulBody):
         heads_crc = binascii.crc32(''.join(heads_vector))
         values_crc = binascii.crc32(''.join(reduce(add,values_vector)))
 
-
-        return (heads_crc, values_crc)
+        return heads_crc, values_crc
 
     def get_headers_metrics(self, head_pattern, known_mailers, score):
         '''
         :param head_pattern: one more regexp list with SN-headers names (X-FACEBOOK-PRIORITY, etc)
         :param known_mailers: X-Mailer: ZuckMail
         :param score:
-        :return: ( penalizing score, Zuck-IsHere-Flag )
+        :return: <penalizing score>, <Zuck-IsHere-Flag>
         '''
 
         typical_heads_score = self.INIT_SCORE
@@ -129,13 +128,13 @@ class BasePattern(BeautifulBody):
             if filter(lambda reg: re.search(reg, x_mailer, re.I), known_mailers):
                 known_mailer_flag = score
 
-        return (emarket_heads_score, known_mailer_flag)
+        return emarket_heads_score, known_mailer_flag
 
     def get_dmarc_metrics(self, score, required_heads_list=None):
         '''
         :param score:
         :param required_heads_list: for those, who are searching smth special
-        :return: ( DMARC metrics dict, sender's domain from DKIM )
+        :return: <DMARC metrics dict>, <sender's domain from DKIM>
         '''
 
         if required_heads_list is None:
@@ -148,7 +147,7 @@ class BasePattern(BeautifulBody):
 
         # RFC 7001, this header has to be included
         if not (heads_dict.keys()).count('Authentication-Results'):
-            return(dmarc_dict, dkim_domain)
+            return dmarc_dict, dkim_domain
 
         total = list()
         for h in dmarc_dict.iterkeys():
@@ -180,14 +179,14 @@ class BasePattern(BeautifulBody):
             dkim_domain = from_domain
             logger.debug('dkim_domain '+str(dkim_domain))
 
-        return(dmarc_dict, dkim_domain)
+        return dmarc_dict, dkim_domain
 
     def get_rcpts_metrics(self, traces_values_list, to_values_list, score):
         '''
         :param score:
         :param traces_values_list: rcpts addresses from Received:
         :param to_values_list: values from To:, Cc:, Bcc:
-        :return: penilizing score for rcpts-headers values
+        :return: penalizing score for rcpts-headers values
         '''
 
         rcpt_score = self.INIT_SCORE
@@ -198,7 +197,7 @@ class BasePattern(BeautifulBody):
         # todo: check - maybe not need list
         smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in parsed_rcvds]))
         if not smtp_to_list:
-            return(rcpt_score)
+            return rcpt_score
 
         logger.debug(">>smtp_to_list: "+str(smtp_to_list))
         smtp_to = re.search(r'<(.*@.*)?>', smtp_to_list[0])
@@ -206,7 +205,7 @@ class BasePattern(BeautifulBody):
         if to_addrs and smtp_to and smtp_to.group(0) == to_addrs[0]:
             rcpt_score+= score
 
-        return(rcpt_score)
+        return rcpt_score
         # TODO: add support the comparation of addrs vectors,
         # so now in general in commercial infos only one rcpt in To field
         # in software email-discussions there are always many rcpts in To !
@@ -214,7 +213,7 @@ class BasePattern(BeautifulBody):
     def get_lists_metrics(self, score):
         '''
         :param score:
-        :return: penilizing score for List-* headers
+        :return: penalizing score for List-* headers
         '''
         # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
         # have to be checked with antiphishing service
@@ -251,7 +250,7 @@ class BasePattern(BeautifulBody):
         unsubscribe_score += (len(rfc_heads)-len(presented))*score
 
         if not presented:
-            return (unsubscribe_score)
+            return unsubscribe_score
 
         for uri in [heads_dict.get(head) for head in presented]:
             if not filter(lambda reg: re.search(reg, uri, re.M), patterns):
@@ -263,9 +262,8 @@ class BasePattern(BeautifulBody):
         '''
         :param subj_regs:
         :param score:
-        :return: ( penalizing score for Subj, count of tokens in Upper case and in Title)
-        cause russian unconditional spam is more complicated than abusix, "made with love",
-        I would say
+        :return: <penalizing score for Subj>, <count of tokens in upper-case and in Title>
+        cause russian unconditional spam is more complicated than abusix )
         '''
 
         # check by regexp rules
@@ -281,14 +279,14 @@ class BasePattern(BeautifulBody):
         upper_words_count = len(filter(lambda w: w.isupper(),tokens))
         title_words_count = len(filter(lambda w: w.istitle(),tokens))
 
-        return (total_score, upper_words_count, title_words_count)
+        return total_score, upper_words_count, title_words_count
 
     def get_url_metrics(self, domain_regs, text_regs, score):
         '''
         :param domain_regs: regexp list for URL's domains
         :param text_regs: regexp list for text and tags around URL
         :param score:
-        :return: dict with metrics, list of domains from URL's
+        :return: <dict with metrics>, <list of domains from URL's>
         '''
         # domain_regs, regs - lists of compiled RE objects
         logger.debug('our list: '+str())
@@ -347,7 +345,7 @@ class BasePattern(BeautifulBody):
             for reg in compiled.for_txt_pt:
                 basic_features['url_score'] += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*score
 
-        return(dict(basic_features), netloc_list)
+        return dict(basic_features), netloc_list
 
     def get_mime_crc(self, excluded_atrs_list=['boundary=','charset=']):
         '''
@@ -399,12 +397,12 @@ class BasePattern(BeautifulBody):
         '''
         1. from the last text/html part creates HTML-body skeleton from end-tags,
             takes checksum from it, cause spammer's and info's/net's HTML patterns
-            are mostly the same;
+            are mostly the same ;
         2. if HTML-body includes table - analyze tags and values inside, cause
-            info's and net's HTML-patterns mostly made up with pretty same <tables>;
+            info's and net's HTML-patterns mostly made up with pretty same <tables> ;
 
-        :param tags_map: expected <tags attribute="value">, described by regexes;
-        :return: penalizing score and checksum for body;
+        :param tags_map: expected <tags attribute="value">, described by regexes ;
+        :return: <penalizing score> and <checksum for body> ;
         '''
 
         (html_score, html_checksum) = [self.INIT_SCORE]*2
@@ -468,11 +466,11 @@ class BasePattern(BeautifulBody):
 
         #logger.debug('HTML CLOSED:'+str(list(html_skeleton)))
         html_checksum = binascii.crc32(''.join(html_skeleton))
-        print(html_checksum)
+        #print(html_checksum)
 
-        return tuple(html_score, html_checksum)
+        return html_score, html_checksum
 
-    @lazyproperty
+    #@lazyproperty
     def get_text_parts_avg_entropy(self):
         '''
         for fun
@@ -491,7 +489,7 @@ class BasePattern(BeautifulBody):
 
         return self.total_h
 
-    @lazyproperty
+    #@lazyproperty
     def get_text_compress_ratio(self):
         '''
         maybe
@@ -509,7 +507,6 @@ class BasePattern(BeautifulBody):
 
         return self.compressed_ratio
 
-
     def get_text_parts_jaccard():
         # nltk.jaccard_distance()
         return 1.618
@@ -519,10 +516,10 @@ class BasePattern(BeautifulBody):
         :param mime_parts_list:
         :param reg_list:
         :param score:
-        :return: (attach_count, score, score, gained by inline attachements)
+        :return: attach_count, score, <score gained by inline attachements>
         '''
 
-        attach_score = INIT_SCORE
+        attach_score = self.INIT_SCORE
 
         mime_values_list = reduce(add, mime_parts_list)
         attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), mime_values_list)
@@ -538,7 +535,7 @@ class BasePattern(BeautifulBody):
 
         inline_score = score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), mime_values_list))
 
-        return(attach_count, score, inline_score)
+        return attach_count, score, inline_score
 
 
 if __name__ == "__main__":
