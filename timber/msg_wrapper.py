@@ -65,6 +65,7 @@ class BeautifulBody(object):
     __LANGS_LIST = ('english', 'french', 'russian')
     #__CHARSET = 'utf-8'
     __MAX_NEST_LEVEL = 30
+    __slots__ = '_msg'
 
     def __init__(self, msg):
 
@@ -83,11 +84,11 @@ class BeautifulBody(object):
         self._msg = msg
 
     # maybe change implementation in future
-    @property
-    def get_lang_(self):
-        return lang
+    #@property
+    #def get_lang_(self):
+    #    return lang
 
-    @get_lang_.setter
+    #@get_lang_.setter
     def get_lang_(self, tokens_list):
         '''
         :param tokens_list:
@@ -149,7 +150,7 @@ class BeautifulBody(object):
         # names are raw encoded strings
         return tuple(names), tuple(addrs)
 
-    @lazyproperty
+    #@lazyproperty
     def get_smtp_domain(self):
         '''
         :return: sender's domain from the first Received-field
@@ -172,7 +173,7 @@ class BeautifulBody(object):
 
         return orig_domain
 
-    @lazyproperty
+    #@lazyproperty
     def get_decoded_subj(self):
         '''
         don't use vector-form of calculations for quick transport-decoding
@@ -183,28 +184,28 @@ class BeautifulBody(object):
 
         #logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
         assert self._msg.get('Subject')
-        parts_list = decode_header(self._msg.get('Subject'))
-        logger.debug('parts >>>>>'+str(subj_parts))
+        parts_list = header.decode_header(self._msg.get('Subject'))
+        logger.debug('parts >>>>>'+str(parts_list))
         subj_line = u''
         encodings_list = list()
 
         for pair in parts_list:
             dummit_obj = None
-            line, encoding = p
+            line, encoding = pair
             try:
                 dummit_obj = UnicodeDammit(line, [encoding], is_html=False)
 
             except Exception as err:
                 #logger.debug(err)
                 #logger.debug('>>> Please, add this to Kunstkamera')
-                if dammit_obj is None:
+                if dummit_obj is None:
                     continue
 
             subj_line += dummit_obj.unicode_markup + u' '
             encodings_list.append(dummit_obj.original_encoding)
 
         tokens = tuple(subj_line.split())
-        lang = self._get_lang_(self._subj_tokens)
+        lang = self.get_lang_(tokens)
         if lang in self.__LANGS_LIST:
             tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
             logger.debug('before stem: '+str(tokens))

@@ -258,7 +258,7 @@ class BasePattern(BeautifulBody):
 
         return unsubscribe_score
 
-    def get_subjects_metrics(self, subj_regs, score):
+    def get_subject_metrics(self, subj_regs, score):
         '''
         :param subj_regs:
         :param score:
@@ -268,11 +268,11 @@ class BasePattern(BeautifulBody):
 
         # check by regexp rules
         total_score = self.INIT_SCORE
-        line, tokens, encodings = BeautifulBody.get_decoded_subj(self)
+        line, tokens, encodings = self.get_decoded_subj()
         #line = re.sub(ur'[\\\|\/\*]', '', line)
         logger.debug('line : '+line)
 
-        regs = self._get_regexp_(subj_regs, re.U)
+        regs = self.get_regexp_(subj_regs, re.U)
         matched = filter(lambda r: r.search(line, re.I), regs)
 
         total_score += score*len(matched)
@@ -326,7 +326,7 @@ class BasePattern(BeautifulBody):
 
         # url_score, distinct_count, sender_count
         reg = namedtuple('reg', 'for_dom_pt for_txt_pt')
-        compiled = reg(*(self.get_regexp(l, re.I) for l in (domain_regs, text_regs)))
+        compiled = reg(*(self.get_regexp_(l, re.I) for l in (domain_regs, text_regs)))
 
         if netloc_list:
 
@@ -377,7 +377,7 @@ class BasePattern(BeautifulBody):
         text_score = self.INIT_SCORE
 
         # precise le flag pour re.compile ?
-        regs_list = self._get_regexp_(regs_list, re.M)
+        regs_list = self.get_regexp_(regs_list, re.M)
 
         if sent_list is None:
             sents_generator = self.get_sentences()
@@ -451,7 +451,7 @@ class BasePattern(BeautifulBody):
                 soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
                 print(soup_attrs_list)
                 print('type of parsing line in reg_obj: '+str(type(tags_map.get(tag))))
-                compiled_regexp_list = self._get_regexp_(tags_map.get(tag), re.U)
+                compiled_regexp_list = self.get_regexp_(tags_map.get(tag), re.U)
 
                 pairs = list()
                 for key_attr in compiled_regexp_list: # expected_attrs_dict:

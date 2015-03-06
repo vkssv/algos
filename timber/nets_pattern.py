@@ -143,7 +143,7 @@ class NetsPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = self._get_addr_values_(self._msg.get('From'))[0]
+            from_values = self.get_addr_values(self._msg.get('From'))[0]
 
             if from_values:
                 vector_dict['from'] = binascii.crc32(reduce(add,from_values))
@@ -164,7 +164,7 @@ class NetsPattern(BasePattern):
 
         # in general nets are very personal, so check Delivered-To may be a feature
         keys = tuple(filter(lambda k: self._msg.get(k), ['Delivered-To','To']))
-        addr_dict = dict([(k, (self._get_addr_values_(self._msg.get(k))[1])[0]) for k in keys])
+        addr_dict = dict([(k, (self.get_addr_values(self._msg.get(k))[1])[0]) for k in keys])
         logger.debug('>>>>>'+str(addr_dict))
         if addr_dict.get('Delivered-To') and addr_dict.get('Delivered-To') != addr_dict.get('To'):
             list_features_dict['delivered'] = 1

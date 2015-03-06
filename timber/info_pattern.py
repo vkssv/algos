@@ -158,9 +158,9 @@ class InfoPattern(BasePattern):
         list_features_dict['ext_checks'] = len(matched)
 
         keys = tuple(filter(lambda k: self._msg.get(k), ['From','Sender','Reply-To','Delivered-To','To']))
-        #addr_dict = dict([(k,self._get_addr_values_(value)[1][0]) for k,value in zip(keys, tuple([self._msg.get(k) for k in keys]))])
-        logger.debug(str([ self._get_addr_values_(self._msg.get(k)) for k in keys]))
-        addr_dict = dict([(k, (self._get_addr_values_(self._msg.get(k))[1])[0]) for k in keys])
+        #addr_dict = dict([(k,self.get_addr_values(value)[1][0]) for k,value in zip(keys, tuple([self._msg.get(k) for k in keys]))])
+        logger.debug(str([ self.get_addr_values(self._msg.get(k)) for k in keys]))
+        addr_dict = dict([(k, (self.get_addr_values(self._msg.get(k))[1])[0]) for k in keys])
         logger.debug('>>>>>'+str(addr_dict))
 
         if addr_dict.get('Sender') and addr_dict.get('Sender') != addr_dict.get('From'):
@@ -191,7 +191,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = self._get_addr_values_(self._msg.get('From'))[0]
+            from_values = self.get_addr_values(self._msg.get('From'))[0]
             logger.debug(str(from_values))
             logger.debug(str(type(from_values)))
 

@@ -80,6 +80,7 @@ class SpamPattern(BasePattern):
         rcvds = self.get_rcvds(self.RCVDS_NUM)
         print('TYPE:'+str(type(rcvds)))
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
+        vector_dict ["rcvd_rules"] = self.INIT_SCORE
         for rule in rcvd_rules:
             if filter(lambda l: re.search(rule, l), rcvds):
                 vector_dict ["rcvd_rules"] += score
@@ -170,7 +171,7 @@ class SpamPattern(BasePattern):
                                 ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
                             ]
 
-            subj_score, upper_flag, title_flag = self.get_subject_metrics(unicode_subj, subject_rule, score)
+            subj_score, upper_flag, title_flag = self.get_subject_metrics(subject_rule, score)
 
             # some words in UPPER case or almoust all words in subj string are Titled
             if upper_flag or (len(norm_words_list) - title_flag) < 3:
@@ -231,11 +232,12 @@ class SpamPattern(BasePattern):
         # 6. Body "From:" values
         logger.debug('>>> 6. ORIGINATOR_CHECKS:')
 
-        vector_dict['from_checksum']=0
+        vector_dict['from_checksum']=self.INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = self._get_addr_values_()
+            from_values = self.get_addr_values()
+            logger.debug('\tFROM:----->'+str(from_values))
 
             if from_values:
                 vector_dict['from_checksum'] = binascii.crc32(reduce(add, from_values[:1]))

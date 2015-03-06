@@ -15,7 +15,7 @@ from collections import defaultdict, OrderedDict
 
 from franks_factory import MetaFrankenstein
 
-from sklearn.ensemble import RandomForestClassifier
+#from sklearn.ensemble import RandomForestClassifier
 
 
 #PYTHON_VERSION=(2,7)
@@ -157,7 +157,7 @@ if __name__ == "__main__":
                 X[args.category].append(vector_x)
 
         logger.debug(X)
-        clf = RandomForestClassifier(n_estimators=10)
+        #clf = RandomForestClassifier(n_estimators=10)
 
 
 
