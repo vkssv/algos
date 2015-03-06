@@ -268,7 +268,7 @@ class BasePattern(BeautifulBody):
 
         # check by regexp rules
         total_score = self.INIT_SCORE
-        line, tokens, encodings = self.get_decoded_subj()
+        line, tokens, encodings = BeautifulBody.get_decoded_subj(self)
         #line = re.sub(ur'[\\\|\/\*]', '', line)
         logger.debug('line : '+line)
 

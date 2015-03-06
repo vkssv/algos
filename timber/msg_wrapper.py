@@ -149,7 +149,7 @@ class BeautifulBody(object):
         # names are raw encoded strings
         return tuple(names), tuple(addrs)
 
-    #@lazyproperty
+    @lazyproperty
     def get_smtp_domain(self):
         '''
         :return: sender's domain from the first Received-field
@@ -172,7 +172,7 @@ class BeautifulBody(object):
 
         return orig_domain
 
-    #@lazyproperty
+    @lazyproperty
     def get_decoded_subj(self):
         '''
         don't use vector-form of calculations for quick transport-decoding
