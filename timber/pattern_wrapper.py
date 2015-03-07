@@ -186,7 +186,7 @@ class BasePattern(BeautifulBody):
         :param score:
         :param traces_values_list: rcpts addresses from Received:
         :param to_values_list: values from To:, Cc:, Bcc:
-        :return: penalizing score for rcpts-headers values
+        :return: penalizing score for rcpt-headers values
         '''
 
         rcpt_score = self.INIT_SCORE

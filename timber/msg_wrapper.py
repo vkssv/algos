@@ -11,7 +11,7 @@ import pdb
 
 
 
-from email import iterators, header
+from email import iterators, header, utils
 
 from urlparse import urlparse
 from operator import add, itemgetter
@@ -83,6 +83,12 @@ class BeautifulBody(object):
 
         self._msg = msg
 
+    @staticmethod
+    def _get_unicoded_value(raw_line, encoding=None):
+        dammit_obj = UnicodeDammit(raw_line, [encoding], is_html=False)
+
+        return(dammit_obj.unicode_markup.strip())
+
     # maybe change implementation in future
     #@property
     #def get_lang_(self):
@@ -116,39 +122,26 @@ class BeautifulBody(object):
 
         return parsed_rcvds
 
-    def get_addr_values(self, header_value=None):
+    def get_addr_values(self, header_value):
         '''
-        :param header_value:
-        :return:
+        :param list with destinator/originator-headers values, which could consist from realname (string, could be encoded by base64/QP) + email address,
+            so these header values must be obtained from email.message object by message.get_all('HEADER') method
+        :return: vector (because keep order of destinator/originator-addresses) of tuples :
+            (unicode string with decoded realname, address without angle parentheses)
         '''
-        if header_value is None:
-            header_value = self._msg.get('To')
 
         logger.debug('+++++>'+str(header_value))
-        for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9-]{1,63}(?:\.[\w]{2,4})+',re.I)
+        #for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9-]{1,63}(?:\.[\w]{2,4})+',re.I)
+        addr_value = namedtuple('addr_value', 'realname address')
 
-        h_value = tuple(header.decode_header(header_value))
-        # don't use encoding info for translations, so don't keep it
-        h_value = tuple([pair[0] for pair in h_value])
-        logger.debug('+++++'+str(h_value))
-        # crunch addreses and names
-        addrs=[]
-        names = []
-        for part in h_value:
-            logger.debug('part  '+str(part))
-            part = re.sub(r'<|>','',part)
-            logger.debug(str(part))
-            addrs += for_crunch.findall(part)
-            logger.debug(str(addrs))
-            names.append(for_crunch.sub('',part))
+        name_addr_tuples = (addr_value(*pair) for pair in utils.getaddresses(header_value))
+        type(name_addr_tuples)
+        name_addr_tuples = ((self._get_unicoded_value(*header.decode_header(t.realname)), t.address.lower()) for t in tuple(name_addr_tuples))
+        type(name_addr_tuples)
 
-        #logger.debug('names: '+str(names))
+        pairs = tuple(filter(lambda x,y:(x, re.sub(r'<|>','',y)),tuple(name_addr_tuples)))
 
-        # keep order => use tuples, + cause function should works
-        # either for To/CC/Bcc headers with many senders,
-        # or for From/Sender
-        # names are raw encoded strings
-        return tuple(names), tuple(addrs)
+        return pairs
 
     #@lazyproperty
     def get_smtp_domain(self):
@@ -190,19 +183,19 @@ class BeautifulBody(object):
         encodings_list = list()
 
         for pair in parts_list:
-            dummit_obj = None
+            dammit_obj = None
             line, encoding = pair
             try:
-                dummit_obj = UnicodeDammit(line, [encoding], is_html=False)
+                dammit_obj = UnicodeDammit(line, [encoding], is_html=False)
 
             except Exception as err:
                 #logger.debug(err)
                 #logger.debug('>>> Please, add this to Kunstkamera')
-                if dummit_obj is None:
+                if dammit_obj is None:
                     continue
 
-            subj_line += dummit_obj.unicode_markup + u' '
-            encodings_list.append(dummit_obj.original_encoding)
+            subj_line += dammit_obj.unicode_markup + u' '
+            encodings_list.append(dammit_obj.original_encoding)
 
         tokens = tuple(subj_line.split())
         lang = self.get_lang_(tokens)

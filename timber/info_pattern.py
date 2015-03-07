@@ -38,10 +38,7 @@ class InfoPattern(BasePattern):
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
                           ]
 
-        vector_dict.update(self._get_all_heads_crc_(self._msg.items(), excluded_heads))
-
         vector_dict.update(self.get_all_heads_crc(excluded_heads))
-
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields

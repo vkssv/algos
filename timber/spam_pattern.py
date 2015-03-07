@@ -93,17 +93,17 @@ class SpamPattern(BasePattern):
 
         # deep parsing and checks for some wellknown spammers tricks with To: header
         features = ('smtp_to','body_to')
-        features_dict = Counter(map(lambda x,y:('rcpt_'+x,y), features, [self.INIT_SCORE]*len(features)))
+        features_dict = Counter(dict(zip(['rcpt_'+f for f in features], [self.INIT_SCORE]*len(features))))
 
         logger.debug('\t----->'+str(features_dict))
 
         to_values, to_addrs = self.get_addr_values()
         if to_values and filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), to_values):
-            features_dict.update['smtp_to'] += score
+            features_dict['smtp_to'] += score
             logger.debug('\t----->'+str(features_dict))
 
         if not to_addrs:
-            features_dict.update['body_to'] += score
+            features_dict['body_to'] += score
             logger.debug('\t----->'+str(features_dict))
 
         smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in rcvds]))
@@ -116,15 +116,15 @@ class SpamPattern(BasePattern):
                 #logger.debug(smtp_to)
 
                 if len(to_addrs) == 1 and smtp_to != to_addrs[0]:
-                    features_dict.update['body_to'] += score
+                    features_dict['body_to'] += score
                     logger.debug('\t----->'+str(features_dict))
 
                 elif len(to_addrs) > 2 and smtp_to != '<multiple recipients>':
-                    features_dict.update['body_to'] += score
+                    features_dict['body_to'] += score
                     logger.debug('\t----->'+str(features_dict))
 
         else:
-            features_dict.update['smtp_to'] += 1
+            features_dict['smtp_to'] += 1
             logger.debug('\t----->'+str(features_dict))
 
 
@@ -236,7 +236,7 @@ class SpamPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = self.get_addr_values()
+            from_values = self.get_addr_values(self._msg.get('From'))
             logger.debug('\tFROM:----->'+str(from_values))
 
             if from_values:
