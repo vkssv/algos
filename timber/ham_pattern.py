@@ -21,7 +21,7 @@ class HamPattern(BasePattern):
         values, mostly don't equal to zeros ;
     """
 
-    RCVDS_NUM = 3
+    __RCVDS_NUM = 3
 
     def run(self, score):
 
@@ -82,7 +82,7 @@ class HamPattern(BasePattern):
                                 ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
             ]
 
-            rcvds = self.get_rcvds(self.RCVDS_NUM)
+            rcvds = self.get_rcvds(self.__RCVDS_NUM)
             rcvd_vect = tuple([r.partition('by')[0] for r in rcvds])
 
             d, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, domain_regs, regs)

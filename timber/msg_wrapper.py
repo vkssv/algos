@@ -16,6 +16,7 @@ from email import iterators, header, utils
 from urlparse import urlparse
 from operator import add, itemgetter
 from collections import defaultdict, namedtuple
+from itertools import islice
 
 from nltk.tokenize import WordPunctTokenizer, PunktSentenceTokenizer
 from nltk.corpus import stopwords
@@ -26,8 +27,8 @@ from timber_exceptions import NaturesError
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(filename)s: %(message)s')
-#ch = logging.StreamHandler(sys.stdout)
-#logger.addHandler(ch)
+ch = logging.StreamHandler(sys.stdout)
+logger.addHandler(ch)
 
 try:
     from bs4 import BeautifulSoup, UnicodeDammit
@@ -61,9 +62,16 @@ class BeautifulBody(object):
     some kind of BeautifulSoup objects from bs4.
 
     """
-    __LANG = 'english'
-    __LANGS_LIST = ('english', 'french', 'russian')
-    __MAX_NEST_LEVEL = 30
+    # now can't see any real reason to set default as private attributes,
+    # so keep them here
+    DEFAULT_LANG = 'english'
+    DEFAULT_CHARSET = 'utf-8'
+    DEFAULT_MAX_NEST_LEVEL = 30
+
+    SUPPORT_LANGS_LIST = ['english', 'french', 'russian']
+
+    __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))', re.M)
+
     __slots__ = '_msg'
 
     def __init__(self, msg):
@@ -71,7 +79,7 @@ class BeautifulBody(object):
         if msg.is_multipart():
 
             be_picky = [
-                        (lambda y: y > self.__MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
+                        (lambda y: y > self.DEFAULT_MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
                         (lambda y: y, lambda m: m.defects,' I don\'t eat such emails, !')
                     ]
 
@@ -103,9 +111,9 @@ class BeautifulBody(object):
         :param tokens_list:
         :return: 42
         '''
-        lang = self.__LANG
+        lang = self.DEFAULT_LANG
 
-        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self.__LANGS_LIST])
+        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self.SUPPORT_LANGS_LIST])
         tokens_set = set(tokens_list)
         lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
         logger.debug(lang_ratios)
@@ -121,7 +129,7 @@ class BeautifulBody(object):
         :return: left parts of Received header's values, everything before ';'
         '''
         # parse all RCVD headers by default if rcvds_num wasn't defined
-        parsed_rcvds = tuple([rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received')])[ -1*rcvds_num : ]
+        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received'))[ -1*rcvds_num : ]
 
         return parsed_rcvds
 
@@ -207,7 +215,7 @@ class BeautifulBody(object):
 
         tokens = tuple(subj_line.split())
         lang = self.get_lang_(tokens)
-        if lang in self.__LANGS_LIST:
+        if lang in self.SUPPORT_LANGS_LIST:
             tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
             logger.debug('before stem: '+str(tokens))
             subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
@@ -219,10 +227,10 @@ class BeautifulBody(object):
         """
         :return: dict { mime_type  : [attribute : value] }
         """
-        self._mime_parts = defaultdict(list)
+        mime_parts = defaultdict(list)
 
-        mime_heads = ['Content-Type', 'Content-Transfer-Encoding', 'Content-Id', 'Content-Disposition',\
-                      'Content-Description','Content-Class']
+        needed_heads = ['content-type', 'content-transfer-encoding', 'content-id', 'content-disposition',\
+                      'content-description','content-class']
 
         for part in self._msg.walk():
 
@@ -230,25 +238,35 @@ class BeautifulBody(object):
             # default initialization, but expected that Content-Type always goes first in MIME-headers set for body's part?
             # so I always will have non-default value in else branch for normal emails
             # can't find any info in RFCs 2045/2046... about MIME-headers order ((
-            for head in filter(lambda n: part.keys().count(n), mime_heads):
 
-                if head == 'Content-Type':
+
+            mime_part_heads = tuple(k.lower() for k in part.keys())
+            print('>>>'+str(mime_part_heads))
+            print(tuple(head_name for head_name in needed_heads if mime_part_heads.count(head_name)))
+            for head in tuple(head_name for head_name in needed_heads if mime_part_heads.count(head_name)):
+            #for head in filter(lambda n: part.keys().count(n), mime_heads):
+
+                if head == 'content-type':
 
                     part_key = part.get(head)
+                    logger.debug(part_key)
                     part_key = part_key.partition(';')[0].strip()
+                    logger.debug(part_key)
                     added_value = (re.sub(part_key+';','',part.get(head).strip(),re.M)).strip()
-
-                    self._mime_parts[part_key].append(added_value.lower())
+                    logger.debug(added_value)
+                    mime_parts[part_key].append(added_value.lower())
+                    logger.debug(mime_parts)
                     #part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
 
                 else:
-                    self._mime_parts[part_key].append(part.get(head).strip())
+                    mime_parts[part_key].append(part.get(head).strip())
+                    logger.debug(mime_parts)
                     #part_dict[head] = part.get(head).strip()
 
-        self._mime_parts = dict([(k,tuple(v)) for k,v in self._mime_parts.items()])
-        #logger.debug("mime_dict: "+str(self._mime_parts_))
+        mime_parts = dict((k,tuple(v)) for k,v in mime_parts.items())
+        logger.debug("mime_dict: "+str(mime_parts))
 
-        return self._mime_parts
+        return mime_parts
 
     #@lazyproperty
     def get_nest_level(self):
@@ -319,7 +337,7 @@ class BeautifulBody(object):
             if decoded_line is None or len(decoded_line.strip()) == 0:
                 continue
 
-            lang = self.__LANG
+            lang = self.DEFAULT_LANG
             if dammit_obj.original_encoding:
                 for l in langs_map.iterkeys():
                     if filter(lambda ch: re.match(r''+ch, dammit_obj.original_encoding, re.I), langs_map.get(l)):
@@ -333,12 +351,17 @@ class BeautifulBody(object):
 
             yield(decoded_line, p.get_content_type(), lang)
 
-    def get_sentences(self):
+    def get_sentences(self, remove_url=True):
         '''
         sentences generator
+        :remove_url: True - replace URL from unicoded sentence with space,
+        cause URLs are processing separately in BasePattern and should not
+        affected other MIME part's tokens statistics
         :return: tuple of sentences for each text/mime part
         '''
         tokenizer = PunktSentenceTokenizer()
+
+
         for raw_line, mime_type, lang in tuple(self.get_text_mime_part()):
             print(raw_line, mime_type, lang)
             if 'html' in mime_type:
@@ -348,13 +371,21 @@ class BeautifulBody(object):
                 # cause exactly sentences are needed, soup.body.strings returns lines+0d0a
                 lines = tuple(soup.body.strings)
                 raw_line = ''.join(lines)
-                logger.debug(raw_line)
+                logger.debug(u'raw_line_from_html >>'+raw_line)
             print(raw_line)
             print(tokenizer.tokenize(raw_line))
             try:
                 sents = tuple(tokenizer.tokenize(raw_line))
             except Exception as err:
                 sents = tuple(raw_line)
+
+            if remove_url:
+                sents = tuple(map(lambda sent: self.__URLINTEXT_PAT.sub(' ', sent, re.I), sents))
+
+            sents = (s.strip() for s in sents)
+            sents = tuple(s for s in tuple(sents) if s)
+            if len(sents) == 0:
+                continue
 
             yield sents
 
@@ -374,7 +405,7 @@ class BeautifulBody(object):
             lang = self.get_lang_(tokens)
             logger.debug('lang: '+lang)
 
-            if lang in self.__LANGS_LIST:
+            if lang in self.SUPPORT_LANGS_LIST:
                 #todo: create stopwords list for jis ,
                 tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
                 logger.debug('before stem: '+str(tokens))

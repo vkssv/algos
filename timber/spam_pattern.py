@@ -43,7 +43,7 @@ class SpamPattern(BasePattern):
     """
 
     # todo: from magic numbers to input arguments ! ( rather to config with sophisticated params )
-    RCVDS_NUM = 2
+    __RCVDS_NUM = 2
 
     def run(self, score):
 
@@ -59,9 +59,7 @@ class SpamPattern(BasePattern):
                          ]
 
         logger.debug(str(self._msg.items()))
-        heads_crc, values_crc = self.get_all_heads_crc(excluded_heads)
-        logger.debug(str(heads_crc))
-        vector_dict['rcvd_heads_crc'] = heads_crc
+        vector_dict['all_heads_crc'] = self.get_all_heads_crc(excluded_heads)
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
@@ -77,7 +75,7 @@ class SpamPattern(BasePattern):
                         r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
         ]
 
-        rcvds = self.get_rcvds(self.RCVDS_NUM)
+        rcvds = self.get_rcvds(self.__RCVDS_NUM)
         print('TYPE:'+str(type(rcvds)))
         logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
         vector_dict ["rcvd_rules"] = self.INIT_SCORE
@@ -165,7 +163,7 @@ class SpamPattern(BasePattern):
 
         if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
             # this unique spam author respects RFC 2369, his creation deservs more attentive check
-            list_features_dict['list'] = self.get_list_metrics(rcvd_vect, score)
+            list_features_dict['list'] = self.get_list_metrics(score)
             logger.debug('\t----->'+str(list_features_dict))
 
         elif (self._msg.keys().count('Sender') and self._msg.keys().count('From')):
@@ -210,7 +208,7 @@ class SpamPattern(BasePattern):
 
             if name_addr_tuples:
                 from_value, from_addr = reduce(add, name_addr_tuples)
-                vector_dict['from_checksum'] = binascii.crc32(from_value)
+                vector_dict['from_checksum'] = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
                 logger.debug('\t----->'+str(vector_dict))
 
 
@@ -327,7 +325,7 @@ class SpamPattern(BasePattern):
 
         else:
             basics = ('url_score', 'distinct_count', 'sender_count')
-            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [self.INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
         vector_dict.update(features_dict)

@@ -35,7 +35,7 @@ class NetsPattern(BasePattern):
                             'Delivered-To', 'Authentication-Results', 'DKIM-Signature','Content-Type'
                             ]
 
-        vector_dict.update(self._get_all_heads_crc_(self._msg.items(), excluded_heads))
+        vector_dict.update(self.get_all_heads_crc(excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
 
         # keep the count of traces fields
@@ -48,7 +48,7 @@ class NetsPattern(BasePattern):
         vector_dict['rcpt_smtp_to'], vector_dict['rcpt_body_to'] = self.get_addr_values(score)
 
         # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in self._get_rcvds_(self, __RCVDS_NUM)])
+        rcvd_vect = tuple([r.partition('by')[0] for r in self.get_rcvds(self.__RCVDS_NUM)])
         logger.debug(rcvd_vect)
         vector_dict.update(self._get_trace_crc_(rcvd_vect))
         logger.debug('\t----->'+str(vector_dict))
@@ -57,7 +57,7 @@ class NetsPattern(BasePattern):
         # 3. DMARC checks
         logger.debug('>>> 3. SPF/DKIM_CHECKS:')
 
-        dmarc_dict_checks, dkim_domain = self.get_dmarc_metrics(self._msg.items(), score)
+        dmarc_dict_checks, dkim_domain = self.get_dmarc_metrics(score)
         vector_dict.update(dmarc_dict_checks)
 
         # take the name from DKIM heads, it's very expensive for spammers to sign their bulk

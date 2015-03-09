@@ -33,7 +33,6 @@ class BasePattern(BeautifulBody):
     """
 
     INIT_SCORE = 0
-    __CHARSET = 'utf-8'
 
     # just for debugging new regexps
     @staticmethod
@@ -80,9 +79,8 @@ class BasePattern(BeautifulBody):
     def get_all_heads_crc(self, excluded_list = None):
         '''
         :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
-        :return: <CRC32 from headers names>, <CRC32 from values> - don't use )
+        :return: <CRC32 from headers names>
         '''
-
         logger.debug(self._msg.items())
 
         heads_vector = tuple(map(itemgetter(0), self._msg.items()))
@@ -93,16 +91,9 @@ class BasePattern(BeautifulBody):
                 # can use match - no new lines in r_name
                 heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
-        values_vector = tuple([heads_dict.get(k) for k in heads_vector])
-        # logger.debug('values_vector'+str(values_vector))
-        # save the last word
-        values_vector = tuple([value.split()[-1:] for value in values_vector[:]])
-        # logger.debug('values_vector --->'+str(values_vector))
-
         heads_crc = binascii.crc32(''.join(heads_vector))
-        values_crc = binascii.crc32(''.join(reduce(add,values_vector)))
 
-        return heads_crc, values_crc
+        return heads_crc
 
     def get_headers_metrics(self, head_pattern, known_mailers, score):
         '''
@@ -216,12 +207,12 @@ class BasePattern(BeautifulBody):
             logger.debug('\t----->'+str(body_to))
 
         elif len(only_addr_list) > 2 and smtp_to_addr != '<multiple recipients>':
-            features_dict['body_to'] += score
+            body_to += score
             logger.debug('\t----->'+str(body_to))
 
         return smtp_to, body_to
 
-    def get_lists_metrics(self, score):
+    def get_list_metrics(self, score):
         '''
         :param score:
         :return: penalizing score for List-* headers
@@ -515,18 +506,17 @@ class BasePattern(BeautifulBody):
         if all_text_parts:
             all_text = ''.join(reduce(add,all_text_parts))
             print(type(all_text))
-            compressed_ratio = float(len(zlib.compress(all_text.encode(self.__CHARSET))))/len(all_text)
+            compressed_ratio = float(len(zlib.compress(all_text.encode(self.DEFAULT_CHARSET))))/len(all_text)
 
         return compressed_ratio
 
-    def get_text_parts_jaccard():
-        # nltk.jaccard_distance()
-        return 1.618
+    #def get_text_parts_jaccard():
+        # return nltk.jaccard_distance()
 
     def get_attach_metrics(self, mime_parts_list, reg_list, score):
         '''
         :param mime_parts_list:
-        :param reg_list:
+        :param reg_list: scary regexes for attach attribute value from Content-Type header
         :param score:
         :return: attach_count, score, <score gained by inline attachements>
         '''
