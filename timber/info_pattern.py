@@ -55,8 +55,7 @@ class InfoPattern(BasePattern):
         # 2. "To:", "SMTP RCPT TO:" Headers
         logger.debug('>>> 2. DESTINATOR CHECKS:')
 
-        # check that rcpt from trace field and To the same and the one (in general)
-        vector_dict['to'] = self.get_rcpts_metrics(score, self._msg.get_all('Received'), self._msg.get_all('To'))
+        vector_dict['rcpt_smtp_to'], vector_dict['rcpt_body_to'] = self.get_addr_values(score)
 
 
         logger.debug('>>> 3. SPF/DKIM_CHECKS:')
@@ -214,7 +213,7 @@ class InfoPattern(BasePattern):
             if 'text/html' in first_content_type and re.search('utf-8',first_content_type,re.I):
                 mime_dict['mime_score'] += score
 
-            mime_skeleton = self._get_mime_struct_(self)
+            mime_skeleton = self.get_mime_struct()
 
             logger.debug('MIME STRUCT: '+str(mime_skeleton))
 

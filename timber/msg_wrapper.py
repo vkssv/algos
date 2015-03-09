@@ -25,7 +25,7 @@ from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(filename)s: %(message)s')
+formatter = logging.Formatter('%(filename)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
@@ -63,7 +63,6 @@ class BeautifulBody(object):
     """
     __LANG = 'english'
     __LANGS_LIST = ('english', 'french', 'russian')
-    #__CHARSET = 'utf-8'
     __MAX_NEST_LEVEL = 30
     __slots__ = '_msg'
 
@@ -84,10 +83,14 @@ class BeautifulBody(object):
         self._msg = msg
 
     @staticmethod
-    def _get_unicoded_value(raw_line, encoding=None):
+    def _get_unicoded_value(raw_line, encoding=None ):
+        print('in _get_unicoded_value')
+        print(raw_line)
+        print(encoding)
         dammit_obj = UnicodeDammit(raw_line, [encoding], is_html=False)
+        logger.debug(dammit_obj.unicode_markup.strip())
 
-        return(dammit_obj.unicode_markup.strip())
+        return dammit_obj.unicode_markup.strip()
 
     # maybe change implementation in future
     #@property
@@ -124,23 +127,28 @@ class BeautifulBody(object):
 
     def get_addr_values(self, header_value):
         '''
-        :param list with destinator/originator-headers values, which could consist from realname (string, could be encoded by base64/QP) + email address,
-            so these header values must be obtained from email.message object by message.get_all('HEADER') method
-        :return: vector (because keep order of destinator/originator-addresses) of tuples :
+        :param list with destinator/originator-headers values, which could consist from realname (string, could be encoded by base64/QP)
+            + email address, so these header values MUST BE obtained from email.message object by message.get_all('HEADER') method
+        :return: vector (because the order of destinator/originator-addresses should be kept) of tuples :
             (unicode string with decoded realname, address without angle parentheses)
         '''
 
         logger.debug('+++++>'+str(header_value))
+
         #for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9-]{1,63}(?:\.[\w]{2,4})+',re.I)
+        # don't see any sense to create one more @static method for making namedtuple objects,
+        # cause it makes code less readable and cumbrous
         addr_value = namedtuple('addr_value', 'realname address')
 
         name_addr_tuples = (addr_value(*pair) for pair in utils.getaddresses(header_value))
-        type(name_addr_tuples)
-        name_addr_tuples = ((self._get_unicoded_value(*header.decode_header(t.realname)), t.address.lower()) for t in tuple(name_addr_tuples))
-        type(name_addr_tuples)
+        temp = tuple((reduce(add,header.decode_header(t.realname)), t.address.lower()) for t in tuple(name_addr_tuples))
+        name_addr_tuples = ((self._get_unicoded_value(*(t.realname)), t.address) for t in tuple((addr_value(*pair) for pair in temp)))
+        # address value has always to exist in returned pair, cause in some patterns we leave only them in the list for processing
+        pairs = tuple((p.realname, p.address) for p in (addr_value(*pair) for pair in name_addr_tuples) if p.address)
+        if pairs:
+            pairs = tuple((p.realname, re.sub(r'<|>','',p.address)) for p in tuple(addr_value(*pair) for pair in pairs))
 
-        pairs = tuple(filter(lambda x,y:(x, re.sub(r'<|>','',y)),tuple(name_addr_tuples)))
-
+        print("pairs >>"+str(pairs))
         return pairs
 
     #@lazyproperty
@@ -154,7 +162,7 @@ class BeautifulBody(object):
         regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
         orig_domain = ''
 
-        l = filter(lambda value: regexp.search(value), self._get_rcvds_())
+        l = filter(lambda value: regexp.search(value), self.get_rcvds())
         logger.debug(l) # check that regexp matched exactlu first
         if l:
             orig_domain = reduce(add,l)
@@ -248,44 +256,35 @@ class BeautifulBody(object):
         :return: MIME-nesting level
         '''
 
-        mime_parts = self._get_mime_struct()
-        level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I),mime_parts.keys()))
+        mime_parts = self.get_mime_struct()
+        level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
 
         return level
 
     #@lazyproperty
     def get_url_list(self):
+        '''
+        :return: list of urlparse objects for further processing,
+        or empty list if body doesn't contain any links
+        '''
 
-        url_list = list()
+        self.url_list = list()
 
-        for line, content_type, lang in list(self._get_text_mime_part()):
-            # parse by lines
+        for line, content_type, lang in list(self.get_text_mime_part()):
             if 'html' in content_type:
                 soup = BeautifulSoup(line)
                 if soup.a:
-                    # TODO: create deeply parsing with cool bs4 methods
-                    url_list.extend([unicode(x) for x in soup.a])
+                    self.url_list.extend([unicode(x) for x in soup.a])
             else:
                 url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
-                url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
+                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
 
-        #logger.debug("URL LIST:")
-        for i in url_list:
-            if url_list:
-                # todo: fix this shame (there is nothing more permanent, then some temporary peaces of shame in your simple code ()
-                url_list = [ (((s.strip(']')).strip('[')).strip(')')).strip('(').strip('<').strip('>') for s in self.url_list ]
 
-            parsed_urls = list()
-            for y in url_list:
-                try:
-                    parsed_urls.append(urlparse(y))
-                except Exception as err:
-                    logger.error(str(err))
-                    continue
+        if self.url_list:
+            self.url_list = [urlparse(i) for i in self.url_list]
 
-            url_list = parsed_urls
-
-        return url_list
+        # todo: make it as lazy computing value
+        return self.url_list
 
     def get_text_mime_part(self):
         '''
@@ -340,7 +339,7 @@ class BeautifulBody(object):
         :return: tuple of sentences for each text/mime part
         '''
         tokenizer = PunktSentenceTokenizer()
-        for raw_line, mime_type, lang in tuple(self._get_text_mime_part_()):
+        for raw_line, mime_type, lang in tuple(self.get_text_mime_part()):
             print(raw_line, mime_type, lang)
             if 'html' in mime_type:
                 soup = BeautifulSoup(raw_line)
@@ -362,20 +361,18 @@ class BeautifulBody(object):
     def get_stemmed_tokens(self):
         '''
         tokens generator
-        :return: stemmed tokens tuple (keeps token's order) for each text/mime part
+        :return: stemmed, cleaned from stopwords tokens tuple (keeps token's order) for each text/mime part
         '''
         tokenizer = WordPunctTokenizer()
         #punct_extractor = RegexpTokenizer("[\w']+", gaps=True)
 
-        # todo: while true ? amneisic ?
-        for pt in tuple(self._get_sentences_()):
+        # todo: while true ?
+        for pt in tuple(self.get_sentences()):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
-            tokens = reduce(add,tokens)
+            tokens = reduce(add, tokens)
             logger.debug("tokens: "+str(tokens))
-            if lang == self.__LANG:
-                # check that it's really english
-                lang = self._get_lang_(tokens)
-                logger.debug('lang: '+lang)
+            lang = self.get_lang_(tokens)
+            logger.debug('lang: '+lang)
 
             if lang in self.__LANGS_LIST:
                 #todo: create stopwords list for jis ,

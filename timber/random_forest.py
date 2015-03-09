@@ -14,6 +14,7 @@ from email.parser import Parser
 from collections import defaultdict, OrderedDict
 
 from franks_factory import MetaFrankenstein
+from pattern_wrapper import BasePattern
 
 #from sklearn.ensemble import RandomForestClassifier
 
@@ -43,8 +44,6 @@ def vectorize(doc_path, label, score):
     with open(doc_path, 'rb') as f:
         msg = parser.parse(f)
 
-    # size
-    # todo: lookup at distribution law for sizes again
     vect_dict['size'] = math.ceil(float((os.stat(doc_path).st_size)/1024))
     logger.debug('----->'+str(vect_dict))
 
@@ -53,8 +52,6 @@ def vectorize(doc_path, label, score):
         Frankenstein = MetaFrankenstein.New(msg, label)
         logger.debug('\n\n\t CHECK_' + label.upper()+'\n')
         vect_dict.update(Frankenstein.run(score))
-        for attr in ('avg_ent', 'mime_compres_ratio'):
-            vect_dict.update(Frankenstein.__getattribute__(attr))
 
     except Exception as details:
         logger.error(str(details))

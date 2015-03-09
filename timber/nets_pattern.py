@@ -45,7 +45,7 @@ class NetsPattern(BasePattern):
 
         # 2. "To:", "SMTP RCPT TO:" Headers
         logger.debug('>>> 2. DESTINATOR CHECKS:')
-        vector_dict['to'] = self.get_rcpts_metrics(score ,self._msg.get_all('Received'), self._msg.get_all('To'))
+        vector_dict['rcpt_smtp_to'], vector_dict['rcpt_body_to'] = self.get_addr_values(score)
 
         # get crc32 from first N trace fields
         rcvd_vect = tuple([r.partition('by')[0] for r in self._get_rcvds_(self, __RCVDS_NUM)])
@@ -182,7 +182,7 @@ class NetsPattern(BasePattern):
         if self._msg.is_multipart():
             mime_dict['mime_score'] = score
 
-            mime_skeleton = self._get_mime_struct_(self)
+            mime_skeleton = self.get_mime_struct()
 
             # some particular rules for SN emails
             # presence of typical mime-parts for infos

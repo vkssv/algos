@@ -27,7 +27,7 @@
 
 import os, sys, logging, re, binascii, math
 
-from operator import add
+from operator import add, itemgetter
 from collections import OrderedDict, Counter, namedtuple
 from pattern_wrapper import BasePattern
 
@@ -91,48 +91,13 @@ class SpamPattern(BasePattern):
         # 2. "To:", "SMTP RCPT TO:" Headers
         logger.debug('>>> 2. DESTINATOR CHECKS:')
 
-        # deep parsing and checks for some wellknown spammers tricks with To: header
-        features = ('smtp_to','body_to')
-        features_dict = Counter(dict(zip(['rcpt_'+f for f in features], [self.INIT_SCORE]*len(features))))
-
-        logger.debug('\t----->'+str(features_dict))
-
-        to_values, to_addrs = self.get_addr_values()
-        if to_values and filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), to_values):
-            features_dict['smtp_to'] += score
-            logger.debug('\t----->'+str(features_dict))
-
-        if not to_addrs:
-            features_dict['body_to'] += score
-            logger.debug('\t----->'+str(features_dict))
-
-        smtp_to_list = filter(lambda x: x, tuple([(r.partition('for')[2]).strip() for r in rcvds]))
-
-        if smtp_to_list:
-            trace_str_with_to = smtp_to_list[0]
-            smtp_to = re.search(r'<(.*@.*)?>', trace_str_with_to)
-            if smtp_to:
-                smtp_to = smtp_to.group(0)
-                #logger.debug(smtp_to)
-
-                if len(to_addrs) == 1 and smtp_to != to_addrs[0]:
-                    features_dict['body_to'] += score
-                    logger.debug('\t----->'+str(features_dict))
-
-                elif len(to_addrs) > 2 and smtp_to != '<multiple recipients>':
-                    features_dict['body_to'] += score
-                    logger.debug('\t----->'+str(features_dict))
-
-        else:
-            features_dict['smtp_to'] += 1
-            logger.debug('\t----->'+str(features_dict))
-
+        vector_dict['rcpt_smtp_to'], vector_dict['rcpt_body_to'] = self.get_rcpts_metrics(score)
 
         # 3. "Subject:" Header
         logger.debug('>>> 3. SUBJECT CHECKS:')
 
         features = ('len','style','score','checksum','encoding')
-        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [self.INIT_SCORE]*len(features)))
+        features_dict = dict(zip(['subj_'+f for f in features], [self.INIT_SCORE]*len(features)))
 
         if self._msg.get("Subject"):
 
@@ -232,15 +197,20 @@ class SpamPattern(BasePattern):
         # 6. Body "From:" values
         logger.debug('>>> 6. ORIGINATOR_CHECKS:')
 
-        vector_dict['from_checksum']=self.INIT_SCORE
+        vector_dict['from_checksum'] = self.INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = self.get_addr_values(self._msg.get('From'))
-            logger.debug('\tFROM:----->'+str(from_values))
+            name_addr_tuples = self.get_addr_values(self._msg.get_all('From'))[:1]
+            logger.debug('\tFROM:----->'+str(name_addr_tuples))
+            print(name_addr_tuples)
 
-            if from_values:
-                vector_dict['from_checksum'] = binascii.crc32(reduce(add, from_values[:1]))
+            if len(name_addr_tuples) != 1:
+                logger.warning('\t----->'+str(name_addr_tuples))
+
+            if name_addr_tuples:
+                from_value, from_addr = reduce(add, name_addr_tuples)
+                vector_dict['from_checksum'] = binascii.crc32(from_value)
                 logger.debug('\t----->'+str(vector_dict))
 
 
@@ -292,7 +262,7 @@ class SpamPattern(BasePattern):
         # many usual and not usual ideas about phising urls:
         # http://www.isteams.org/conference/pdf/Paper%20111-%20iSTEAMS%202014%20-Asani%20et%20al%20-%20MAXIMUM%20PHISH%20BAIT%20-%20TOWARDS%20FEATURE%20BASED%20DETECTION%20OF%20PHISING%20USING%20MAXIMUM%20ENTROPY%20CLASSIFICATION%20TECHNIQUE.pdf
         # (Now I'm not having time to code all features by day or two ;-((( )
-        features_dict = OrderedDict(map(lambda x,y: (x,y), features, [INIT_SCORE]*len(features)))
+        features_dict = OrderedDict(zip(features, [self.INIT_SCORE]*len(features)))
 
         if urls_list:
 
@@ -330,7 +300,7 @@ class SpamPattern(BasePattern):
                                 ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
             ]
 
-            basic_features_dict, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, regs_for_dom_pt, regs_for_txt_pt)
+            basic_features_dict, netloc_list = self.get_url_metrics(regs_for_dom_pt, regs_for_txt_pt, score)
             basic_features_dict.pop('url_count') # for spams url count may be totally different
 
             print('NETLOC_LIST >>>'+str(netloc_list))
@@ -407,11 +377,18 @@ class SpamPattern(BasePattern):
                         }
         }
 
-        # todo: ask about this acrh problem : repeate 2 lines in each class or
+        # todo: ask somebody smart how to kill yourself immediately
+        # about this acrh problem : repeate 2 lines in each class or
         # call these functions with method_getter() in random_forest namespace + __get_atribute__()
         # for args
+
+
         vector_dict.update(dict(zip(('html_score', 'html_checksum'), self.get_html_parts_metrics(score, tags_map))))
         vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
+        vector_dict['avg_entropy'] = self.get_text_parts_avg_entropy()
+        vector_dict['compression_ratio'] = self.get_text_compress_ratio()
+
+        logger.debug('MSG VECTOR --> '+str(vector_dict))
 
         return vector_dict
 
