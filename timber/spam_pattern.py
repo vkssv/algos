@@ -188,7 +188,8 @@ class SpamPattern(BasePattern):
         # that's very typically for unconditional spam
         logger.debug('>>> 5. SPF/DKIM_CHECKS:')
 
-        dmarc_dict, dkim_domain = self.get_dmarc_metrics(score)
+        dmarc_score, dmarc_dict, dkim_domain = self.get_dmarc_metrics(score)
+        vector_dict['dmarc_score'] = dmarc_score
         vector_dict.update(dmarc_dict)
 
 

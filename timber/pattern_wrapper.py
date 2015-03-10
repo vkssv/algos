@@ -122,56 +122,59 @@ class BasePattern(BeautifulBody):
 
         return emarket_heads_score, known_mailer_flag
 
-    def get_dmarc_metrics(self, score, required_heads_list=None):
+    def get_dmarc_metrics(self, score, dmarc_heads=None):
         '''
         :param score:
-        :param required_heads_list: for those, who are searching smth special
-        :return: <DMARC metrics dict>, <sender's domain from DKIM>
+        :param dmarc_heads: list of headers, described in RFC 6376, RFC 7208
+        :return: <dmarc_score (score, which is gained, if some of DMARC-standard's headers are absent)>
+                    <DMARC metrics dict>, <sender's domain from DKIM>
         '''
 
-        if required_heads_list is None:
-            required_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
+        if dmarc_heads is None:
+            dmarc_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
 
-        dmarc_dict = dict(zip(required_heads,[self.INIT_SCORE]*len(required_heads)))
+        dmarc_dict = dict(zip(dmarc_heads, [self.INIT_SCORE]*len(dmarc_heads)))
         logger.debug(str(dmarc_dict))
+        dmarc_score = self.INIT_SCORE
         dkim_domain = ''
-        heads_dict = dict(self._msg.items())
 
-        # RFC 7001, this header has to be included
-        if not (heads_dict.keys()).count('Authentication-Results'):
-            return dmarc_dict, dkim_domain
+        # RFC 7001, this header has always to be included
+        dmarc_heads.append('Authentication-Results')
+        if not (self._msg.keys()).count('Authentication-Results'):
+            return dmarc_score, dmarc_dict, dkim_domain
 
         total = list()
         for h in dmarc_dict.iterkeys():
-            dkims = filter(lambda z: re.search(h, z), heads_dict.keys())
+            dkims = filter(lambda z: re.match(h, z, re.I), self._msg.keys())
             total.extend(dkims)
 
         logger.debug('TOTAL:'+str(total))
 
         # (len(required_heads_list)+1, cause we can find DKIM-Signature and DomainKey-Signature in one doc
-        logger.debug('req_head:'+str(len(required_heads_list)+1))
+        logger.debug('req_head:'+str(len(dmarc_heads)))
         #logger.debug('req_head:'+str(len(required_heads_list)+1))
         logger.debug('found:'+str(len(set(total))*score))
 
-        basic_score = (len(required_heads_list)+1) - (len(set(total))*score)
+        # todo: in a results look how it will probably correlate with last two metrics below
+        dmarc_score = len(dmarc_heads) - len(set(total))*score
 
         # simple checks for Received-SPF and DKIM/DomainKey-Signature
-        if heads_dict.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', heads_dict.get('Received-SPF'), re.I):
+        if self._msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self._msg.get('Received-SPF'), re.I):
             dmarc_dict['Received-SPF'] += score
 
         # check domain names in From and DKIM-headers (but now it's probably redundant)
-        from_domain = (heads_dict.get('From')).partition('@')[2]
+        from_domain = (self._msg.get('From')).partition('@')[2]
         from_domain = from_domain.strip('>').strip()
 
         dkim_domain=''
         logger.debug('dkims'+str(dkims))
-        valid_lines = filter(lambda f: re.search(from_domain,f), [heads_dict.get(h) for h in dkims])
+        valid_lines = filter(lambda f: re.search(from_domain,f), [ self._msg.get(h) for h in dkims ])
         if len(valid_lines) == len(dkims):
             dmarc_dict['(DKIM|DomainKey)-Signature'] += score
             dkim_domain = from_domain
             logger.debug('dkim_domain '+str(dkim_domain))
 
-        return dmarc_dict, dkim_domain
+        return dmarc_score, dmarc_dict, dkim_domain
 
     def get_rcpts_metrics(self, score):
         '''
@@ -194,7 +197,7 @@ class BasePattern(BeautifulBody):
 
         if not (smtp_to_list or only_addr_list):
             # can't check without data => leave zeros
-            return rcpt_score
+            return smtp_to, body_to
 
         for key, l in zip((smtp_to, body_to),(smtp_to_list, only_addr_list)):
             if filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), l):

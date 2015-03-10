@@ -60,10 +60,11 @@ class InfoPattern(BasePattern):
 
         logger.debug('>>> 3. SPF/DKIM_CHECKS:')
         logger.debug('>>>'+str(self.get_dmarc_metrics(self._msg.items(), score)))
-        dmarc_dict_checks, dkim_domain = self.get_dmarc_metrics(self._msg.items(), score)
-        logger.debug(str(dmarc_dict_checks))
-        vector_dict.update(dmarc_dict_checks)
-        vector_dict['dmarc'] = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I),self._msg.keys()))
+        dmarc_score, dmarc_dict, dkim_domain = self.get_dmarc_metrics(score)
+        logger.debug(str(dmarc_dict))
+        vector_dict['dmarc_score'] = dmarc_score
+        vector_dict.update(dmarc_dict)
+        vector_dict['dmarc_x_heads'] = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I),self._msg.keys()))
 
 
         # 4. Presense of X-EMID && X-EMMAIL, etc

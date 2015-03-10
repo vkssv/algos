@@ -57,20 +57,21 @@ class NetsPattern(BasePattern):
         # 3. DMARC checks
         logger.debug('>>> 3. SPF/DKIM_CHECKS:')
 
-        dmarc_dict_checks, dkim_domain = self.get_dmarc_metrics(score)
-        vector_dict.update(dmarc_dict_checks)
+        dmarc_score, dmarc_dict, dkim_domain = self.get_dmarc_metrics(score)
+        vector_dict['dmarc_score'] = dmarc_score
+        vector_dict.update(dmarc_dict)
 
         # take the name from DKIM heads, it's very expensive for spammers to sign their bulk
         known_domains = [
                             r'.*\.vk\.com',\
+                            r'.*\.twitter\.com',\
                             r'.*\.facebook.*\.com',\
-                            r'odnoklassniki\.ru',\
-                            r'plus\.google\.com',\
+                            r'.*\.odnoklassniki\.ru',\
+                            r'.*\.plus\.google\.com',\
                             r'.*\.linkedin\.com', \
                             r'.*\.meetup\.com', \
                             r'.*\.viadeo\.com'
                         ]
-
 
         vector_dict['known_domain'] = len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), known_domains))
 

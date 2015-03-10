@@ -143,16 +143,47 @@ class BeautifulBody(object):
 
         logger.debug('+++++>'+str(header_value))
 
-        #for_crunch = re.compile(r'[\w\.-_]{1,64}@[a-z0-9-]{1,63}(?:\.[\w]{2,4})+',re.I)
-        # don't see any sense to create one more @static method for making namedtuple objects,
-        # cause it makes code less readable and cumbrous
         addr_value = namedtuple('addr_value', 'realname address')
 
         name_addr_tuples = (addr_value(*pair) for pair in utils.getaddresses(header_value))
-        temp = tuple((reduce(add,header.decode_header(t.realname)), t.address.lower()) for t in tuple(name_addr_tuples))
-        name_addr_tuples = ((self._get_unicoded_value(*(t.realname)), t.address) for t in tuple((addr_value(*pair) for pair in temp)))
+        # cause of such From-header values from russian spam:
+        # utils.getaddresses(m.get_all('From'))
+        # [('=?utf-8?B?0KDQodCl0JDQo9Cf?= "=?utf-8?B?0JHQtdC70J/QodCl0JDQk9CY?="', 'mail@belaerogis.by')]
+        # need to cycling
+        temp = list()
+        for realname, address in tuple(name_addr_tuples):
+            print(address)
+            if not address:
+                continue
+            parts = realname
+            if realname.startswith('=?') and (realname.count(' ')>0 or realname.count('"')>0):
+                realname = re.sub('"','',realname)
+
+                parts = tuple(header.decode_header(p) for p in (realname).split())
+                print(parts)
+
+            temp.append((parts, address.lower()))
+
+        print(temp)
+        pairs = list()
+        for t in temp:
+            realname_parts, addr = t
+            print(realname_parts)
+            print(addr)
+            
+            value = u''
+
+            for part in realname_parts:
+                print(part)
+                if len(part)==0:
+                    continue
+                value += self._get_unicoded_value(*(reduce(add,part)))
+
+            pairs.append((value, addr))
+
+        #name_addr_tuples = ((self._get_unicoded_value(*(t.realname)), t.address) for t in tuple((addr_value(*pair) for pair in temp)))
         # address value has always to exist in returned pair, cause in some patterns we leave only them in the list for processing
-        pairs = tuple((p.realname, p.address) for p in (addr_value(*pair) for pair in name_addr_tuples) if p.address)
+        #pairs = tuple((p.realname, p.address) for p in (addr_value(*pair) for pair in name_addr_tuples) if p.address)
         if pairs:
             pairs = tuple((p.realname, re.sub(r'<|>','',p.address)) for p in tuple(addr_value(*pair) for pair in pairs))
 
@@ -333,7 +364,7 @@ class BeautifulBody(object):
                     continue
 
             decoded_line = dammit_obj.unicode_markup
-            logger.debug(decoded_line)
+            #logger.debug(decoded_line)
             if decoded_line is None or len(decoded_line.strip()) == 0:
                 continue
 
@@ -372,8 +403,8 @@ class BeautifulBody(object):
                 lines = tuple(soup.body.strings)
                 raw_line = ''.join(lines)
                 logger.debug(u'raw_line_from_html >>'+raw_line)
-            print(raw_line)
-            print(tokenizer.tokenize(raw_line))
+            #print(raw_line)
+            #print(tokenizer.tokenize(raw_line))
             try:
                 sents = tuple(tokenizer.tokenize(raw_line))
             except Exception as err:
@@ -401,16 +432,16 @@ class BeautifulBody(object):
         for pt in tuple(self.get_sentences()):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add, tokens)
-            logger.debug("tokens: "+str(tokens))
+            #logger.debug("tokens: "+str(tokens))
             lang = self.get_lang_(tokens)
             logger.debug('lang: '+lang)
 
             if lang in self.SUPPORT_LANGS_LIST:
                 #todo: create stopwords list for jis ,
                 tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
-                logger.debug('before stem: '+str(tokens))
+                #logger.debug('before stem: '+str(tokens))
                 tokens = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
-                logger.debug("tokens list: "+str(tokens))
+                #logger.debug("tokens list: "+str(tokens))
 
             yield tokens
 
