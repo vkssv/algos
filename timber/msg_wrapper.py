@@ -144,24 +144,15 @@ class BeautifulBody(object):
         logger.debug('+++++>'+str(header_value))
 
         addr_value = namedtuple('addr_value', 'realname address')
-
         name_addr_tuples = (addr_value(*pair) for pair in utils.getaddresses(header_value))
-        # cause of such From-header values from russian spam:
-        # utils.getaddresses(m.get_all('From'))
-        # [('=?utf-8?B?0KDQodCl0JDQo9Cf?= "=?utf-8?B?0JHQtdC70J/QodCl0JDQk9CY?="', 'mail@belaerogis.by')]
-        # need to looping
+        # and we can meet here tricky stuff like this:
+        # ('=?utf-8?B?0KDQodCl0JDQo9Cf?= "=?utf-8?B?0JHQtdC70J/QodCl0JDQk9CY?="', 'mail@belaerogis.by')
         temp = list()
         for realname, address in tuple(name_addr_tuples):
-            print(address)
             if not address:
                 continue
-            parts = realname
-            if realname.startswith('=?') and (realname.count(' ')>0 or realname.count('"')>0):
-                realname = re.sub('"','',realname)
-
-                parts = tuple(header.decode_header(p) for p in (realname).split())
-                print(parts)
-
+            realname = re.sub('"','',realname)
+            parts = tuple(header.decode_header(p) for p in realname.split())
             temp.append((parts, address.lower()))
 
         print(temp)
@@ -172,7 +163,6 @@ class BeautifulBody(object):
             print(addr)
             
             value = u''
-
             for part in realname_parts:
                 print(part)
                 if len(part)==0:
@@ -181,11 +171,7 @@ class BeautifulBody(object):
 
             pairs.append((value, addr))
 
-        #name_addr_tuples = ((self._get_unicoded_value(*(t.realname)), t.address) for t in tuple((addr_value(*pair) for pair in temp)))
-        # address value has always to exist in returned pair, cause in some patterns we leave only them in the list for processing
-        #pairs = tuple((p.realname, p.address) for p in (addr_value(*pair) for pair in name_addr_tuples) if p.address)
-        if pairs:
-            pairs = tuple((p.realname, re.sub(r'<|>','',p.address)) for p in tuple(addr_value(*pair) for pair in pairs))
+        pairs = tuple((p.realname, re.sub(r'<|>','',p.address)) for p in tuple(addr_value(*pair) for pair in pairs))
 
         print("pairs >>"+str(pairs))
         return pairs
