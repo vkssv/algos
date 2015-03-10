@@ -513,9 +513,6 @@ class BasePattern(BeautifulBody):
 
         return compressed_ratio
 
-    #def get_text_parts_jaccard():
-        # return nltk.jaccard_distance()
-
     def get_attach_metrics(self, mime_parts_list, reg_list, score):
         '''
         :param mime_parts_list:

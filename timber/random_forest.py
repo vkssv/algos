@@ -65,6 +65,10 @@ def normilize(vect_dict):
     pass
 
 
+#def get_jaccard_distance():
+        # return nltk.jaccard_distance()
+
+
 def pathes_gen(path,st_mode):
 
     sample_path = path

@@ -149,7 +149,7 @@ class BeautifulBody(object):
         # cause of such From-header values from russian spam:
         # utils.getaddresses(m.get_all('From'))
         # [('=?utf-8?B?0KDQodCl0JDQo9Cf?= "=?utf-8?B?0JHQtdC70J/QodCl0JDQk9CY?="', 'mail@belaerogis.by')]
-        # need to cycling
+        # need to looping
         temp = list()
         for realname, address in tuple(name_addr_tuples):
             print(address)
