@@ -16,7 +16,7 @@ from collections import defaultdict, OrderedDict
 from franks_factory import MetaFrankenstein
 from pattern_wrapper import BasePattern
 
-#from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 
 #PYTHON_VERSION=(2,7)
@@ -59,7 +59,7 @@ def vectorize(doc_path, label, score):
 
     return (vect_dict, label)
 
-def normilize(vect_dict):
+def __normalize(vect_dict):
     # remove feature tags ?
     #
     pass
@@ -69,7 +69,7 @@ def normilize(vect_dict):
         # return nltk.jaccard_distance()
 
 
-def pathes_gen(path,st_mode):
+def __pathes_gen(path,st_mode):
 
     sample_path = path
     if st_mode == stat.S_IFREG:
@@ -92,8 +92,6 @@ def dump_data_set(data_set):
 			f.close()
 
 
-
-def plot_data_set(data_set):
 '''''
 
 if __name__ == "__main__":
@@ -106,6 +104,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', type = float,  action = 'store', dest = "score", default = 1.0,
                             help = "score penalty for matched feature, def = 1.0")
     parser.add_argument('-v', action = "store_true", dest = "debug", default = False, help = "be verbose")
+    parser.add_argument('-v', type=str, action = "store", dest = "criterion", default = 'gini', help = "the function name to measure the quality of a split")
 
     args = parser.parse_args()
 
@@ -138,17 +137,18 @@ if __name__ == "__main__":
     # 2. make datasets
     try:
         X = defaultdict(list)
-        pathes_iterator = pathes_gen(args.PATH, *mode)
+        pathes_iterator = __pathes_gen(args.PATH, *mode)
+        clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0, criterion=args.criterion)
 
         while(True):
             sample_path = next(pathes_iterator)
             logger.debug('PATH: '+sample_path)
             if args.category == 'test':
-                for label in ['ham', 'spam', 'info', 'nets']:
+                for label in ('ham', 'spam', 'info', 'net'):
 
                     vector_x = vectorize(sample_path, label, args.score)
                     logger.debug('----->'+str(vector_x))
-                    vector_x = normilize(vector_x)
+                    #vector_x = normilize(vector_x)
                     logger.debug('----->'+str(vector_x))
                     X[label].append(vector_x)
             else:
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                 X[args.category].append(vector_x)
 
         logger.debug(X)
-        #clf = RandomForestClassifier(n_estimators=10)
+        clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0, criterion=args.criterion)
 
 
 
@@ -170,6 +170,19 @@ if __name__ == "__main__":
         #sys.exit(1)
         raise
 
+
+'''
+class forest(object):
+
+    DEFAULT_LABELS = ('ham', 'spam', 'info', 'net')
+
+    def vectorize(doc_path, label, score)
+    def get_labeled_data_set (label)
+    def fit(label)
+    def predict(path)
+    def get_trained_forest(label)
+    def dump_data_set(label)
+'''
 
 
 
