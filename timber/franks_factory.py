@@ -20,3 +20,11 @@ class PatternFactory(object):
 
 
 MetaFrankenstein = PatternFactory()
+
+'''
+@classmethod
+def from_string(cls, date_as_string):
+    day, month, year = map(int, date_as_string.split('-'))
+    date1 = cls(day, month, year)
+    return date1
+'''

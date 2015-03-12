@@ -90,8 +90,9 @@ class BeautifulBody(object):
 
         self._msg = msg
 
-    @staticmethod
-    def _get_unicoded_value(raw_line, encoding=None ):
+
+    @classmethod
+    def _get_unicoded_value(cls, raw_line, encoding=None ):
         print('in _get_unicoded_value')
         print(raw_line)
         print(encoding)

@@ -35,8 +35,8 @@ class BasePattern(BeautifulBody):
     INIT_SCORE = 0
 
     # just for debugging new regexps
-    @staticmethod
-    def get_regexp_(regexp_list, compilation_flag=None):
+    @classmethod
+    def get_regexp_(cls, regexp_list, compilation_flag=None):
         '''
         :param regexp_list: list of scary regexes
         :param compilation_flag: re.U, re.M, etc
