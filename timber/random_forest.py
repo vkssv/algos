@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 -- can be imported as submodule to build feature vectors from emails collections,
-using different presets of loaded heuristics
+using different presets of loaded heuristics ;
 
 -- returns NxM matrix --> N samples from collection x M features +label value
-(or "test" label if not defined) in numpy array type
+( or "test" label if not defined ) in numpy array type
 """
 
 import sys, os, logging, re, email, argparse, stat, tempfile, math
@@ -16,7 +16,7 @@ from collections import defaultdict, OrderedDict
 from franks_factory import MetaFrankenstein
 from pattern_wrapper import BasePattern
 
-from sklearn.ensemble import RandomForestClassifier
+#from sklearn.ensemble import RandomForestClassifier
 
 
 #PYTHON_VERSION=(2,7)
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', type = float,  action = 'store', dest = "score", default = 1.0,
                             help = "score penalty for matched feature, def = 1.0")
     parser.add_argument('-v', action = "store_true", dest = "debug", default = False, help = "be verbose")
-    parser.add_argument('-v', type=str, action = "store", dest = "criterion", default = 'gini', help = "the function name to measure the quality of a split")
+    parser.add_argument('-a', type=str, action = "store", dest = "criterion", default = 'gini', help = "the function name to measure the quality of a split")
 
     args = parser.parse_args()
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     try:
         X = defaultdict(list)
         pathes_iterator = __pathes_gen(args.PATH, *mode)
-        clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0, criterion=args.criterion)
+        #clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0, criterion=args.criterion)
 
         while(True):
             sample_path = next(pathes_iterator)
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                 X[args.category].append(vector_x)
 
         logger.debug(X)
-        clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0, criterion=args.criterion)
+        #clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0, criterion=args.criterion)
 
 
 

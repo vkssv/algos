@@ -80,7 +80,7 @@ class NetsPattern(BasePattern):
         logger.debug('>>> 4. Specific SN-headers checks:')
 
         heads_pattern = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|Auto-Response-Suppress)$'
-        known_senders = [r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow']
+        known_senders = [ r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow' ]
 
         heads_score, known_mailer_flag = self.get_headers_metrics(heads_pattern, known_senders, self._msg.items(), score)
 
@@ -91,7 +91,7 @@ class NetsPattern(BasePattern):
         # 5. Subject checks
         logger.debug('>>> 5. SUBJECT CHECKS:')
         features = ('style', 'score', 'encoding', 'checksum')
-        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [INIT_SCORE]*len(features)))
+        features_dict = dict(map(lambda x,y: ('subj_'+x,y), features, [self.INIT_SCORE]*len(features)))
 
         if self._msg.get('Subject'):
 
@@ -154,7 +154,7 @@ class NetsPattern(BasePattern):
         # 7. simple List fields checks
         logger.debug('>>> 7. LIST CHECKS:')
         list_features = ('basic_checks', 'delivered')
-        list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [INIT_SCORE]*len(list_features)))
+        list_features_dict = dict(map(lambda x,y: ('list_'+x,y), list_features, [self.INIT_SCORE]*len(list_features)))
 
         logger.debug('\t----->'+str(list_features_dict))
 
@@ -178,7 +178,7 @@ class NetsPattern(BasePattern):
         logger.debug('>>> 8. MIME CHECKS:')
 
         mime_features = ('mime_score', 'checksum', 'att_score', 'att_count', 'nest_level')
-        mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [INIT_SCORE]*len(mime_features)))
+        mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [self.INIT_SCORE]*len(mime_features)))
 
         if self._msg.is_multipart():
             mime_dict['mime_score'] = score
@@ -245,7 +245,7 @@ class NetsPattern(BasePattern):
             basic_features_dict, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, domain_regs, regs)
 
             urls_features = ('path_sim', 'ascii', 'avg_length')
-            urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [INIT_SCORE]*len(urls_features)))
+            urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [self.INIT_SCORE]*len(urls_features)))
 
             url_lines = [ ''.join(u._asdict().values()) for u in urls_list ]
             if filter(lambda x: x in string.printable, [line for line in url_lines]):
@@ -261,7 +261,7 @@ class NetsPattern(BasePattern):
 
         else:
             basics = ('url_count', 'url_score', 'distinct_count', 'sender_count')
-            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [INIT_SCORE]*len(basics)))
+            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [self.INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
         vector_dict.update(urls_dict)

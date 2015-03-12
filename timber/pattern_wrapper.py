@@ -95,32 +95,26 @@ class BasePattern(BeautifulBody):
 
         return heads_crc
 
-    def get_headers_metrics(self, head_pattern, known_mailers, score):
+    def get_emarket_metrics(self, head_pattern, known_mailers, score):
         '''
-        :param head_pattern: one more regexp list with SN-headers names (X-FACEBOOK-PRIORITY, etc)
-        :param known_mailers: X-Mailer: ZuckMail
+        :param head_pattern: one more regexp list with SN-header's names (X-FACEBOOK-PRIORITY, etc)
+        :param known_mailers: X-Mailer header with value like "ZuckMail"
         :param score:
-        :return: <penalizing score>, <Zuck-IsHere-Flag>
+        :return: <penalizing score>, <flag of known mailer presence>
         '''
 
-        typical_heads_score = self.INIT_SCORE
-        known_mailer_flag = self.INIT_SCORE
-        header = namedtuple('header','name value')
+        emarket_features = ('emarket_score', 'known_mailer_flag')
+        emarket_dict = dict(zip(emarket_features, [self.INIT_SCORE]*len(emarket_features)))
 
-        header_value_list = [header(*pair) for pair in header_value_list]
-        headers_list = [i.name for i in header_value_list]
+        emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), self._msg.keys()))
+        emarket_dict['emarket_score'] = len(emarket_heads)*score
 
-        emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), headers_list))
-        emarket_heads_score += len(emarket_heads)*score
+        mailer_header = ''.join(filter(lambda h: re.match(r'^x-mailer$', h, re.I), self._msg.keys()))
 
-        mailer_header = ''.join(filter(lambda h: re.match(r'^x-mailer$', h, re.I), headers_list))
+        if self._msg.get(mailer_header) and filter(lambda reg: re.search(reg, self._msg.get(mailer_header), re.I), known_mailers):
+            emarket_dict['known_mailer_flag'] = score
 
-        if dict(self._msg_items()).get(mailer_header):
-            x_mailer =  dict(self._msg_items()).get(mailer_header)
-            if filter(lambda reg: re.search(reg, x_mailer, re.I), known_mailers):
-                known_mailer_flag = score
-
-        return emarket_heads_score, known_mailer_flag
+        return emarket_dict
 
     def get_dmarc_metrics(self, score, dmarc_heads=None):
         '''
