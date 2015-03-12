@@ -42,7 +42,7 @@ class SpamPattern(BasePattern):
         values, which are mostly don't equal to zeros ;
     """
 
-    # todo: from magic numbers to input arguments ! ( rather to config with sophisticated params )
+    # todo: get rid of magic numbers and unicorns
     __RCVDS_NUM = 2
 
     def run(self, score):

@@ -62,7 +62,7 @@ class HamPattern(BasePattern):
 
         urls_list = self.get_url_list()
         urls_features = ('avg_length', 'query_absence', 'url_score')
-        urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [__INIT_SCORE]*len(urls_features)))
+        urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [self.INIT_SCORE]*len(urls_features)))
 
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
