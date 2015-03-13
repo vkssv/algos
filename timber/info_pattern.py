@@ -140,7 +140,7 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(list_features_dict))
 
         if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self._msg.keys()):
-            list_features_dict['basic_checks'] = self.get_list_metrics(self._msg.items(), rcvd_vect, score)
+            list_features_dict['basic_checks'] = self.get_list_metrics(score)
             logger.debug('\t----->'+str(list_features_dict))
 
         # for old-school style emailings
@@ -176,19 +176,18 @@ class InfoPattern(BasePattern):
         logger.debug('\t----->'+str(vector_dict))
 
         # 4. crc for From values
+        # move to BasePattern
         logger.debug('>>> 6. ORIGINATOR_CHECKS:')
         vector_dict['from'] = self.INIT_SCORE
         logger.debug('\t----->'+str(vector_dict))
 
         if self._msg.get('From'):
-            from_values = self.get_addr_values(self._msg.get_all('From'))[0]
-            logger.debug(str(from_values))
-            logger.debug(str(type(from_values)))
+            from_value, from_addr = reduce(add, self.get_addr_values(self._msg.get_all('From')))
+            logger.debug(from_value)
 
-            if from_values:
-                vector_dict['from'] = binascii.crc32((reduce(add,from_values)).strip())
+            if from_value:
+                vector_dict['from_checksum'] = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
                 logger.debug('\t----->'+str(vector_dict))
-
 
         logger.debug('\t----->'+str(vector_dict)+'\n')
 
@@ -197,18 +196,17 @@ class InfoPattern(BasePattern):
         logger.debug('>>> 7. MIME CHECKS:')
 
         mime_features = ('mime_score', 'checksum', 'att_count', 'att_score', 'in_score', 'nest_level')
-        mime_dict = OrderedDict(map(lambda x,y: (x,y), mime_features, [self.INIT_SCORE]*len(mime_features)))
+        mime_dict = OrderedDict(zip(mime_features, [self.INIT_SCORE]*len(mime_features)))
 
         logger.debug('IS MULTI >>>>>> '+str(self._msg.is_multipart()))
         if self._msg.is_multipart():
             mime_dict['mime_score'] += score
 
             first_content_type = self._msg.get('Content-Type')
-            if 'text/html' in first_content_type and re.search('utf-8',first_content_type,re.I):
+            if 'text/html' in first_content_type and re.search('utf-8', first_content_type, re.I):
                 mime_dict['mime_score'] += score
 
             mime_skeleton = self.get_mime_struct()
-
             logger.debug('MIME STRUCT: '+str(mime_skeleton))
 
             # some particular rules for infos
@@ -216,7 +214,6 @@ class InfoPattern(BasePattern):
                 mime_dict['mime_score'] += score
 
             mime_dict['checksum'] = self.get_mime_crc(mime_skeleton)
-
             logger.debug('\t----->'+str(vector_dict))
 
             # todo: why only one here ?
@@ -228,9 +225,7 @@ class InfoPattern(BasePattern):
             mime_dict['in_score'] = in_score
 
             # helps to outline difference between spams, which were made very similar to infos
-            mime_dict['nest_level'] = self._get_nest_level_()
-            #if BasePattern.get_nest_level(self) <= NEST_LEVEL_THRESHOLD:
-            #    mime_dict['nest_level'] = score
+            mime_dict['nest_level'] = self.get_nest_level()
 
         vector_dict.update(mime_dict)
         logger.debug('\t----->'+str(vector_dict))
@@ -243,7 +238,7 @@ class InfoPattern(BasePattern):
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-            domain_regs = [
+            regs_for_dom_pt = [
                                 ur'(news(letter)?|trip|sales+|offer|journal|event|post|asseccories|rasprodaga)',
                                 ur'(global|response|click|shop|sale|flight|hotel|cit(y|ies)|campaign|bouquet)',
                                 ur'(celebration|friday|binus|magazin|cheap|subscibe|manage|feed|list|blog)',
@@ -253,32 +248,32 @@ class InfoPattern(BasePattern):
                                 ur'(look-at-media|digest|the-village|ozon.ru|enter.ru)'
             ]
 
-            regs = [
+            regs_for_txt_pt = [
                                 ur'(cheap.*|prices+|clothes+|action|shoes+|women|label|brand|zhensk|odezhd)',
                                 ur'(campaign|rasprodaga|requirements|choice|personal|track|click|customer|product)',
                                 ur'(meetup|facebook|twitter|pinterest|vk|odnoklassinki|google)_footer',
                                 ur'(training|mailing|modify|unsub|newsletter|catalog|mdeia|graphics|announcement)',
                                 ur'(utm_medium=|utm_source=|utm_term=|utm_campaign=|applications+|upn=|aspx\?)',
                                 ur'(shop|magazin|collections+|lam|(mail_link_)?track(er)?|EMID=|EMV=|genders)'
-                    ]
+            ]
 
-            basic_features_dict, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, domain_regs, regs)
+            basic_features_dict, netloc_list = self.get_url_metrics(regs_for_dom_pt, regs_for_txt_pt, score)
 
             urls_features = ('query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii')
             # initialize OrderedDict exactly by this way cause of
             # http://stackoverflow.com/questions/16553506/python-ordereddict-iteration
             # and vector of metrics is wanted, so order is important
-            urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [self.INIT_SCORE]*len(urls_features)))
-
             print('NETLOC_LIST >>>'+str(netloc_list))
             print('DICT >>>'+str(basic_features_dict))
 
+            urls_dict = OrderedDict(zip(urls_features, [self.INIT_SCORE]*len(urls_features)))
+
             url_lines = [ ''.join(u._asdict().values()) for u in urls_list ]
-            if filter(lambda x: x in string.printable, [line for line in url_lines]):
+            if list( x for x in  [line for line in url_lines] if x in string.printable ):
                 urls_dict['ascii'] = score
 
             for attr in ['path','query']:
-                obj_list = [url.__getattribute__(attr) for url in urls_list]
+                obj_list = [ url.__getattribute__(attr) for url in urls_list ]
 
                 lengthes_list = [len(line) for line in obj_list]
                 urls_dict['avg_'+attr+'_len'] = sum(lengthes_list)/len(obj_list)
@@ -288,7 +283,7 @@ class InfoPattern(BasePattern):
 
         else:
             basics = ('url_count', 'url_score', 'distinct_count', 'sender_count')
-            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [self.INIT_SCORE]*len(basics)))
+            basic_features_dict = dict(zip(basics, [self.INIT_SCORE]*len(basics)))
 
         vector_dict.update(basic_features_dict)
         vector_dict.update(urls_dict)
@@ -316,8 +311,13 @@ class InfoPattern(BasePattern):
         }
 
 
-        vector_dict.update(dict(zip(('html_score','html_checksum'), self.get_html_parts_metrics(score, tags_map))))
+        # move to BasePattern
+        vector_dict.update(dict(zip(('html_score', 'html_checksum'), self.get_html_parts_metrics(score, tags_map))))
         vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
+        vector_dict['avg_entropy'] = self.get_text_parts_avg_entropy()
+        vector_dict['compression_ratio'] = self.get_text_compress_ratio()
+
+        logger.debug('MSG VECTOR --> '+str(vector_dict))
 
         return vector_dict
 

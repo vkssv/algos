@@ -230,7 +230,6 @@ class SpamPattern(BasePattern):
             ]
 
             mime_skeleton = self.get_mime_struct()
-            #mime_skeleton = BasePattern.get_mime_struct(self)
             logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
 
             count, att_score, in_score = self.get_attach_metrics(mime_skeleton.values(), attach_regs, score)

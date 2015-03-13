@@ -15,7 +15,7 @@ from email import iterators, header, utils
 
 from urlparse import urlparse
 from operator import add, itemgetter
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, OrderedDict
 from itertools import islice
 
 from nltk.tokenize import WordPunctTokenizer, PunktSentenceTokenizer
@@ -89,7 +89,7 @@ class BeautifulBody(object):
                     raise NaturesError(str(y)+text)
 
         self._msg = msg
-
+        #self._msg_vector = OrderedDict()
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None ):

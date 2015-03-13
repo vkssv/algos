@@ -5,6 +5,7 @@ import sys, os, importlib, logging, re, binascii, zlib, math
 from urlparse import urlparse
 from operator import add, itemgetter
 from collections import defaultdict, namedtuple, Counter, OrderedDict
+from itertools import ifilterfalse
 
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
@@ -346,22 +347,20 @@ class BasePattern(BeautifulBody):
 
         return dict(basic_features), netloc_list
 
-    def get_mime_crc(self, excluded_atrs_list=['boundary=','charset=']):
+    def get_mime_crc(self, excluded_attrs_list=['boundary=','charset=']):
         '''
         :param excluded_atrs_list: values of uninteresting mime-attrs
         :return: 42
         '''
 
         checksum = self.INIT_SCORE
-        logger.debug('EXL:'+str(excluded_atrs_list))
+        logger.debug('EXL:'+str(excluded_attrs_list))
 
-        items = self.get_mime_struct.items()
-
-        for prefix in excluded_args_list:
-            items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in items]
+        for prefix in excluded_attrs_list:
+            items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in self.get_mime_struct().items()]
 
         if items:
-            items = reduce(add,items)
+            items = reduce(add, items)
             checksum = binascii.crc32(''.join([''.join(i) for i in items]))
 
         return checksum
@@ -375,7 +374,7 @@ class BasePattern(BeautifulBody):
         print("regs_list "+str(regs_list))
         text_score = self.INIT_SCORE
 
-        # precise le flag pour re.compile ?
+        # precise flag for re.compile ?
         regs_list = self.get_regexp_(regs_list, re.M)
 
         if sent_list is None:
