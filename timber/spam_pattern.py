@@ -1,29 +1,6 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-""" Keeps and applies vectorising rules for spams.
 
-    todo: refactor architecture of particular patterns (now it's shame, of course)
-    Real architecture of particular patterns modules should be like this:
-        class SpamPattern(BasePattern):
-
-            def __rule_1(self, *args, **kwargs):
-                ...
-                return metric1
-
-            def __rule_N(self, *args, **kwargs):
-                ...
-                return metricN
-
-            also need to generate and append new trigger-rules as methods to pattern class in runtime
-
-            def run(self, score):
-
-                features_vector.update[f_1] = self.__rule_1()
-                features_vector.update[f_N] = self.__rule_N()
-
-                return(features_vector)
-
-"""
 
 import os, sys, logging, re, binascii, math
 
@@ -53,9 +30,9 @@ class SpamPattern(BasePattern):
                                     'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
                                     'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
                               ]
-        self.spam_vector = OrderedDict()
+        self.spam_vector = OrderedDict(self.msg_vector)
 
-        self.spam_vector['all_heads_crc'] = self.get_all_heads_crc(excluded_heads)
+        self.spam_vector['all_heads_crc'] = self.get_all_heads_crc(self.excluded_heads)
         self.spam_vector.update(self.spam_rcvd_checks())
         if (self._msg.keys()).count('Disposition-Notification-To'):
             self.spam_vector['disp-notification'] = self.score
@@ -66,14 +43,16 @@ class SpamPattern(BasePattern):
             # MUA didn't generate Sender field cause of redundancy
                 self.spam_vector['forged_sender'] = self.score
 
+        self.spam_vector.update(self.spam_mime_checks())
+        self.spam_vector.update(self.spam_url_checks())
         self.spam_vector['mime_score'] = self.spam_mime_checks()
-        self.spam_vector['attach_score'] = self.spam_mime_checks()
+        self.spam_vector['attach_score'] = self.spam_attach_checks()
+        self.spam_vector.update(self.spam_mime_checks())
+        self.spam_vector.update(self.spam_content_checks())
 
 
     @classmethod
     def spam_rcvd_checks(cls):
-
-        #vector_dict = OrderedDict()
 
         # 1. "Received:" Headers
         logger.debug('>>> 1. RCVD_CHECKS:')
@@ -94,11 +73,6 @@ class SpamPattern(BasePattern):
         logger.debug('\t----->'+str(rcvd_features_dict))
 
         return rcvd_features_dict
-
-        # 2. "To:", "SMTP RCPT TO:" Headers
-        #logger.debug('>>> 2. DESTINATOR CHECKS:')
-
-        #vector_dict['rcpt_smtp_to'], vector_dict['rcpt_body_to'] = self.get_rcpts_metrics(score)
 
     @classmethod
     def spam_subj_checks(cls):
@@ -213,22 +187,18 @@ class SpamPattern(BasePattern):
         # 8. URL-checks
         logger.debug('>>> 8. URL_CHECKS:')
 
-        urls_list = self.get_url_list()
-        logger.debug('URLS_LIST >>>>>'+str(urls_list))
-
-        features = ('url_upper', 'repetitions', 'punicode', 'domain_name_level', 'url_avg_len', \
-                    'onMouseOver', 'hex', 'at_sign')
+        features = ('score', 'upper', 'repetitions', 'punicode', 'domain_name_level', \
+                        'avg_len', 'onMouseOver', 'hex', 'at_sign')
+        url_features_dict = cls._get_empty_features_dict('url', features, init_score=cls.INIT_SCORE)
         # URL_UPPER: presense of elements in upper-case in URL
         # REPETITIONS: presense of repetitions like:
         # PUNICODE: respectively (very often for russian spams)
         # DOMAIN NAME LEVEL: very often russian spams are send from third-level domains
         # URL_AVG_LENGTH: they are short in general, cause of url-short services, etc
-        # many usual and not usual ideas about phising urls:
+        # todo: many usual and not usual ideas about phising urls:
         # http://www.isteams.org/conference/pdf/Paper%20111-%20iSTEAMS%202014%20-Asani%20et%20al%20-%20MAXIMUM%20PHISH%20BAIT%20-%20TOWARDS%20FEATURE%20BASED%20DETECTION%20OF%20PHISING%20USING%20MAXIMUM%20ENTROPY%20CLASSIFICATION%20TECHNIQUE.pdf
-        # (Now I'm not having time to code all features by day or two ;-((( )
-        features_dict = OrderedDict(zip(features, [self.INIT_SCORE]*len(features)))
 
-        if urls_list:
+        if cls.urls_list:
 
             regs_for_dom_pt = [
                                 ur'tinyurl\.',
@@ -264,58 +234,45 @@ class SpamPattern(BasePattern):
                                 ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
             ]
 
-            basic_features_dict, netloc_list = self.get_url_metrics(regs_for_dom_pt, regs_for_txt_pt, score)
-            basic_features_dict.pop('url_count') # for spams url count may be totally different
+            url_features_dict['url_score'] = cls.get_url_score(regs_for_dom_pt, regs_for_txt_pt, cls.score)
+            # URL_SCORE: score, which will be earned during regexp-checks for different parts of parsed URLs;
 
-            print('NETLOC_LIST >>>'+str(netloc_list))
-            print('DICT >>>'+str(basic_features_dict))
-
-            if netloc_list:
+            if cls.netloc_list:
                 for method in [ unicode.isupper, unicode.istitle ]:
-                    features_dict['url_upper'] += len(filter(lambda s: method(s), netloc_list))*score
+                    url_features_dict['url_upper'] += len(filter(lambda s: method(s), cls.netloc_list))*cls.score
 
                 # mostly thinking about shortened urls, created by tinyurl and other services,
                 # but maybe this is weak feature
-                features_dict['url_avg_len'] = math.ceil(float(sum([len(s) for s in netloc_list]))/len(netloc_list))
+                url_features_dict['url_avg_len'] = math.ceil(float(sum([len(s) for s in cls.netloc_list]))/len(cls.netloc_list))
 
                 puni_regex = ur'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
-                features_dict['punicode'] = len(filter(lambda u: re.search(puni_regex,u,re.I), netloc_list))*score
+                url_features_dict['punicode'] = len(filter(lambda u: re.search(puni_regex, u, re.I), cls.netloc_list))*cls.score
 
-                features_dict['domain_name_level'] = len(filter(lambda n: n>=2, [s.count('.') for s in netloc_list]))*score
+                url_features_dict['domain_name_level'] = len(filter(lambda n: n>=2, [s.count('.') for s in cls.netloc_list]))*cls.score
 
-            repet_regex = ur'(https?:\/\/|www\.)\w{1,61}(\.\w{2,10}){1,5}'
-            urls = [x.geturl() for x in urls_list]
+        return url_features_dict
 
-            if filter(lambda l: len(l)>1, map(lambda url: re.findall(repet_regex,url,re.I), urls)):
-                features_dict['repetitions'] = 1
-
-        else:
-            basics = ('url_score', 'distinct_count', 'sender_count')
-            basic_features_dict = dict(map(lambda x,y: (x,y), basics, [self.INIT_SCORE]*len(basics)))
-
-        vector_dict.update(basic_features_dict)
-        vector_dict.update(features_dict)
-        logger.debug('\t----->'+str(vector_dict))
-
-
+    @classmethod
+    def spam_content_checks(cls):
         # 9. check body
-        @
-        logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
+        logger.debug('>>> 9. CONTENT\'S TEXT PARTS CHECKS:')
+        features = ('text_score', 'html_score', 'html_checksum')
+        content_features_dict = cls._get_empty_features_dict('content', features, init_score=cls.INIT_SCORE)
 
 
         regexp_list = [
-                    ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
-                    ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
-                    ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
-                    ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
-                    ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
-                    ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
-                    ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
-                    ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
-                    ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
-                    ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
-                    ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
-                    ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
+                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
+                            ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
+                            ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
+                            ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
+                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
+                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
+                            ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
+                            ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
+                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
+                            ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
+                            ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
+                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
                     ]
 
         tags_map = {
@@ -339,19 +296,11 @@ class SpamPattern(BasePattern):
                                 }
                     }
 
-        # todo: ask somebody smart how to kill yourself immediately
-        # about this acrh problem : repeate 2 lines in each class or
-        # call these functions with method_getter() in random_forest namespace + __get_atribute__()
-        # for args
 
+        content_features_dict['text_score'] = cls.get_text_parts_metrics(regexp_list)
+        content_features_dict['html_score'] = cls.get_html_parts_metrics(tags_map)
 
-        vector_dict.update(dict(zip(('html_score', 'html_checksum'), self.get_html_parts_metrics(score, tags_map))))
-        vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
-
-
-        logger.debug('MSG VECTOR --> '+str(vector_dict))
-
-        return vector_dict
+        return content_features_dict
 
 if __name__ == "__main__":
 

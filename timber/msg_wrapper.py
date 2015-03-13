@@ -90,8 +90,7 @@ class BeautifulBody(object):
                     raise NaturesError(str(y)+text)
 
         self._msg = msg
-        #self._msg_vector = OrderedDict()
-
+        (self.url_list, self.netloc_list) = [list()]*2
 
 
     @classmethod
@@ -307,7 +306,7 @@ class BeautifulBody(object):
         or empty list if body doesn't contain any links
         '''
 
-        self.url_list = list()
+
 
         for line, content_type, lang in list(self.get_text_mime_part()):
             if 'html' in content_type:
@@ -324,6 +323,31 @@ class BeautifulBody(object):
 
         # todo: make it as lazy computing value
         return self.url_list
+
+    def get_netlocation_list(self):
+        '''
+
+        :return:
+        '''
+
+        for url in self.url_list:
+            if url.netloc:
+                netloc_list.append(url.netloc)
+                continue
+            elif url.path:
+                netloc_list.append(url.path.strip('www.'))
+                continue
+
+        netloc_list = [ domain for domain in  netloc_list if domain ]
+
+        only_str_obj = [i for i in netloc_list if type(i) is str]
+
+        if only_str_obj:
+            only_str_obj  = [i.decode('utf8') for i in only_str_obj]
+            netloc_list = only_str_obj + [ i for i in netloc_list if type(i) is unicode ]
+
+        #print("NETLOC: >>>>>"+str(netloc_list))
+        return self.netloc_list
 
     def get_text_mime_part(self):
         '''
@@ -349,7 +373,6 @@ class BeautifulBody(object):
 
             except Exception as err:
                 #logger.debug(err)
-                #logger.debug('>>> Please, add this to Kunstkamera')
                 if dammit_obj is None:
                     continue
 
@@ -434,6 +457,25 @@ class BeautifulBody(object):
                 #logger.debug("tokens list: "+str(tokens))
 
             yield tokens
+
+    def get_html_parts(self, mime_parts_list=None):
+        '''
+
+        :param mime_parts_list:
+        :return:
+        '''
+        if mime_parts_list is None:
+            mime_parts_list = self.get_text_mime_part()
+
+        while(True):
+            mime_text_part, content_type, lang = next(mime_parts_list)
+            if 'html' in content_type:
+                soup = BeautifulSoup(mime_text_part)
+                if not soup.body:
+                    continue
+
+                yield soup
+
 
 
 if __name__ == "__main__":
