@@ -48,7 +48,7 @@ class HamPattern(BasePattern):
                                 ur'от\s+[\w\.-]{3,10}\s+(счет|отчет|выписка|электронный\s+(билет)?)'
             ]
 
-            subj_score, upper_words_num, title_words_num = self.get_subjects_metrics(unicode_subj, subject_rule, score)
+            subj_score, upper_words_num, title_words_num = self.get_subjects_metrics(unicode_subj, subject_rule, self.score)
 
             #features_dict['subj_style'] = title_words_num
 

@@ -8,5 +8,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="tempest" />
     <orderEntry type="module" module-name="timber" />
+    <orderEntry type="module" module-name="test" />
   </component>
 </module>

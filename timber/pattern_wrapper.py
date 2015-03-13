@@ -24,7 +24,7 @@ except ImportError:
     print('Can\'t find bs4 module, probably, it isn\'t installed.')
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
-from msg_wrapper import BeautifulBody, lazyproperty
+from msg_wrapper import BeautifulBody
 
 class BasePattern(BeautifulBody):
     """
@@ -34,9 +34,46 @@ class BasePattern(BeautifulBody):
     """
 
     INIT_SCORE = 0
+    BASE_FEATURES = ('rcvd_traces_num','rcpt_smtp_to', 'rcpt_body_to', 'list', 'avg_entropy')
+
+    def __init__(self, score, **kwds):
+        print('in constructor BasePattern')
+        super(BasePattern, self).__init__(**kwds)
+        self.score = score
+        self.msg_vector = OrderedDict(dict(zip(self.BASE_FEATURES, len(self.BASE_FEATURES)*[self.INIT_SCORE])))
+        self.msg_vector ['rcvd_traces_num'] = self._msg.keys().count('Received')
+        self.msg_vector['rcpt_smtp_to'], self.msg_vector['rcpt_body_to'] = self.get_rcpts_metrics()
+        self.msg_vector['list'] = self.get_list_metrics()
+        dmarc_dict, self.dkim_domain = self.get_dmarc_metrics()
+        self.msg_vector.update(dmarc_dict)
+        self.msg_vector['from_checksum'] = self.get_from_crc()
+        self.msg_vector.update(attach_dict)
+        self.msg_vector['avg_entropy'] = self.get_text_parts_avg_entropy()
+        self.msg_vector['compression_ratio'] = self.get_text_compress_ratio()
+
+
+
+
+    @staticmethod
+    def _get_empty_features_dict(prefix, features, init_score=0, container_type='dict'):
+        '''
+
+        :param prefix:
+        :param features_tuple:
+        :param init_score:
+        :param type:
+        :return:
+        '''
+        features = tuple(prefix+'_'+f for f in features)
+        if container_type == 'dict':
+            features_dict = OrderedDict(dict(zip(features, [init_score]*len(features))))
+        else:
+            features_dict = Counter(dict(zip(features, [init_score]*len(features))))
+
+        return features_dict
 
     # just for debugging new regexps
-    @classmethod
+    @staticmethod
     def get_regexp_(cls, regexp_list, compilation_flag=None):
         '''
         :param regexp_list: list of scary regexes
@@ -117,7 +154,8 @@ class BasePattern(BeautifulBody):
 
         return emarket_dict
 
-    def get_dmarc_metrics(self, score, dmarc_heads=None):
+    @classmethod
+    def get_dmarc_metrics(cls):
         '''
         :param score:
         :param dmarc_heads: list of headers, described in RFC 6376, RFC 7208
@@ -125,53 +163,71 @@ class BasePattern(BeautifulBody):
                     <DMARC metrics dict>, <sender's domain from DKIM>
         '''
 
-        if dmarc_heads is None:
-            dmarc_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
-
-        dmarc_dict = dict(zip(dmarc_heads, [self.INIT_SCORE]*len(dmarc_heads)))
-        logger.debug(str(dmarc_dict))
-        dmarc_score = self.INIT_SCORE
+        dmarc_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
         dkim_domain = ''
+        features = ('score')+tuple(dmarc_heads)
+        dmarc_features_dict = cls._get_empty_features_dict('dmarc', features, init_score=cls.INI_SCORE, container_type='counter')
+
+        logger.debug(str(dmarc_features_dict))
 
         # RFC 7001, this header has always to be included
-        dmarc_heads.append('Authentication-Results')
-        if not (self._msg.keys()).count('Authentication-Results'):
-            return dmarc_score, dmarc_dict, dkim_domain
 
-        total = list()
-        for h in dmarc_dict.iterkeys():
-            dkims = filter(lambda z: re.match(h, z, re.I), self._msg.keys())
-            total.extend(dkims)
+        if not (cls._msg.keys()).count('Authentication-Results'):
+            return dmarc_features_dict, dkim_domain
 
-        logger.debug('TOTAL:'+str(total))
+        found_heads = list()
+        for h in dmarc_heads:
+            found_heads.extend(filter(lambda z: re.match(h, z, re.I), cls._msg.keys()))
+
+        logger.debug('TOTAL:'+str(found_heads))
 
         # (len(required_heads_list)+1, cause we can find DKIM-Signature and DomainKey-Signature in one doc
         logger.debug('req_head:'+str(len(dmarc_heads)))
         #logger.debug('req_head:'+str(len(required_heads_list)+1))
-        logger.debug('found:'+str(len(set(total))*score))
+        #logger.debug('found:'+str(len(set(total))*score))
 
         # todo: in a results look how it will probably correlate with last two metrics below
-        dmarc_score = len(dmarc_heads) - len(set(total))*score
+        dmarc_features_dict['dmarc_score'] = (len(dmarc_heads) - len(set(found_heads)))*cls.score
 
         # simple checks for Received-SPF and DKIM/DomainKey-Signature
-        if self._msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self._msg.get('Received-SPF'), re.I):
-            dmarc_dict['Received-SPF'] += score
+        if cls._msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', cls._msg.get('Received-SPF'), re.I):
+            dmarc_features_dict['dmarc_Received-SPF'] += cls.score
 
         # check domain names in From and DKIM-headers (but now it's probably redundant)
-        from_domain = (self._msg.get('From')).partition('@')[2]
+        from_domain = (cls._msg.get('From')).partition('@')[2]
         from_domain = from_domain.strip('>').strip()
 
-        dkim_domain=''
-        logger.debug('dkims'+str(dkims))
-        valid_lines = filter(lambda f: re.search(from_domain,f), [ self._msg.get(h) for h in dkims ])
-        if len(valid_lines) == len(dkims):
-            dmarc_dict['(DKIM|DomainKey)-Signature'] += score
+        logger.debug('dkims'+str(found_heads))
+        valid_lines = filter(lambda f: re.search(from_domain, f), [ cls._msg.get(h) for h in found_heads ])
+        if len(valid_lines) == len(found_heads):
+            dmarc_features_dict['(DKIM|DomainKey)-Signature'] += cls.score
             dkim_domain = from_domain
             logger.debug('dkim_domain '+str(dkim_domain))
 
-        return dmarc_score, dmarc_dict, dkim_domain
+        return dmarc_features_dict, dkim_domain
 
-    def get_rcpts_metrics(self, score):
+    @classmethod
+    def get_from_crc(cls):
+        logger.debug('>>> ORIGINATOR_CHECKS:')
+        from_checksum = cls.INIT_SCORE
+
+        if cls._msg.get('From'):
+            name_addr_tuples = cls.get_addr_values(cls._msg.get_all('From'))[:1]
+            logger.debug('\tFROM:----->'+str(name_addr_tuples))
+            print(name_addr_tuples)
+
+            if len(name_addr_tuples) != 1:
+                logger.warning('\t----->'+str(name_addr_tuples))
+
+            if name_addr_tuples:
+                from_value, from_addr = reduce(add, name_addr_tuples)
+                from_checksum = binascii.crc32(from_value.encode(cls.DEFAULT_CHARSET))
+                logger.debug('\t----->'+str(from_checksum))
+
+        return from_checksum
+
+    @classmethod
+    def get_rcpts_metrics(cls):
         '''
         :param score:
         :return: tuple with penalizing scores for To-header value from body,
@@ -179,13 +235,13 @@ class BasePattern(BeautifulBody):
 
         for debut works only with To-header values
         '''
-        (smtp_to, body_to) = [self.INIT_SCORE]*2
+        (smtp_to, body_to) = [cls.INIT_SCORE]*2
 
-        name_addr_tuples = self.get_addr_values(self._msg.get_all('To'))
+        name_addr_tuples = cls.get_addr_values(cls._msg.get_all('To'))
         only_addr_list = map(itemgetter(1), name_addr_tuples)
         logger.debug(only_addr_list)
 
-        parsed_rcvds = [ rcvd.partition(';')[0] for rcvd in self.get_rcvds() ]
+        parsed_rcvds = [ rcvd.partition(';')[0] for rcvd in cls.get_rcvds() ]
         print('parsed_rcvds >>'+str(parsed_rcvds))
         smtp_to_list = [ x for x in ( r.partition('for')[2].strip() for r in parsed_rcvds ) if x ]
         smtp_to_addr = re.findall(r'<(.*@.*)?>', ''.join(smtp_to_list))
@@ -198,41 +254,42 @@ class BasePattern(BeautifulBody):
             if filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), l):
                 print(key)
                 print(l)
-                key += score
+                key += cls.score
 
         if len(only_addr_list) == 1 and ''.join(smtp_to_addr) != ''.join(only_addr_list):
-            body_to += score
+            body_to += cls.score
             logger.debug('\t----->'+str(body_to))
 
         elif len(only_addr_list) > 2 and smtp_to_addr != '<multiple recipients>':
-            body_to += score
+            body_to += cls.score
             logger.debug('\t----->'+str(body_to))
 
         return smtp_to, body_to
 
-    def get_list_metrics(self, score):
+    @classmethod
+    def get_list_metrics(cls):
         '''
-        :param score:
         :return: penalizing score for List-* headers
         '''
         # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
         # have to be checked with antiphishing service
-        unsubscribe_score = self.INIT_SCORE
+        unsubscribe_score = cls.INIT_SCORE
+        if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
         body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
 
         #logger.debug('\t=====>'+str(header_value_list))
-        heads_dict = dict(self._msg.items())
+
 
         # try to get sender domain from RCVD headers,
         # use header_value_list to obtain
         # exactly the first rcvd header,
         # order makes sense here
 
-        sender_domain = self.get_smtp_domain()
+        sender_domain = cls.get_smtp_domain()
         if not sender_domain:
-            body_from.search(heads_dict.get('From'))
+            body_from.search(cls._msg.get('From'))
             # try to get it from From: header value
-            sender_domain = (for_body_from.search(heads_dict.get('From'))).group(0)
+            sender_domain = (for_body_from.search(cls._msg.get('From'))).group(0)
             sender_domain = sender_domain.strip('@')
 
         patterns = [
@@ -245,18 +302,19 @@ class BasePattern(BeautifulBody):
         # rather put exactly Errors-To in their infos instead of List-Unsubscribe
         rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
 
-        presented = filter(lambda h: (heads_dict.keys()).count(h), rfc_heads)
+        presented = filter(lambda h: (cls._msg.keys()).count(h), rfc_heads)
         # doesn't support RFC 2369 in a proper way
-        unsubscribe_score += (len(rfc_heads)-len(presented))*score
+        unsubscribe_score += (len(rfc_heads)-len(presented))*cls.score
 
         if not presented:
             return unsubscribe_score
 
         for uri in [heads_dict.get(head) for head in presented]:
             if not filter(lambda reg: re.search(reg, uri, re.M), patterns):
-                unsubscribe_score += score
+                unsubscribe_score += cls.score
 
         return unsubscribe_score
+
 
     def get_subject_metrics(self, subj_regs, score):
         '''
@@ -265,22 +323,59 @@ class BasePattern(BeautifulBody):
         :return: <penalizing score for Subj>, <count of tokens in upper-case and in Title>
         cause russian unconditional spam is more complicated than abusix )
         '''
-
         # check by regexp rules
         total_score = self.INIT_SCORE
         line, tokens, encodings = self.get_decoded_subj()
         #line = re.sub(ur'[\\\|\/\*]', '', line)
         logger.debug('line : '+line)
-
         regs = self.get_regexp_(subj_regs, re.U)
         matched = filter(lambda r: r.search(line, re.I), regs)
-
         total_score += score*len(matched)
         upper_words_count = len(filter(lambda w: w.isupper(),tokens))
         title_words_count = len(filter(lambda w: w.istitle(),tokens))
 
         return total_score, upper_words_count, title_words_count
 
+
+
+
+
+    @classmethod
+    def get_subject_metrics(cls):
+        '''
+        :param subj_regs:
+        :param score:
+        :return: <penalizing score for Subj>, <count of tokens in upper-case and in Title>
+        cause russian unconditional spam is more complicated than abusix )
+        '''
+
+        line, tokens, encodings = self.get_decoded_subj()
+
+        logger.debug('line : '+line)
+        upper_words_count = len(filter(lambda w: w.isupper(),tokens))
+        title_words_count = len(filter(lambda w: w.istitle(),tokens))
+
+        return len(line), upper_words_count, title_words_count, len(encodings)
+
+    def get_subject_score(self, subj_regs, score):
+        '''
+        :param subj_regs:
+        :param score:
+        :return: <penalizing score for Subj>, <count of tokens in upper-case and in Title>
+        cause russian unconditional spam is more complicated than abusix )
+        '''
+
+        # check by regexp rules
+
+
+        regs = self.get_regexp_(subj_regs, re.U)
+        matched = filter(lambda r: r.search(line, re.I), regs)
+
+        total_score += score*len(matched)
+
+
+
+    @classmethod
     def get_url_metrics(self, domain_regs, text_regs, score):
         '''
         :param domain_regs: regexp list for URL's domains
@@ -365,20 +460,21 @@ class BasePattern(BeautifulBody):
 
         return checksum
 
-    def get_text_parts_metrics(self, score, regs_list, sent_list=None):
+    @classmethod
+    def get_text_parts_metrics(cls, score, regs_list, sent_list=None):
         '''
         Maps input regexp list to each sentence one by one
         :return: penalising score, gained by sentenses
         '''
         print("score "+str(score))
         print("regs_list "+str(regs_list))
-        text_score = self.INIT_SCORE
+        text_score = cls.INIT_SCORE
 
         # precise flag for re.compile ?
-        regs_list = self.get_regexp_(regs_list, re.M)
+        regs_list = cls.get_regexp_(regs_list, re.M)
 
         if sent_list is None:
-            sents_generator = self.get_sentences()
+            sents_generator = cls.get_sentences()
             print("sent_lists >>"+str(self.get_sentences()))
 
         while(True):
@@ -469,16 +565,16 @@ class BasePattern(BeautifulBody):
 
         return html_score, html_checksum
 
-    #@lazyproperty
-    def get_text_parts_avg_entropy(self):
+    @classmethod
+    def get_text_parts_avg_entropy(cls):
         '''
         for fun
         :return:
         '''
 
-        (avg_ent, n) = [self.INIT_SCORE]*2
+        (avg_ent, n) = [cls.INIT_SCORE]*2
         # todo: make n-grams
-        for tokens in self.get_stemmed_tokens():
+        for tokens in cls.get_stemmed_tokens():
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
@@ -488,15 +584,15 @@ class BasePattern(BeautifulBody):
 
         return avg_ent
 
-    #@lazyproperty
-    def get_text_compress_ratio(self):
+    @classmethod
+    def get_text_compress_ratio(cls):
         '''
         maybe
         :return: compress ratio of stemmed text-strings from
         all text/mime-parts
         '''
-        compressed_ratio = self.INIT_SCORE
-        all_text_parts = list(self.get_stemmed_tokens())
+        compressed_ratio = cls.INIT_SCORE
+        all_text_parts = list(cls.get_stemmed_tokens())
         for x in all_text_parts:
             print('>>>> '+str(x))
         if all_text_parts:
@@ -506,13 +602,26 @@ class BasePattern(BeautifulBody):
 
         return compressed_ratio
 
-    def get_attach_metrics(self, mime_parts_list, reg_list, score):
+    @classmethod
+    def get_attach_metrics(cls):
         '''
         :param mime_parts_list:
         :param reg_list: scary regexes for attach attribute value from Content-Type header
         :param score:
         :return: attach_count, score, <score gained by inline attachements>
         '''
+
+        mime_skeleton = self.get_mime_struct()
+            logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
+
+         mime_dict['att_count'] = count
+            mime_dict['att_score'] = att_score
+            # defines by count of inline attachements
+            mime_dict['in_score'] = in_score
+
+            mime_dict['nest_level'] = self.get_nest_level()
+            mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
+
 
         attach_score = self.INIT_SCORE
 
@@ -523,14 +632,16 @@ class BasePattern(BeautifulBody):
 
         attach_score += score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), attach_attrs))
 
+        inline_score = score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), mime_values_list))
+
+    def get_attach_score(self, reg_list, score):
 
         for exp in [re.compile(r,re.I) for r in reg_list]:
             x = filter(lambda value: exp.search(value,re.M), attach_attrs)
             score += score*len(x)
 
-        inline_score = score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), mime_values_list))
 
-        return attach_count, score, inline_score
+        return attach_score
 
 
 if __name__ == "__main__":

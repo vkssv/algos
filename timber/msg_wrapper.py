@@ -64,6 +64,7 @@ class BeautifulBody(object):
     """
     # now can't see any real reason to set default as private attributes,
     # so keep them here
+
     DEFAULT_LANG = 'english'
     DEFAULT_CHARSET = 'utf-8'
     DEFAULT_MAX_NEST_LEVEL = 30
@@ -74,7 +75,7 @@ class BeautifulBody(object):
 
     __slots__ = '_msg'
 
-    def __init__(self, msg):
+    def __init__(self, msg, **kwds):
 
         if msg.is_multipart():
 
@@ -90,6 +91,8 @@ class BeautifulBody(object):
 
         self._msg = msg
         #self._msg_vector = OrderedDict()
+
+
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None ):

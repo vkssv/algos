@@ -45,63 +45,77 @@ class SpamPattern(BasePattern):
     # todo: get rid of magic numbers and unicorns
     __RCVDS_NUM = 2
 
-    def run(self, score):
+    def __init__(self, **kwds):
 
-        vector_dict = OrderedDict()
+        print('in constructor SpamPattern')
+        super(BasePattern, self).__init__(**kwds)
+        self.excluded_heads = [
+                                    'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
+                                    'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
+                              ]
+        self.spam_vector = OrderedDict()
+
+        self.spam_vector['all_heads_crc'] = self.get_all_heads_crc(excluded_heads)
+        self.spam_vector.update(self.spam_rcvd_checks())
+        if (self._msg.keys()).count('Disposition-Notification-To'):
+            self.spam_vector['disp-notification'] = self.score
+
+        if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
+            if self._msg.keys().count('Sender') and self._msg.keys().count('From')):
+            # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
+            # MUA didn't generate Sender field cause of redundancy
+                self.spam_vector['forged_sender'] = self.score
+
+        self.spam_vector['mime_score'] = self.spam_mime_checks()
+        self.spam_vector['attach_score'] = self.spam_mime_checks()
+
+
+    @classmethod
+    def spam_rcvd_checks(cls):
+
+        #vector_dict = OrderedDict()
 
         # 1. "Received:" Headers
         logger.debug('>>> 1. RCVD_CHECKS:')
+        features = ('score','checksum')
+        rcvd_features_dict = cls._get_empty_features_dict('rcvd', features, init_score=cls.INIT_SCORE, container_type='counter')
 
-        # get crc32 of only unique headers and it's values
-        excluded_heads = [
-                            'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
-                            'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
-                         ]
-
-        logger.debug(str(self._msg.items()))
-        vector_dict['all_heads_crc'] = self.get_all_heads_crc(excluded_heads)
-        logger.debug('\t----->'+str(vector_dict))
-
-        # keep the count of traces fields
-        vector_dict ["rcvd_traces_num"] = self._msg.keys().count('Received')
-        logger.debug('\t----->'+str(vector_dict))
-
-        # basic parsing and dummy checks with regexps (takes only first n_rcvds headers)
-        vector_dict ["rcvd_trace_rule"] = self.INIT_SCORE
-        logger.debug('\t----->'+str(vector_dict))
         rcvd_rules = [
                         r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
                         r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
                         r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
         ]
 
-        rcvds = self.get_rcvds(self.__RCVDS_NUM)
-        print('TYPE:'+str(type(rcvds)))
-        logger.debug("my pretty rcvds headers:".upper()+str(rcvds))
-        vector_dict ["rcvd_rules"] = self.INIT_SCORE
         for rule in rcvd_rules:
-            if filter(lambda l: re.search(rule, l), rcvds):
-                vector_dict ["rcvd_rules"] += score
+            if filter(lambda l: re.search(rule, l),  cls.get_rcvds(cls.__RCVDS_NUM)):
+                rcvd_features_dict['rcvd_score'] += cls.score
 
-        vector_dict.update(self.get_trace_crc())
-        logger.debug('\t----->'+str(vector_dict))
+        rcvd_features_dict['rcvd_checksum'] = cls.get_trace_crc(cls.__RCVDS_NUM)
+        logger.debug('\t----->'+str(rcvd_features_dict))
+
+        return rcvd_features_dict
 
         # 2. "To:", "SMTP RCPT TO:" Headers
-        logger.debug('>>> 2. DESTINATOR CHECKS:')
+        #logger.debug('>>> 2. DESTINATOR CHECKS:')
 
-        vector_dict['rcpt_smtp_to'], vector_dict['rcpt_body_to'] = self.get_rcpts_metrics(score)
+        #vector_dict['rcpt_smtp_to'], vector_dict['rcpt_body_to'] = self.get_rcpts_metrics(score)
 
+    @classmethod
+    def spam_subj_checks(cls):
         # 3. "Subject:" Header
-        logger.debug('>>> 3. SUBJECT CHECKS:')
+        # this is alchemy
+        logger.debug('>>> 2. SUBJECT CHECKS:')
 
-        features = ('len','style','score','checksum','encoding')
-        features_dict = dict(zip(['subj_'+f for f in features], [self.INIT_SCORE]*len(features)))
+        features = ('style','score','checksum','encoding')
+        subj_features_dict = cls._get_empty_features_dict('subj', features, init_score=cls.INIT_SCORE, container_type='counter')
 
-        if self._msg.get("Subject"):
+        if cls._msg.get("Subject"):
 
-            total_score = self.INIT_SCORE
-            unicode_subj, norm_words_list, encodings = self.get_decoded_subj()
-            features_dict['subj_len'] = len(unicode_subj)
+            total_score = cls.INIT_SCORE
+            unicode_subj, norm_words_list, encodings = cls.get_decoded_subj()
+
+            if len(set(encodings)) > 1:
+                subj_features_dict['encoding'] = cls.score
 
             # check the origin of RE: and FW: prefixes in "Subject:" header value, according to RFC 5322 rules
             prefix_heads_map = {
@@ -113,9 +127,9 @@ class SpamPattern(BasePattern):
                 if re.match(ur''+k+'\s*:', unicode_subj, re.I):
                     heads_list  = prefix_heads_map.get(k)
 
-                    for h_name in self._msg.keys():
-                        found_heads = filter(lambda reg: re.match(reg,h_name,re.I),h_name)
-                        total_score += (len(prefix_heads_map.get(k)) - len(found_heads))*score
+                    for h_name in cls._msg.keys():
+                        found_heads = filter(lambda reg: re.match(reg, h_name, re.I), h_name)
+                        total_score += (len(prefix_heads_map.get(k)) - len(found_heads))*cls.score
 
             # some self greedy regexes
             subject_rule = [
@@ -134,115 +148,67 @@ class SpamPattern(BasePattern):
                                 ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
                             ]
 
-            subj_score, upper_flag, title_flag = self.get_subject_metrics(subject_rule, score)
+            subj_features_dict['subj_score'], upper_flag, title_flag = self.get_subject_metrics(subject_rule)
 
             # some words in UPPER case or almoust all words in subj string are Titled
+            # todo: 3 is a magic number!
             if upper_flag or (len(norm_words_list) - title_flag) < 3:
-                features_dict['subj_style'] = 1
+                subj_features_dict['subj_style'] = self.score
 
-            features_dict['subj_score'] = total_score + subj_score
-
-            if len(set(encodings)) > 1:
-                features_dict['encoding'] = score
+            subj_features_dict['subj_score'] += total_score
 
             # take crc32, make line only from words on even positions, not all
-            norm_words_list = tuple([norm_words_list[i] for i in filter(lambda i: i%2, range(len(norm_words_list)))])
+            norm_words_list = tuple(norm_words_list[i] for i in filter(lambda i: i%2, range(len(norm_words_list))))
             subj_trace = ''.join(tuple([w.encode('utf-8') for w in norm_words_list]))
-            features_dict['subj_checksum'] = binascii.crc32(subj_trace)
+            subj_features_dict['subj_checksum'] = binascii.crc32(subj_trace)
 
-        vector_dict.update(features_dict)
-        logger.debug('\t----->'+str(vector_dict))
+        logger.debug('\t----->'+str(subj_features_dict))
 
+        return subj_features_dict
 
-        # 4. Assert the absence of "List-*:" headers + some RFC 5322 compliences checks for other self headers
-        logger.debug('>>> 4. LIST_CHECKS + ORIGINATOR_CHECKS:')
-
-        list_features = ('list', 'sender', 'preamble', 'disp-notification')
-        list_features_dict = dict(map(lambda x,y: (x,y), list_features, [self.INIT_SCORE]*len(list_features)))
-        logger.debug('\t----->'+str(list_features_dict))
-
-        if filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
-            # this unique spam author respects RFC 2369, his creation deservs more attentive check
-            list_features_dict['list'] = self.get_list_metrics(score)
-            logger.debug('\t----->'+str(list_features_dict))
-
-        elif (self._msg.keys().count('Sender') and self._msg.keys().count('From')):
-            # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
-            # MUA didn't generate Sender field cause of redundancy
-            list_features_dict ['sender'] = score
-            logger.debug('\t----->'+str(list_features_dict))
-
-        if self._msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self._msg.preamble,re.I):
-
-            list_features_dict ['preamble'] = score
-            logger.debug('\t----->'+str(list_features_dict))
-
-        vector_dict.update(list_features_dict)
-        logger.debug('\t----->'+str(list_features_dict))
-
-        if (self._msg.keys()).count('Disposition-Notification-To'):
-            vector_dict ['disp-notification'] = score
-            logger.debug('\t----->'+str(vector_dict))
-
-        # 5. assert the absence of "Received-SPF:", "Authentication-Results:" and "DKIM-*" headers,
-        # that's very typically for unconditional spam
-        logger.debug('>>> 5. SPF/DKIM_CHECKS:')
-
-        dmarc_score, dmarc_dict, dkim_domain = self.get_dmarc_metrics(score)
-        vector_dict['dmarc_score'] = dmarc_score
-        vector_dict.update(dmarc_dict)
-
-
-        # 6. Body "From:" values
-        logger.debug('>>> 6. ORIGINATOR_CHECKS:')
-
-        vector_dict['from_checksum'] = self.INIT_SCORE
-        logger.debug('\t----->'+str(vector_dict))
-
-        if self._msg.get('From'):
-            name_addr_tuples = self.get_addr_values(self._msg.get_all('From'))[:1]
-            logger.debug('\tFROM:----->'+str(name_addr_tuples))
-            print(name_addr_tuples)
-
-            if len(name_addr_tuples) != 1:
-                logger.warning('\t----->'+str(name_addr_tuples))
-
-            if name_addr_tuples:
-                from_value, from_addr = reduce(add, name_addr_tuples)
-                vector_dict['from_checksum'] = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
-                logger.debug('\t----->'+str(vector_dict))
-
-
+    @classmethod
+    def spam_mime_checks(cls):
         # 7. MIME-headers checks
         logger.debug('>>> 7. MIME_CHECKS:')
 
-        mime_features = ('mime_score', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score')
-        mime_dict = dict(zip(mime_features, [self.INIT_SCORE]*len(mime_features)))
+        mime_score = cls.INIT_SCORE
 
-        if self._msg.get('MIME-Version') and not self._msg.is_multipart():
-            mime_dict['mime_score'] = score
+        if not cls._msg.is_multipart() and cls._msg.get('MIME-Version'):
+            mime_score += cls.score
+            return mime_score
 
-        elif self._msg.is_multipart():
+        elif not cls._msg.is_multipart():
+            return mime_score
 
-            attach_regs = [
-                                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',
+        #', 'checksum', 'nest_level', 'att_count', 'att_score', 'in_score')
+        #mime_features = ('mime_score', 'checksum', 'att_count', 'att_score', 'in_score', 'nest_level')
+        #mime_features = ('mime_score', 'checksum', 'att_score', 'att_count', 'nest_level')
+
+        if cls._msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', cls._msg.preamble, re.I):
+            mime_score += cls.score
+            logger.debug('\t----->'+str(mime_score))
+
+        return mime_score
+
+
+    @classmethod
+    def spam_attach_checks(cls):
+
+        attach_score = cls.INIT_SCORE
+        if not cls._msg.is_multipart():
+            return attach_score
+
+        attach_regs = [
+                                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
                                 r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
-            ]
+        ]
 
-            mime_skeleton = self.get_mime_struct()
-            logger.debug('MIME STRUCT >>>>>'+str(mime_skeleton)+'/n')
+        attach_score = cls.get_attach_score(attach_regs, cls.score)
 
-            count, att_score, in_score = self.get_attach_metrics(mime_skeleton.values(), attach_regs, score)
-            mime_dict['att_count'] = count
-            mime_dict['att_score'] = att_score
-            # defines by count of inline attachements
-            mime_dict['in_score'] = in_score
+        return attach_score
 
-            mime_dict['nest_level'] = self.get_nest_level()
-            mime_dict['checksum'] = binascii.crc32(''.join(mime_skeleton.keys()))
-
-        vector_dict.update(mime_dict)
-        logger.debug('\t----->'+str(vector_dict))
+    @classmethod
+    def spam_url_checks(cls):
 
         # 8. URL-checks
         logger.debug('>>> 8. URL_CHECKS:')
@@ -333,47 +299,45 @@ class SpamPattern(BasePattern):
 
 
         # 9. check body
-
+        @
         logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
-            # some simple greedy regexp, don't belive in them at all
-            # this like good all tradition of antispam filter's world
+
         regexp_list = [
-                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
-                            ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
-                            ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
-                            ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
-                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
-                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
-                            ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
-                            ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
-                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
-                            ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
-                            ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
-                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
-        ]
+                    ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
+                    ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
+                    ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
+                    ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
+                    ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
+                    ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
+                    ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
+                    ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
+                    ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
+                    ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
+                    ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
+                    ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
+                    ]
 
         tags_map = {
-
                         'table':{
-                                    'width'                 : '[1-9]{3}[^%]',
-                                    'height'                : '[1-9]{1,3}',
+                                    'width' : '[1-9]{3}[^%]',
+                                    'height' : '[1-9]{1,3}',
                                     'cell(padding|spacing)' : '[1-9]',
-                                    'border-color'          : '#[0-9A-F]{3,6}',
-                                    'border'                : '[1-9]',
-                                    'style'                 : '([A-Z-][^(a-z)]){3,10}'
-                        },
+                                    'border-color' : '#[0-9A-F]{3,6}',
+                                    'border' : '[1-9]',
+                                    'style' : '([A-Z-][^(a-z)]){3,10}'
+                                },
                         'span' :{
-                                    'style'                 : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
-                                    'lang'                  : '(RU|EN-US)'
-                        },
-                        'p'    :{
-                                    'style'                 : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
-                                    'class'                 : '\[\'(Mso.*|.*)\'\]',
-                                    'align'                 : 'center',
-                                    'css'                   : ''
-                        }
-        }
+                                    'style' : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
+                                    'lang' : '(RU|EN-US)'
+                                },
+                        'p' :   {
+                                    'style' : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
+                                    'class' : '\[\'(Mso.*|.*)\'\]',
+                                    'align' : 'center',
+                                    'css' : ''
+                                }
+                    }
 
         # todo: ask somebody smart how to kill yourself immediately
         # about this acrh problem : repeate 2 lines in each class or
@@ -383,8 +347,7 @@ class SpamPattern(BasePattern):
 
         vector_dict.update(dict(zip(('html_score', 'html_checksum'), self.get_html_parts_metrics(score, tags_map))))
         vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
-        vector_dict['avg_entropy'] = self.get_text_parts_avg_entropy()
-        vector_dict['compression_ratio'] = self.get_text_compress_ratio()
+
 
         logger.debug('MSG VECTOR --> '+str(vector_dict))
 

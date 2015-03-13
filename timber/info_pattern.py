@@ -233,7 +233,7 @@ class InfoPattern(BasePattern):
         # 8. check urls
         logger.debug('>>> 8. URL_CHECKS:')
 
-        urls_list = self.get_url_list()
+        if not self.url_list:
 
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
@@ -314,8 +314,6 @@ class InfoPattern(BasePattern):
         # move to BasePattern
         vector_dict.update(dict(zip(('html_score', 'html_checksum'), self.get_html_parts_metrics(score, tags_map))))
         vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
-        vector_dict['avg_entropy'] = self.get_text_parts_avg_entropy()
-        vector_dict['compression_ratio'] = self.get_text_compress_ratio()
 
         logger.debug('MSG VECTOR --> '+str(vector_dict))
 
