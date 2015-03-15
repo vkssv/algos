@@ -46,15 +46,12 @@ class BeautifulBody(object):
     # now can't see any real reason to set default as private attributes,
     # so keep them here
 
-    __DEFAULT_LANG = 'english'
-    __DEFAULT_CHARSET = 'utf-8'
     __DEFAULT_MAX_NEST_LEVEL = 30
-
-    __SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
-
     __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))', re.M)
 
-    #__slots__ = '_msg'
+    _DEFAULT_LANG = 'english'
+    _DEFAULT_CHARSET = 'utf-8'
+    _SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
 
     def __init__(self, msg, **kwds):
 
@@ -70,7 +67,7 @@ class BeautifulBody(object):
                 if whim(y):
                     raise NaturesError(str(y)+text)
 
-        self.msg = msg
+        self._msg = msg
         #(self.url_list, self.netloc_list) = [list()]*2
 
 
@@ -84,18 +81,12 @@ class BeautifulBody(object):
 
         return dammit_obj.unicode_markup.strip()
 
-    # maybe change implementation in future
-    #@property
-    #def get_lang_(self):
-    #    return lang
+    @classmethod
+    def get_lang(cls, tokens_list):
 
-    '''''
+        lang = cls._DEFAULT_LANG
 
-    def get_lang(self, tokens_list):
-
-        lang = self.DEFAULT_LANG
-
-        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self.SUPPORT_LANGS_LIST])
+        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in cls._SUPPORT_LANGS_LIST])
         tokens_set = set(tokens_list)
         lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
         logger.debug(lang_ratios)
@@ -104,20 +95,18 @@ class BeautifulBody(object):
             lang = l
 
         return lang
-    '''''
+
     def get_rcvds(self, rcvds_num=0):
         '''
         :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
         :return: left parts of Received header's values, everything before ';'
         '''
         # parse all RCVD headers by default if rcvds_num wasn't defined
-        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received'))[ -1*rcvds_num : ]
+        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received'))[ -1*rcvds_num : ]
 
         return parsed_rcvds
 
-    '''''
     def get_addr_values(self, header_value):
-
 
         logger.debug('+++++>'+str(header_value))
 
@@ -157,7 +146,6 @@ class BeautifulBody(object):
     #@lazyproperty
     def get_smtp_domain(self):
 
-
         regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
         orig_domain = ''
 
@@ -175,7 +163,6 @@ class BeautifulBody(object):
 
     #@lazyproperty
     def get_decoded_subj(self):
-
 
         #logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
         assert self._msg.get('Subject')
@@ -200,15 +187,15 @@ class BeautifulBody(object):
             encodings_list.append(dammit_obj.original_encoding)
 
         tokens = tuple(subj_line.split())
-        lang = self.get_lang_(tokens)
-        if lang in self.SUPPORT_LANGS_LIST:
+        lang = self.get_lang(tokens)
+        if lang in self._SUPPORT_LANGS_LIST:
             tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
             logger.debug('before stem: '+str(tokens))
             subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
 
-        return subj_line, subj_tokens, encodings_list
+        return (subj_line, subj_tokens, encodings_list)
 
-    #@lazyproperty
+
     def get_mime_struct(self):
         """
         :return: dict { mime_type  : [attribute : value] }
@@ -254,7 +241,6 @@ class BeautifulBody(object):
 
         return mime_parts
 
-    #@lazyproperty
     def get_nest_level(self):
 
         mime_parts = self.get_mime_struct()
@@ -262,30 +248,27 @@ class BeautifulBody(object):
 
         return level
 
-    #@lazyproperty
-    def get_url_list(self):
-
+    def get_urlparse_obj_list(self):
 
         for line, content_type, lang in list(self.get_text_mime_part()):
             if 'html' in content_type:
                 soup = BeautifulSoup(line)
                 if soup.a:
-                    self.url_list.extend([unicode(x) for x in soup.a])
+                    url_list.extend([unicode(x) for x in soup.a])
             else:
                 url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
                 self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
 
 
-        if self.url_list:
-            self.url_list = [urlparse(i) for i in self.url_list]
+        if url_list:
+            url_list = [urlparse(i) for i in url_list]
 
         # todo: make it as lazy computing value
-        return self.url_list
+        return url_list
 
-    def get_netlocation_list(self):
+    def get_netlocation_list(self, url_list):
 
-
-        for url in self.url_list:
+        for url in url_list:
             if url.netloc:
                 netloc_list.append(url.netloc)
                 continue
@@ -301,8 +284,10 @@ class BeautifulBody(object):
             only_str_obj  = [i.decode('utf8') for i in only_str_obj]
             netloc_list = only_str_obj + [ i for i in netloc_list if type(i) is unicode ]
 
-        #print("NETLOC: >>>>>"+str(netloc_list))
-        return self.netloc_list
+        print("NETLOC: >>>>>"+str(netloc_list))
+        return netloc_list
+
+    '''''
 
     def get_text_mime_part(self):
 
@@ -421,4 +406,3 @@ if __name__ == "__main__":
     import doctest
     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
 
-'''''
