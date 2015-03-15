@@ -37,25 +37,6 @@ except ImportError:
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 
-class lazyproperty:
-    '''
-    decorator for once-computed methods, cause for test-emails
-    4 patterns will be created, all are inheritated from
-    one base class
-    '''
-
-    def __init__(self, func):
-        self.func = func
-
-    def __get__(self, instance, cls):
-        if instance is None:
-            return self
-        else:
-            setattr(instance, self.func.__name__, value)
-
-        return val
-
-
 class BeautifulBody(object):
     """
     Base class for happy life with email.message objects,
@@ -65,36 +46,36 @@ class BeautifulBody(object):
     # now can't see any real reason to set default as private attributes,
     # so keep them here
 
-    DEFAULT_LANG = 'english'
-    DEFAULT_CHARSET = 'utf-8'
-    DEFAULT_MAX_NEST_LEVEL = 30
+    __DEFAULT_LANG = 'english'
+    __DEFAULT_CHARSET = 'utf-8'
+    __DEFAULT_MAX_NEST_LEVEL = 30
 
-    SUPPORT_LANGS_LIST = ['english', 'french', 'russian']
+    __SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
 
     __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))', re.M)
 
-    __slots__ = '_msg'
+    #__slots__ = '_msg'
 
     def __init__(self, msg, **kwds):
 
         if msg.is_multipart():
 
             be_picky = [
-                        (lambda y: y > self.DEFAULT_MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
+                        (lambda y: y > BeautifulBody.__DEFAULT_MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
                         (lambda y: y, lambda m: m.defects,' I don\'t eat such emails, !')
-                    ]
+            ]
 
             for whim, f, text in be_picky:
                 y=f(msg) # cause don't want to calculate it again in exception's text
                 if whim(y):
                     raise NaturesError(str(y)+text)
 
-        self._msg = msg
-        (self.url_list, self.netloc_list) = [list()]*2
+        self.msg = msg
+        #(self.url_list, self.netloc_list) = [list()]*2
 
 
     @classmethod
-    def _get_unicoded_value(cls, raw_line, encoding=None ):
+    def _get_unicoded_value(cls, raw_line, encoding=None):
         print('in _get_unicoded_value')
         print(raw_line)
         print(encoding)
@@ -108,12 +89,10 @@ class BeautifulBody(object):
     #def get_lang_(self):
     #    return lang
 
-    #@get_lang_.setter
-    def get_lang_(self, tokens_list):
-        '''
-        :param tokens_list:
-        :return: 42
-        '''
+    '''''
+
+    def get_lang(self, tokens_list):
+
         lang = self.DEFAULT_LANG
 
         stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in self.SUPPORT_LANGS_LIST])
@@ -125,24 +104,20 @@ class BeautifulBody(object):
             lang = l
 
         return lang
-
+    '''''
     def get_rcvds(self, rcvds_num=0):
         '''
         :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
         :return: left parts of Received header's values, everything before ';'
         '''
         # parse all RCVD headers by default if rcvds_num wasn't defined
-        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received'))[ -1*rcvds_num : ]
+        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received'))[ -1*rcvds_num : ]
 
         return parsed_rcvds
 
+    '''''
     def get_addr_values(self, header_value):
-        '''
-        :param list with destinator/originator-headers values, which could consist from realname (string, could be encoded by base64/QP)
-            + email address, so these header values MUST BE obtained from email.message object by message.get_all('HEADER') method
-        :return: vector (because the order of destinator/originator-addresses should be kept) of tuples :
-            (unicode string with decoded realname, address without angle parentheses)
-        '''
+
 
         logger.debug('+++++>'+str(header_value))
 
@@ -181,11 +156,7 @@ class BeautifulBody(object):
 
     #@lazyproperty
     def get_smtp_domain(self):
-        '''
-        :return: sender's domain from the first Received-field
-        "...Ah, it is easy to deceive me!...
-            I long to be deceived myself!...A. Pushkin"
-        '''
+
 
         regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
         orig_domain = ''
@@ -204,12 +175,7 @@ class BeautifulBody(object):
 
     #@lazyproperty
     def get_decoded_subj(self):
-        '''
-        don't use vector-form of calculations for quick transport-decoding
-        and unicoding metamorphoses, cause it could be exceptions on each
-        step, so consequently cycling
-        :return:
-        '''
+
 
         #logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
         assert self._msg.get('Subject')
@@ -290,9 +256,6 @@ class BeautifulBody(object):
 
     #@lazyproperty
     def get_nest_level(self):
-        '''
-        :return: MIME-nesting level
-        '''
 
         mime_parts = self.get_mime_struct()
         level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
@@ -301,11 +264,6 @@ class BeautifulBody(object):
 
     #@lazyproperty
     def get_url_list(self):
-        '''
-        :return: list of urlparse objects for further processing,
-        or empty list if body doesn't contain any links
-        '''
-
 
 
         for line, content_type, lang in list(self.get_text_mime_part()):
@@ -325,10 +283,7 @@ class BeautifulBody(object):
         return self.url_list
 
     def get_netlocation_list(self):
-        '''
 
-        :return:
-        '''
 
         for url in self.url_list:
             if url.netloc:
@@ -340,7 +295,7 @@ class BeautifulBody(object):
 
         netloc_list = [ domain for domain in  netloc_list if domain ]
 
-        only_str_obj = [i for i in netloc_list if type(i) is str]
+        only_str_obj = [ i for i in netloc_list if type(i) is str ]
 
         if only_str_obj:
             only_str_obj  = [i.decode('utf8') for i in only_str_obj]
@@ -350,10 +305,7 @@ class BeautifulBody(object):
         return self.netloc_list
 
     def get_text_mime_part(self):
-        '''
-        generator of tuples with decoded text/mime part's line and metainfo
-        :return: generator of tuples ( decoded line , mime type , lang ) for each text/mime part
-        '''
+
         # partial support of asian encodings, just to decode in UTF without exceptions
         # and normilize with NFC form: one unicode ch per symbol
         langs_map = {
@@ -396,13 +348,7 @@ class BeautifulBody(object):
             yield(decoded_line, p.get_content_type(), lang)
 
     def get_sentences(self, remove_url=True):
-        '''
-        sentences generator
-        :remove_url: True - replace URL from unicoded sentence with space,
-        cause URLs are processing separately in BasePattern and should not
-        affected other MIME part's tokens statistics
-        :return: tuple of sentences for each text/mime part
-        '''
+
         tokenizer = PunktSentenceTokenizer()
 
 
@@ -434,10 +380,7 @@ class BeautifulBody(object):
             yield sents
 
     def get_stemmed_tokens(self):
-        '''
-        tokens generator
-        :return: stemmed, cleaned from stopwords tokens tuple (keeps token's order) for each text/mime part
-        '''
+
         tokenizer = WordPunctTokenizer()
         #punct_extractor = RegexpTokenizer("[\w']+", gaps=True)
 
@@ -459,11 +402,7 @@ class BeautifulBody(object):
             yield tokens
 
     def get_html_parts(self, mime_parts_list=None):
-        '''
 
-        :param mime_parts_list:
-        :return:
-        '''
         if mime_parts_list is None:
             mime_parts_list = self.get_text_mime_part()
 
@@ -482,3 +421,4 @@ if __name__ == "__main__":
     import doctest
     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
 
+'''''
