@@ -53,6 +53,8 @@ class BeautifulBody(object):
     _DEFAULT_CHARSET = 'utf-8'
     _SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
 
+    __slots__ = ['_msg']
+
     def __init__(self, msg, **kwds):
 
         if msg.is_multipart():

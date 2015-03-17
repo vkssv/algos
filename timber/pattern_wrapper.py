@@ -45,10 +45,10 @@ class BasePattern(BeautifulBody):
 
         base_features = [
                             'rcvd_num',
-                            'all_heads_crc',
+                            'all_heads_checksum',
                             'from_checksum',
                             'list',
-                            ''
+                            'mime_checksum'
 
         ]
 
@@ -60,7 +60,7 @@ class BasePattern(BeautifulBody):
 
         self.rcvd_num = self._msg.keys().count('Received')
         self.get_rcpts_metrics()
-        self.get_from_crc()
+        self.get_from_checksum()
         self.get_list_metrics()
         self.get_dmarc_metrics()
         self.get_base_url_metrics()
@@ -74,8 +74,6 @@ class BasePattern(BeautifulBody):
         '''''
         logger.debug('BasePattern was created')
 
-
-    # just for debugging new regexps
     @staticmethod
     def get_regexp(regexp_list, compilation_flag=None):
         '''
@@ -98,7 +96,7 @@ class BasePattern(BeautifulBody):
         return compiled_list
 
     # called from each particular pattern
-    def get_all_heads_crc(self, excluded_list=None):
+    def get_all_heads_checksum(self, excluded_list=None):
         '''
         :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
         :return: <CRC32 from headers names>
@@ -113,9 +111,9 @@ class BasePattern(BeautifulBody):
                 # can use match - no new lines in r_name
                 heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
-        self.all_heads_crc = binascii.crc32(''.join(heads_vector))
+        self.all_heads_checksum = binascii.crc32(''.join(heads_vector))
 
-        return self.all_heads_crc
+        return self.all_heads_checksum
 
     def get_rcvd_checksum(self, rcvds_num=0):
         '''
@@ -172,8 +170,7 @@ class BasePattern(BeautifulBody):
 
         dmarc_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
 
-        features = ('score')+tuple(dmarc_heads)
-        dmarc_features_dict = cls._get_empty_features_dict('dmarc', features, init_score=cls.INI_SCORE, container_type='counter')
+
 
         logger.debug(str(dmarc_features_dict))
 
@@ -216,7 +213,7 @@ class BasePattern(BeautifulBody):
     def get_dkim_domain(self):
         pass
 
-    def get_from_crc(self):
+    def get_from_checksum(self):
         logger.debug('>>> ORIGINATOR_CHECKS:')
 
         if self._msg.get('From'):
@@ -393,23 +390,22 @@ class BasePattern(BeautifulBody):
 
         return url_score
 
-    def get_mime_crc(self, excluded_attrs_list=['boundary=','charset=']):
+    def get_mime_checksum(self, excluded_attrs_list=['boundary=','charset=']):
 
         #:param excluded_atrs_list: values of uninteresting mime-attrs
         #:return: 42
 
-
-        checksum = self.INIT_SCORE
         logger.debug('EXL:'+str(excluded_attrs_list))
 
         for prefix in excluded_attrs_list:
             items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in self.get_mime_struct().items()]
 
-        if items:
-            items = reduce(add, items)
-            checksum = binascii.crc32(''.join([''.join(i) for i in items]))
+            if items:
+                items = reduce(add, items)
 
-        return checksum
+            self.checksum = binascii.crc32(''.join([''.join(i) for i in items]))
+
+        return self.mime_checksum
 
     '''''
     def get_text_parts_metrics(self, regs_list, sent_list=None):

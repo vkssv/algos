@@ -55,7 +55,7 @@ class SpamPattern(BasePattern):
         [ self.__setattr__(f, SpamPattern._INIT_SCORE) for f in base_features + subj_features ]
 
         # 1. all headers
-        self.get_all_heads_crc(SpamPattern.__EXCLUDED_HEADS)
+        self.get_all_heads_checksum(SpamPattern.__EXCLUDED_HEADS)
 
         # 2. Received headers
 
@@ -176,7 +176,7 @@ class SpamPattern(BasePattern):
 
         return (self.subj_encoding, self.subj_score, self.subj_style, self.subj_checksum)
 
-    def get_mime_metrics(self):
+    def get_mime_score(self):
 
         # 7. MIME-headers checks
         logger.debug('>>> 7. MIME_CHECKS:')
