@@ -6,7 +6,7 @@ import sys, os, importlib
 class PatternFactory(object):
     """ Factory for creating flying Frankensteins """
 
-    def New(self, msg, label):
+    def New(self, label):
         #logger.debug(label)
         try:
             pattern = importlib.import_module(label + '_pattern')
@@ -16,7 +16,7 @@ class PatternFactory(object):
         except Exception as details:
             raise
 
-        return (current_obj(msg))
+        return (current_obj())
 
 
 MetaFrankenstein = PatternFactory()

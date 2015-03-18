@@ -49,9 +49,9 @@ def vectorize(doc_path, label, score):
 
     try:
 
-        Frankenstein = MetaFrankenstein.New(msg, label)
+        Frankenstein = MetaFrankenstein.New(label)
         logger.debug('\n\n\t CHECK_' + label.upper()+'\n')
-        vect_dict.update(Frankenstein.run(score))
+        vect_dict.update(Frankenstein(msg, score))
 
     except Exception as details:
         logger.error(str(details))

@@ -33,7 +33,7 @@ class BasePattern(BeautifulBody):
     Keeps Frankenstein's DNAs.
     '''
 
-    _INIT_SCORE = 0 # can redifine for particular set of instanses, => use cls./self.INIT_SCORE in code
+    _INIT_SCORE = 0 # can redifine for particular set of instanses, => use cls./self._INIT_SCORE in code
 
     # BASE_FEATURES = ('rcvd_traces_num','rcpt_smtp_to', 'rcpt_body_to', 'list', 'avg_entropy')
 
@@ -45,7 +45,6 @@ class BasePattern(BeautifulBody):
 
         base_features = [
                             'rcvd_num',
-                            'all_heads_checksum',
                             'from_checksum',
                             'list',
                             'mime_checksum'
@@ -95,7 +94,22 @@ class BasePattern(BeautifulBody):
 
         return compiled_list
 
-    # called from each particular pattern
+
+    def get_features_dict(self, features_list):
+        '''
+
+        :param features_list: list of private attributes of particular PatternClass,
+        which we need to return when exit from PatternClass.method scope,
+        don't want to return None
+        :return:
+        '''
+        for f in features:
+            keys.extend(filter(lambda k: re.search(r'_.*'+f,k), self.__dict__.keys()))
+
+        return dict((k, self.__dict__[k]) for k in keys)
+
+
+    # can be called from each particular pattern with particular excluded_list
     def get_all_heads_checksum(self, excluded_list=None):
         '''
         :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
@@ -111,10 +125,11 @@ class BasePattern(BeautifulBody):
                 # can use match - no new lines in r_name
                 heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
-        self.all_heads_checksum = binascii.crc32(''.join(heads_vector))
+        all_heads_checksum = binascii.crc32(''.join(heads_vector))
 
-        return self.all_heads_checksum
+        return all_heads_checksum
 
+    # can be called from each particular pattern with particular rcvds_num
     def get_rcvd_checksum(self, rcvds_num=0):
         '''
         :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
