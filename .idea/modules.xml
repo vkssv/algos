@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/algos.iml" filepath="$PROJECT_DIR$/.idea/algos.iml" />
       <module fileurl="file://$PROJECT_DIR$/../tempest/.idea/tempest.iml" filepath="$PROJECT_DIR$/../tempest/.idea/tempest.iml" />
       <module fileurl="file://$PROJECT_DIR$/../test/.idea/test.iml" filepath="$PROJECT_DIR$/../test/.idea/test.iml" />
+      <module fileurl="file:///usr/lib/python2.6/site-packages/testtools/.idea/testtools.iml" filepath="/usr/lib/python2.6/site-packages/testtools/.idea/testtools.iml" />
       <module fileurl="file://$PROJECT_DIR$/timber/.idea/timber.iml" filepath="$PROJECT_DIR$/timber/.idea/timber.iml" />
     </modules>
   </component>

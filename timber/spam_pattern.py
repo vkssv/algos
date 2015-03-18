@@ -43,14 +43,14 @@ class SpamPattern(BasePattern):
         # for avoiding additional headaches and investigations with Python GC
         base_features = [
                             '__all_heads_checksum',
-                            '__rcvd_score',
-                            '__forged_sender',
-                            '__disp_notification',
-                            '__mime_score'
+                            'rcvd_score',
+                            'forged_sender',
+                            'disp_notification',
+                            'mime_score'
         ]
 
-        subj_features = ['__subj_'+name for name in ['style','score','checksum','encoding']]
-        url_features = ['__url_'+name for name in ['score', 'upper', 'repetitions', 'punicode', 'domain_name_level', \
+        subj_features = ['subj_'+name for name in ['style','score','checksum','encoding']]
+        url_features = ['url_'+name for name in ['score', 'upper', 'repetitions', 'punicode', 'domain_name_level', \
                                                  'avg_len', 'onMouseOver', 'hex', 'at_sign']]
         # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
         [ self.__setattr__(f, self._INIT_SCORE) for f in base_features + subj_features + url_features ]
@@ -73,7 +73,7 @@ class SpamPattern(BasePattern):
 
         # 5. Typical spams headers
         if self._msg.keys().count('Disposition-Notification-To'):
-            self.__disp_notification = self._penalty_score
+            self.disp_notification = self._penalty_score
 
         # 6. Checks for MIME-skeleton attributes
         self.get_mime_score()
@@ -104,9 +104,9 @@ class SpamPattern(BasePattern):
 
         for rule in rcvd_rules:
             if filter(lambda l: re.search(rule, l), self.get_rcvds(self.__RCVDS_NUM)):
-                self.__rcvd_score += self._penalty_score
+                self.rcvd_score += self._penalty_score
 
-        return self.__rcvd_score
+        return self.rcvd_score
 
     def get_originator_score(self):
 
@@ -114,11 +114,11 @@ class SpamPattern(BasePattern):
 
         if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
             if self._msg.keys().count('Sender') and self._msg.keys().count('From'):
-                self.__forged_sender = self._penalty_score
+                self.forged_sender = self._penalty_score
                 # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
                 # MUA didn't generate Sender field cause of redundancy
 
-        return self.__forged_sender
+        return self.forged_sender
 
     def get_spam_subj_features(self, features_list):
 
@@ -131,7 +131,7 @@ class SpamPattern(BasePattern):
 
         unicode_subj, norm_words_list, encodings = self.get_decoded_subj()
 
-        self.__subj_encoding = len(set(encodings))
+        self.subj_encoding = len(set(encodings))
 
         # check the origin of RE: and FW: prefixes in "Subject:" header value, according to RFC 5322 rules
         prefix_heads_map = {
@@ -145,7 +145,7 @@ class SpamPattern(BasePattern):
 
                 for h_name in self._msg.keys():
                     found_heads = filter(lambda reg: re.match(reg, h_name, re.I), h_name)
-                    self.__subj_score += (len(prefix_heads_map.get(k)) - len(found_heads))*self._penalty_score
+                    self.subj_score += (len(prefix_heads_map.get(k)) - len(found_heads))*self._penalty_score
 
         # try greedy regexes, maybe will precise them in future
         subject_rule = [
@@ -165,17 +165,17 @@ class SpamPattern(BasePattern):
         ]
 
         score, upper_flag, title_flag = self.get_base_subj_metrics(subject_rule)
-        self.__subj_score += score
+        self.subj_score += score
 
         # some words in UPPER case or almoust all words in subj string are Titled
         # todo: remove magic number (after investigating how it will devide vectors inside trees)
         if upper_flag or (len(norm_words_list) - title_flag) < 3:
-            self.__subj_style = self._penalty_score
+            self.subj_style = self._penalty_score
 
         # take crc32, make line only from words on even positions, not all
         norm_words_list = tuple(norm_words_list[i] for i in filter(lambda i: i%2, range(len(norm_words_list))))
         subj_trace = ''.join(tuple([w.encode('utf-8') for w in norm_words_list]))
-        self.__subj_checksum = binascii.crc32(subj_trace)
+        self.subj_checksum = binascii.crc32(subj_trace)
 
         features_dict = self.get_features_dict(features_list)
 
@@ -187,17 +187,17 @@ class SpamPattern(BasePattern):
         logger.debug('>>> 7. MIME_CHECKS:')
 
         if not self._msg.is_multipart() and self._msg.get('MIME-Version'):
-            self.__mime_score += self._penalty_score
-            return self.__mime_score
+            self.mime_score += self._penalty_score
+            return self.mime_score
 
         elif not self._msg.is_multipart():
-            return self.__mime_score
+            return self.mime_score
 
         if self._msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self._msg.preamble, re.I):
-            self.__mime_score += self._penalty_score
+            self.mime_score += self._penalty_score
             logger.debug('\t----->'+str(self.mime_score))
 
-        return self.__mime_score
+        return self.mime_score
 
     def get_url_features(self, url_features_list):
 
@@ -254,18 +254,18 @@ class SpamPattern(BasePattern):
         ]
 
         # cause also uses netloc_list
-        self.__url_score += self.get_url_score(fqdn_regs, txt_regs)
+        self.url_score += self.get_url_score(fqdn_regs, txt_regs)
 
         for method in [ unicode.isupper, unicode.istitle ]:
-            self.__url_upper += len(filter(lambda s: method(s), net_location_list))*self._penalty_score
+            self.url_upper += len(filter(lambda s: method(s), net_location_list))*self._penalty_score
 
         # mostly thinking about shortened urls, created by tinyurl and other services,
         # but maybe this is weak feature
-        self.__url_avg_len = math.ceil(float(sum([len(s) for s in net_location_list]))/len(net_location_list))
+        self.url_avg_len = math.ceil(float(sum([len(s) for s in net_location_list]))/len(net_location_list))
 
         puni_regex = ur'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
-        self.__url_punicode = len(filter(lambda u: re.search(puni_regex, u, re.I), net_location_list))*self._penalty_score
-        self.__url_domain_name_level = len(filter(lambda n: n>=2, [s.count('.') for s in net_location_list]))*self._penalty_score
+        self.url_punicode = len(filter(lambda u: re.search(puni_regex, u, re.I), net_location_list))*self._penalty_score
+        self.url_domain_name_level = len(filter(lambda n: n>=2, [s.count('.') for s in net_location_list]))*self._penalty_score
 
         features_dict = self.get_features_dict(url_features_list)
 

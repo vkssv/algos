@@ -252,6 +252,7 @@ class BeautifulBody(object):
 
     def get_urlparse_obj_list(self):
 
+        url_list = list()
         for line, content_type, lang in list(self.get_text_mime_part()):
             if 'html' in content_type:
                 soup = BeautifulSoup(line)
@@ -259,11 +260,11 @@ class BeautifulBody(object):
                     url_list.extend([unicode(x) for x in soup.a])
             else:
                 url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
-                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
+                url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
 
 
         if url_list:
-            url_list = [urlparse(i) for i in url_list]
+            url_list = [urlparse(i) for i in self._url_list]
 
         # todo: make it as lazy computing value
         return url_list
