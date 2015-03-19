@@ -70,12 +70,13 @@ class BeautifulBody(object):
                     raise NaturesError(str(y)+text)
 
         self._msg = msg
+        logger.debug(type(self._msg))
         #(self.url_list, self.netloc_list) = [list()]*2
 
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None):
-        print('in _get_unicoded_value')
+        print('in get_unicoded_value')
         print(raw_line)
         print(encoding)
         dammit_obj = UnicodeDammit(raw_line, [encoding], is_html=False)
@@ -109,6 +110,8 @@ class BeautifulBody(object):
         return parsed_rcvds
 
     def get_addr_values(self, header_value):
+        '''
+        '''
 
         logger.debug('+++++>'+str(header_value))
 
@@ -250,48 +253,6 @@ class BeautifulBody(object):
 
         return level
 
-    def get_urlparse_obj_list(self):
-
-        url_list = list()
-        for line, content_type, lang in list(self.get_text_mime_part()):
-            if 'html' in content_type:
-                soup = BeautifulSoup(line)
-                if soup.a:
-                    url_list.extend([unicode(x) for x in soup.a])
-            else:
-                url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
-                url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
-
-
-        if url_list:
-            url_list = [urlparse(i) for i in self._url_list]
-
-        # todo: make it as lazy computing value
-        return url_list
-
-    def get_netlocation_list(self, url_list):
-
-        for url in url_list:
-            if url.netloc:
-                netloc_list.append(url.netloc)
-                continue
-            elif url.path:
-                netloc_list.append(url.path.strip('www.'))
-                continue
-
-        netloc_list = [ domain for domain in  netloc_list if domain ]
-
-        only_str_obj = [ i for i in netloc_list if type(i) is str ]
-
-        if only_str_obj:
-            only_str_obj  = [i.decode('utf8') for i in only_str_obj]
-            netloc_list = only_str_obj + [ i for i in netloc_list if type(i) is unicode ]
-
-        print("NETLOC: >>>>>"+str(netloc_list))
-        return netloc_list
-
-    '''''
-
     def get_text_mime_part(self):
 
         # partial support of asian encodings, just to decode in UTF without exceptions
@@ -321,7 +282,7 @@ class BeautifulBody(object):
             if decoded_line is None or len(decoded_line.strip()) == 0:
                 continue
 
-            lang = self.DEFAULT_LANG
+            lang = self._DEFAULT_LANG
             if dammit_obj.original_encoding:
                 for l in langs_map.iterkeys():
                     if filter(lambda ch: re.match(r''+ch, dammit_obj.original_encoding, re.I), langs_map.get(l)):
@@ -333,7 +294,54 @@ class BeautifulBody(object):
             if l:
                 lang = ''.join(self._msg.get(''.join(l)).split('-')[:1])
 
-            yield(decoded_line, p.get_content_type(), lang)
+            yield (decoded_line, p.get_content_type(), lang)
+
+    def get_url_obj_list(self):
+
+        self.url_list = list()
+        for line, content_type, lang in list(self.get_text_mime_part()):
+            if 'html' in content_type:
+                soup = BeautifulSoup(line)
+                if soup.a:
+                    self.url_list.extend([unicode(x) for x in soup.a])
+            else:
+                url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
+                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
+
+
+        if self.url_list:
+            self.url_list = [urlparse(i) for i in self.url_list]
+
+        # todo: make it as lazy computing value
+        return self.url_list
+
+    def get_net_location_list(self, url_list=None):
+
+        netloc_list = list()
+        if url_list is None:
+            url_list = self.url_list
+
+        for url in url_list:
+            if url.netloc:
+                netloc_list.append(url.netloc)
+                continue
+            elif url.path:
+                netloc_list.append(url.path.strip('www.'))
+                continue
+
+        netlocations = [ domain for domain in  netloc_list if domain ]
+
+        only_str_obj = [ i for i in netloc_list if type(i) is str ]
+
+        if only_str_obj:
+            only_str_obj  = [i.decode('utf8') for i in only_str_obj]
+            netloc_list = only_str_obj + [ i for i in netlocations if type(i) is unicode ]
+
+            logger.debug("NETLOC: >>>>>"+str(netloc_list))
+
+        return netloc_list
+
+    '''''
 
     def get_sentences(self, remove_url=True):
 
@@ -409,3 +417,4 @@ if __name__ == "__main__":
     import doctest
     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
 
+'''''

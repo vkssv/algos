@@ -42,7 +42,7 @@ class SpamPattern(BasePattern):
         # 0. initialize vector of features explicitly,
         # for avoiding additional headaches and investigations with Python GC
         base_features = [
-                            '__all_heads_checksum',
+                            'all_heads_checksum',
                             'rcvd_score',
                             'forged_sender',
                             'disp_notification',
@@ -56,7 +56,7 @@ class SpamPattern(BasePattern):
         [ self.__setattr__(f, self._INIT_SCORE) for f in base_features + subj_features + url_features ]
 
         # 1. all headers
-        self.__all_heads_checksum = self.get_all_heads_checksum(self.__EXCLUDED_HEADS)
+        self.all_heads_checksum = self.get_all_heads_checksum(self.__EXCLUDED_HEADS)
 
         # 2. Received headers
 
@@ -120,7 +120,7 @@ class SpamPattern(BasePattern):
 
         return self.forged_sender
 
-    def get_spam_subj_features(self, features_list):
+    def get_subj_features(self, features_list):
 
         # 3. "Subject:" Header (pure alchemy )) )
         logger.debug('>>> 3. SUBJECT CHECKS:')

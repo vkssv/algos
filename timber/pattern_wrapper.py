@@ -43,26 +43,24 @@ class BasePattern(BeautifulBody):
 
         super(BasePattern, self).__init__(**kwds)
 
-        base_features = [
-                            'rcvd_num',
-                            'from_checksum',
-                            'list',
-                            'mime_checksum'
+        features_dict = {
+                            'base'    :   ['rcvd_num', 'from_checksum', 'list_score', 'mime_checksum'],
+                            'rcpt'    :   ['rcpt_'+f for f in ['smtp_to','body_to']],
+                            'dmarc'   :   ['dmarc_'+f for f in ['spf','score']],
+                            'url_base':   ['url_'+f for f in ['url_count','distinct_count','sender_count']]
+        }
 
-        ]
+        total = list()
+        [ total.extend(features_dict.get(k)) for k in features_dict.keys() ]
 
-        rcpt_features = ['rcpt_'+f for f in ['smtp_to','body_to']]
-        dmarc_features = ['dmarc+'+f for f in ['Received-SPF','(DKIM|DomainKey)-Signature']]
-        url_base_features =
-
-        [ self.__setattr__(f, BasePattern._INIT_SCORE) for f in base_features + rcpt_features + dmarc_features ]
+        [ self.__setattr__(f, BasePattern._INIT_SCORE) for f in total ]
 
         self.rcvd_num = self._msg.keys().count('Received')
-        self.get_rcpts_metrics()
+        self.get_dmarc_features()
         self.get_from_checksum()
-        self.get_list_metrics()
-        self.get_dmarc_metrics()
-        self.get_base_url_metrics()
+        self.get_rcpts_metrics()
+        self.get_list_score()
+        self.get_url_base_features()
 
 
         '''''
@@ -74,7 +72,7 @@ class BasePattern(BeautifulBody):
         logger.debug('BasePattern was created')
 
     @staticmethod
-    def get_regexp(regexp_list, compilation_flag=None):
+    def _get_regexp(regexp_list, compilation_flag=None):
         '''
         :param regexp_list: list of scary regexes
         :param compilation_flag: re.U, re.M, etc
@@ -95,7 +93,7 @@ class BasePattern(BeautifulBody):
         return compiled_list
 
 
-    def get_features_dict(self, features_list):
+    def _get_features_dict(self, features_list):
         '''
 
         :param features_list: list of private attributes of particular PatternClass,
@@ -175,58 +173,48 @@ class BasePattern(BeautifulBody):
             emarket_dict['known_mailer_flag'] = score
 
         return emarket_dict
-    '''''
 
-    def get_dmarc_metrics(self):
+
+    def get_dkim_domain(self):
+
+         if filter(lambda value: re.search(from_domain, value), [self._msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]):
+            logger.debug(from_domain)
+            logger.debug(str([self._msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]))
+            self.dkim_domain = from_domain
+
+
+        return self.dkim_domain
+    '''''
+    def get_dmarc_features(self):
 
         #:param score:
         #:param dmarc_heads: list of headers, described in RFC 6376, RFC 7208
         #:return: <DMARC metrics dict>
 
-        dmarc_heads = ['Received-SPF','(DKIM|DomainKey)-Signature']
-
-
-
-        logger.debug(str(dmarc_features_dict))
+        features_heads_map = { 'dmarc_spf':'Received-SPF', 'dmarc_dkim':'(DKIM|DomainKey)-Signature' }
 
         # RFC 7001, this header has always to be included
-
-        if not (cls._msg.keys()).count('Authentication-Results'):
-            return dmarc_features_dict, dkim_domain
+        if not (self._msg.keys()).count('Authentication-Results'):
+            return (self.dmarc_spf, self.dmarc_score)
 
         found_heads = list()
-        for h in dmarc_heads:
-            found_heads.extend(filter(lambda z: re.match(h, z, re.I), cls._msg.keys()))
+        for h in features_heads_map.values():
+            found_heads.extend(filter(lambda z: re.match(h, z, re.I), self._msg.keys()))
 
         logger.debug('TOTAL:'+str(found_heads))
 
         # (len(required_heads_list)+1, cause we can find DKIM-Signature and DomainKey-Signature in one doc
-        logger.debug('req_head:'+str(len(dmarc_heads)))
+        logger.debug('req_head:'+str(len(features_heads_map.values())))
         #logger.debug('req_head:'+str(len(required_heads_list)+1))
         #logger.debug('found:'+str(len(set(total))*score))
 
-        # todo: in a results look how it will probably correlate with last two metrics below
-        dmarc_features_dict['dmarc_score'] = (len(dmarc_heads) - len(set(found_heads)))*cls.score
+        self.dmarc_score += (len(features_heads_map.values()) - len(set(found_heads)))*self._penalty_score
 
         # simple checks for Received-SPF and DKIM/DomainKey-Signature
-        if cls._msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', cls._msg.get('Received-SPF'), re.I):
-            dmarc_features_dict['dmarc_Received-SPF'] += cls.score
+        if self._msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self._msg.get('Received-SPF'), re.I):
+            self.dmarc_spf += self._penalty_score
 
-        # check domain names in From and DKIM-headers (but now it's probably redundant)
-        from_domain = (cls._msg.get('From')).partition('@')[2]
-        from_domain = from_domain.strip('>').strip()
-
-        logger.debug('dkims'+str(found_heads))
-        valid_lines = filter(lambda f: re.search(from_domain, f), [ cls._msg.get(h) for h in found_heads ])
-        if len(valid_lines) == len(found_heads):
-            dmarc_features_dict['(DKIM|DomainKey)-Signature'] += cls.score
-            dkim_domain = from_domain
-            logger.debug('dkim_domain '+str(dkim_domain))
-
-        return dmarc_features_dict
-
-    def get_dkim_domain(self):
-        pass
+        return (self.dmarc_spf, self.dmarc_score)
 
     def get_from_checksum(self):
         logger.debug('>>> ORIGINATOR_CHECKS:')
@@ -283,55 +271,45 @@ class BasePattern(BeautifulBody):
 
         return (self.rcpt_body_to, self.rcpt_smtp_to)
 
-
-    def get_list_metrics(self):
+    def get_list_score(self):
 
         #:return: penalizing score for List-* headers
 
-        # very weak for spam cause all url from 'List-Unsubscribe','Errors-To','Reply-To'
-        # have to be checked with antiphishing service
-
         if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
-            body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
+            return self.list_score
 
-        #logger.debug('\t=====>'+str(header_value_list))
+        # check Reply-To only with infos, cause it is very controversial,
+        # here are only pure RFC 2369 checks
+        # leave Errors-To cause all russian email-market players
+        # put exactly Errors-To in their advertising emails instead of List-Unsubscribe
+        rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
+        presented = [ head for head in rfc_heads if self._msg.keys().count(head) ]
 
+        # alchemy, probably was written just for fun, e.g this body doesn't support RFC 2369 in a proper way ))
+        self.list_score += (len(rfc_heads)-len(presented))*self._penalty_score
 
-        # try to get sender domain from RCVD headers,
-        # use header_value_list to obtain
-        # exactly the first rcvd header,
-        # order makes sense here
+        #body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
+        sender_domain = False
+        while not (sender_domain):
+            sender_domain = self.get_smtp_domain()
+            originator = self.get_addr_values(self._msg.get_all('From'))
+            if not originator:
+                return self.list_score
 
-        sender_domain = self.get_smtp_domain()
-        if not sender_domain:
-            body_from.search(cls._msg.get('From'))
-            # try to get it from From: header value
-            sender_domain = (for_body_from.search(cls._msg.get('From'))).group(0)
-            sender_domain = sender_domain.strip('@')
+            orig_name, orig_addr = reduce(add, originator)
+            sender_domain = (orig_addr.split('@')[1]).strip()
+
 
         patterns = [
                         r'https?:\/\/.*'+sender_domain+'\/.*(listinfo|unsub|email=).*', \
                         r'mailto:.*@.*\.'+sender_domain+'.*'
         ]
 
-        # check Reply-To only with infos, very controversial, here are only pure RFC 2369 checks
-        # leave Errors-To cause all russian authorized email market players
-        # rather put exactly Errors-To in their infos instead of List-Unsubscribe
-        rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
-
-        presented = filter(lambda h: (cls._msg.keys()).count(h), rfc_heads)
-        # doesn't support RFC 2369 in a proper way
-        unsubscribe_score += (len(rfc_heads)-len(presented))*cls.score
-
-        if not presented:
-            return unsubscribe_score
-
-        for uri in [heads_dict.get(head) for head in presented]:
+        for uri in [ heads_dict.get(head) for head in presented ]:
             if not filter(lambda reg: re.search(reg, uri, re.M), patterns):
-                unsubscribe_score += cls.score
+                self.list_score += self._penalty_score
 
-        return unsubscribe_score
-
+        return self.list_score
 
     # call from each particular pattern
     def get_base_subj_metrics(self, subj_regs):
@@ -355,7 +333,7 @@ class BasePattern(BeautifulBody):
         return (subj_score, upper_words_count, title_words_count)
 
 
-    def get_url_features(self):
+    def get_url_base_features(self):
 
         # URL_COUNT: url count for infos and nets maybe lies in certain boundaries, \
         # cause they are generated by certain patterns  ));
@@ -364,17 +342,17 @@ class BasePattern(BeautifulBody):
         # which are the same with sender domain from RCVD-headers.
 
         # url_count
-        self.url_count = len(self.get_urlparse_obj_list())
+        self.url_count = len(self.get_url_obj_list())
 
         if self.url_count > 0:
-            net_location_list = self.get_netlocation_list()
+            net_location_list = self.get_net_location_list()
 
             if net_location_list:
-                self.distinct_count += len(set([d.strip() for d in net_location_list]))
+                self.url_distinct_count += len(set([d.strip() for d in net_location_list]))
                 pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
-                self.sender_count += len(filter(lambda d: re.search(pattern, d, re.I), net_location_list))
+                self.url_sender_count += len(filter(lambda d: re.search(pattern, d, re.I), net_location_list))
 
-        return (self.url_count, self.distinct_count, self.sender_count)
+        return (self.url_count, self.url_distinct_count, self.url_sender_count)
 
     def get_url_score(self, fqdn_regs, txt_regs):
 
@@ -386,7 +364,7 @@ class BasePattern(BeautifulBody):
         compiled = reg(*(self.get_regexp(l, re.I) for l in (fqdn_regs, txt_regs)))
 
         for reg in compiled.fqdn_regs:
-            url_score += len(filter(lambda netloc: reg.search(netloc), self.netloc_list))*self.score
+            url_score += len(filter(lambda netloc: reg.search(netloc), self.get_net_location_list()))*self._penalty_score
 
         # url_score
         metainfo_list = list()
@@ -395,7 +373,7 @@ class BasePattern(BeautifulBody):
 
         if metainfo_list:
             for reg in compiled.txt_regs:
-                url_score += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*self.score
+                url_score += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*self._penalty_score
 
         return url_score
 
