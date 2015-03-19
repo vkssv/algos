@@ -149,7 +149,7 @@ class BeautifulBody(object):
         return pairs
 
     #@lazyproperty
-    def get_smtp_domain(self):
+    def get_smtp_originator_domain(self):
 
         regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
         orig_domain = ''

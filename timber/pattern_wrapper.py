@@ -106,6 +106,18 @@ class BasePattern(BeautifulBody):
 
         return dict((k, self.__dict__[k]) for k in keys)
 
+    def _get_sender_domain(self):
+        sender_domain = False
+        while not (sender_domain):
+            sender_domain = self.get_smtp_originator_domain()
+            originator = self.get_addr_values(self._msg.get_all('From'))
+            if not originator:
+                return self.list_score
+
+            orig_name, orig_addr = reduce(add, originator)
+            sender_domain = (orig_addr.split('@')[1]).strip()
+
+
 
     # can be called from each particular pattern with particular excluded_list
     def get_all_heads_checksum(self, excluded_list=None):
@@ -291,7 +303,7 @@ class BasePattern(BeautifulBody):
         #body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
         sender_domain = False
         while not (sender_domain):
-            sender_domain = self.get_smtp_domain()
+            sender_domain = self.get_smtp_originator_domain()
             originator = self.get_addr_values(self._msg.get_all('From'))
             if not originator:
                 return self.list_score
@@ -349,6 +361,17 @@ class BasePattern(BeautifulBody):
 
             if net_location_list:
                 self.url_distinct_count += len(set([d.strip() for d in net_location_list]))
+                sender_domain = False
+                while not (sender_domain):
+                    sender_domain = self.get_smtp_originator_domain()
+                    originator = self.get_addr_values(self._msg.get_all('From'))
+                    if not originator:
+                        return (self.url_count, self.url_distinct_count, self.url_sender_count)
+
+                    orig_name, orig_addr = reduce(add, originator)
+                    sender_domain = (orig_addr.split('@')[1]).strip()
+
+
                 pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
                 self.url_sender_count += len(filter(lambda d: re.search(pattern, d, re.I), net_location_list))
 
