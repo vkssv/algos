@@ -162,6 +162,7 @@ class BeautifulBody(object):
             print((orig_domain,))
             orig_domain = (regexp.search(orig_domain)).group(0)
             orig_domain = orig_domain.strip('.').strip('@').strip('=').strip()
+            print(type(orig_domain))
             print('ORIG_DOMAINS: '+str(orig_domain))
 
         return orig_domain

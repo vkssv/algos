@@ -21,11 +21,17 @@ class SpamPattern(BasePattern):
         values, which are mostly don't equal to zeros ;
     """
 
-    # todo: get rid of magic numbers and unicorns
+    # if you need them outside the class you will write getter and setter,
+    # but these privates can clash, when same attrs from other X_Pattern classes
+
     __RCVDS_NUM = 2
     __EXCLUDED_HEADS = [
                             'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
+    ]
+    __ATTACHES_RULES = [
+                                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
+                                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
     ]
 
     def __init__(self, **kwds):
@@ -46,14 +52,23 @@ class SpamPattern(BasePattern):
                             'rcvd_score',
                             'forged_sender',
                             'disp_notification',
-                            'mime_score'
+                            'mime_score',
+                            'text_score',
+                            'html_score',
+                            'attach_score'
         ]
 
-        subj_features = ['subj_'+name for name in ['style','score','checksum','encoding']]
-        url_features = ['url_'+name for name in ['score', 'upper', 'repetitions', 'punicode', 'domain_name_level', \
-                                                 'avg_len', 'onMouseOver', 'hex', 'at_sign']]
+        features_dict = {
+                            'subj':   ['style','score','checksum','encoding'],
+                            'url' :   ['score', 'upper', 'repetitions', 'punicode', 'domain_name_level',\
+                                         'avg_len', 'onMouseOver', 'hex', 'at_sign'],
+        }
+
+        total = list()
+
+        [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
         # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
-        [ self.__setattr__(f, self._INIT_SCORE) for f in base_features + subj_features + url_features ]
+        [ self.__setattr__(f, self._INIT_SCORE) for f in (base_features + total) ]
 
         # 1. all headers
         self.all_heads_checksum = self.get_all_heads_checksum(self.__EXCLUDED_HEADS)
@@ -69,7 +84,7 @@ class SpamPattern(BasePattern):
         self.get_originator_score()
 
         # 4. Subject
-        self.get_spam_subj_features(subj_features)
+        self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
 
         # 5. Typical spams headers
         if self._msg.keys().count('Disposition-Notification-To'):
@@ -79,16 +94,20 @@ class SpamPattern(BasePattern):
         self.get_mime_score()
 
         # 7. URL-checks
-        self.get_url_features(url_features)
+        self.get_url_features(['url_'+name for name in features_dict.get('url')])
 
-        '''
-        # 8. Text-content metrics
-        self.msg_vector.update(self.spam_content_checks())
+        # 8. mime/text|mime/html-content attrs
+        self.get_content_features()
 
         # 9. Attachments metrics
         self.msg_vector['attach_score'] = self.spam_attach_checks()
-        '''
-        logger.debug('SpamPattern was created')
+
+
+        logger.debug('SpamPattern was created'.upper())
+        logger.debug(self.__dict__)
+        logger.debug(SpamPattern.__dict__)
+        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
+
 
 
     def get_rcvd_score(self):
@@ -117,17 +136,16 @@ class SpamPattern(BasePattern):
                 self.forged_sender = self._penalty_score
                 # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
                 # MUA didn't generate Sender field cause of redundancy
-
+        logger.debug(self.forged_sender)
         return self.forged_sender
 
-    def get_subj_features(self, features_list):
+    def get_subj_features(self, subj_features):
 
         # 3. "Subject:" Header (pure alchemy )) )
         logger.debug('>>> 3. SUBJECT CHECKS:')
 
         if not self._msg.get("Subject"):
-            features_dict = self.get_features_dict(features_list)
-            return features_dict
+            return dict([ (key, self.__dict__[key]) for key in subj_features ])
 
         unicode_subj, norm_words_list, encodings = self.get_decoded_subj()
 
@@ -177,9 +195,7 @@ class SpamPattern(BasePattern):
         subj_trace = ''.join(tuple([w.encode('utf-8') for w in norm_words_list]))
         self.subj_checksum = binascii.crc32(subj_trace)
 
-        features_dict = self.get_features_dict(features_list)
-
-        return features_dict
+        return dict([ (key, self.__dict__[key]) for key in subj_features ])
 
     def get_mime_score(self):
 
@@ -188,15 +204,18 @@ class SpamPattern(BasePattern):
 
         if not self._msg.is_multipart() and self._msg.get('MIME-Version'):
             self.mime_score += self._penalty_score
+            logger.debug(self.mime_score)
             return self.mime_score
 
         elif not self._msg.is_multipart():
+            logger.debug(self.mime_score)
             return self.mime_score
 
         if self._msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self._msg.preamble, re.I):
             self.mime_score += self._penalty_score
             logger.debug('\t----->'+str(self.mime_score))
 
+        logger.debug(self.mime_score)
         return self.mime_score
 
     def get_url_features(self, url_features_list):
@@ -213,11 +232,10 @@ class SpamPattern(BasePattern):
         # todo: many usual and not usual ideas about phising urls:
         # http://www.isteams.org/conference/pdf/Paper%20111-%20iSTEAMS%202014%20-Asani%20et%20al%20-%20MAXIMUM%20PHISH%20BAIT%20-%20TOWARDS%20FEATURE%20BASED%20DETECTION%20OF%20PHISING%20USING%20MAXIMUM%20ENTROPY%20CLASSIFICATION%20TECHNIQUE.pdf
 
-        net_location_list = self.get_netlocation_list()
+        net_location_list = self.get_net_location_list()
 
         if not net_location_list:
-            features_dict = self.get_features_dict(url_features_list)
-            return features_dict
+            return dict([ (key, self.__dict__[key]) for key in url_features_list ])
 
         fqdn_regs = [
                                 ur'tinyurl\.',
@@ -266,18 +284,13 @@ class SpamPattern(BasePattern):
         puni_regex = ur'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
         self.url_punicode = len(filter(lambda u: re.search(puni_regex, u, re.I), net_location_list))*self._penalty_score
         self.url_domain_name_level = len(filter(lambda n: n>=2, [s.count('.') for s in net_location_list]))*self._penalty_score
+        logger.debug(dict([ (key, self.__dict__[key]) for key in url_features_list ]))
 
-        features_dict = self.get_features_dict(url_features_list)
+        return dict([ (key, self.__dict__[key]) for key in url_features_list ])
 
-        return features_dict
-
-    '''''
-    def spam_content_checks(cls):
+    def get_text_score(self,):
         # 9. check body
         logger.debug('>>> 9. CONTENT\'S TEXT PARTS CHECKS:')
-        features = ('text_score', 'html_score', 'html_checksum')
-        content_features_dict = cls._get_empty_features_dict('content', features)
-
 
         regexp_list = [
                             ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
@@ -292,7 +305,7 @@ class SpamPattern(BasePattern):
                             ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
                             ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
                             ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
-                    ]
+        ]
 
         tags_map = {
                         'table':{
@@ -315,30 +328,12 @@ class SpamPattern(BasePattern):
                                 }
                     }
 
-
-        content_features_dict['text_score'] = cls.get_text_parts_metrics(regexp_list)
-        content_features_dict['html_score'] = cls.get_html_parts_metrics(tags_map)
-
-        return content_features_dict
-
-    @classmethod
-    def spam_attach_checks(cls):
+        return
 
 
-        attach_score = cls.INIT_SCORE
-        if not cls._msg.is_multipart():
-            return attach_score
-
-        attach_regs = [
-                                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
-                                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
-        ]
-
-        attach_score = cls.get_attach_score(attach_regs, cls.score)
-
-        return attach_score
 
 
+'''''
 if __name__ == "__main__":
 
     formatter = logging.Formatter('%(filename)s: %(message)s')
