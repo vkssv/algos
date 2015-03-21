@@ -21,17 +21,90 @@ class SpamPattern(BasePattern):
         values, which are mostly don't equal to zeros ;
     """
 
-    # if you need them outside the class you will write getter and setter,
-    # but these privates can clash, when same attrs from other X_Pattern classes
-
-    __RCVDS_NUM = 2
-    __EXCLUDED_HEADS = [
+    _RCVDS_NUM = 2
+    _RCVD_RULES = [
+                            r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
+                            r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
+                            r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
+    ]
+    _EXCLUDED_HEADS = [
                             'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
     ]
-    __ATTACHES_RULES = [
-                                r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
-                                r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+    _ATTACHES_RULES = [
+                            r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
+                            r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+    ]
+
+    _TEXT_REGEXP_LIST = [
+                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
+                            ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
+                            ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
+                            ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
+                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
+                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
+                            ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
+                            ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
+                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
+                            ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
+                            ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
+                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
+    ]
+
+    _HTML_TAGS_MAP = {
+                            'table':{
+                                        'width' : '[1-9]{3}[^%]',
+                                        'height' : '[1-9]{1,3}',
+                                        'cell(padding|spacing)' : '[1-9]',
+                                        'border-color' : '#[0-9A-F]{3,6}',
+                                        'border' : '[1-9]',
+                                        'style' : '([A-Z-][^(a-z)]){3,10}'
+                            },
+                            'span' :{
+                                        'style' : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
+                                        'lang' : '(RU|EN-US)'
+                            },
+                            'p' :   {
+                                        'style' : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
+                                        'class' : '\[\'(Mso.*|.*)\'\]',
+                                        'align' : 'center',
+                                        'css' : ''
+                            }
+    }
+
+    _FQDN_REGEXP =       [
+                            ur'tinyurl\.',
+                            ur'(\w{3,6}-){1,3}\w{2,45}(\.\w{2,5}){0,3}',
+                            ur'\D{1,3}(\.|-)\w{1,61}(\.\w{2,5}){0,3}',
+                            # match if contains only non-ascii
+                            ur'[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
+                            ur'(\w{1,10}\.)?[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
+                            ur'(\d{1,10}\.)?[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
+                            ur'([0-9-]{1,61}\.?){1,3}(\D{2,5}\.?){0,3}',
+                            ur'(\w{3,6}-){1,3}\w{2,45}\.(\w{2,5}){0,3}',
+                            ur'\w{1,61}(\.[a-zA-z]{1,4}){0,2}\.(in|me|ua|ru|mobi|red|es)',
+                            ur'\w{1,61}\.(in.ua|ru.all.biz|gl|ee|pp.ua|kiev.ua|com.ua|ro|lviv.ua|ly|pro|co.jp|c|c=|lt|by|asia)',
+                            ur'\w{1,3}(\.[a-zA-Z]{1,4}){1,3}',
+                            ur'(.*-loader|lets-|youtu.be|goo.gl|wix.com|us\d.|jujf.ru)',
+                            ur'\w{1,61}(\.\w{1,4}){0,3}\.\w{1,3}([^\u0000-\u007F]{1,3}|\d{1,5})'
+
+    ]
+
+    _TXT_REGEXP = [
+                            ur'(click|here|link|login|update|confirm|legilize|now|buy|online|movie|s0x(room|boat)?)+',
+                            ur'(Free|Shipping|Options|Pills|Every?|Order|Best|Deal|Today|Now|Contact|Pay|go)+',
+                            ur'(Ccылк|Курс|Цен|Посмотреть|Каталог|Здесь|Сюда|Регистрация|бесплатное|участие|на\s+сайт|подробн)',
+                            ur'(горяч|скидк|отписаться|отказаться)',
+                            ur'(message|view|can\'t\see)',
+                            ur'(background-color|text-decoration|font\scolor|color|underline|font\ssize|img|style|<\/?wbr>|font\sface|<strong>|<em>)',
+                            ur'\/[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{1,3}[^\u0000-\u007F]{2,}',
+                            ur'[^\u0000-\u007F]{2,}(\.|\?|!|;){0,}',
+                            ur'(cid:)?\w{1,40}@(\d{1,3}-){1,3}\d{1,3}(\.[A-Za-z]{1,10}){1,3}',
+                            ur'([\a\b\t\r\n\f\v]{0,}|[\?!])',
+                            ur'(\S*)http:.*',
+                            ur'[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{3,}',
+                            ur'[\+=\$]{1,3}(\w){0,}',
+                            ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
     ]
 
     def __init__(self, **kwds):
@@ -43,13 +116,14 @@ class SpamPattern(BasePattern):
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
         '''
+
         super(SpamPattern, self).__init__(**kwds)
+
+
 
         # 0. initialize vector of features explicitly,
         # for avoiding additional headaches and investigations with Python GC
         base_features = [
-                            'all_heads_checksum',
-                            'rcvd_score',
                             'forged_sender',
                             'disp_notification',
                             'mime_score',
@@ -60,7 +134,7 @@ class SpamPattern(BasePattern):
 
         features_dict = {
                             'subj':   ['style','score','checksum','encoding'],
-                            'url' :   ['score', 'upper', 'repetitions', 'punicode', 'domain_name_level',\
+                            'url' :   ['upper', 'repetitions', 'punicode', 'domain_name_level',\
                                          'avg_len', 'onMouseOver', 'hex', 'at_sign'],
         }
 
@@ -70,23 +144,13 @@ class SpamPattern(BasePattern):
         # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
         [ self.__setattr__(f, self._INIT_SCORE) for f in (base_features + total) ]
 
-        # 1. all headers
-        self.all_heads_checksum = self.get_all_heads_checksum(self.__EXCLUDED_HEADS)
-
-        # 2. Received headers
-
-        # expands only spam-vectors, so function defined here
-        self.get_rcvd_score()
-
-        self.__dict__.update(self.get_rcvd_checksum(self.__RCVDS_NUM))
-
-        # 3. Originator checks
+        # 1. Originator checks
         self.get_originator_score()
 
-        # 4. Subject
+        # 2. Subject
         self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
 
-        # 5. Typical spams headers
+        # 3. Typical spams headers
         if self._msg.keys().count('Disposition-Notification-To'):
             self.disp_notification = self._penalty_score
 
@@ -96,36 +160,12 @@ class SpamPattern(BasePattern):
         # 7. URL-checks
         self.get_url_features(['url_'+name for name in features_dict.get('url')])
 
-        # 8. mime/text|mime/html-content attrs
-        self.get_content_features()
-
-        # 9. Attachments metrics
-        self.msg_vector['attach_score'] = self.spam_attach_checks()
-
-
         logger.debug('SpamPattern was created'.upper())
         logger.debug(self.__dict__)
+        logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
         logger.debug(SpamPattern.__dict__)
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-
-
-    def get_rcvd_score(self):
-
-        # 1. "Received:" Headers
-        logger.debug('>>> 1. RCVD_CHECKS:')
-
-        rcvd_rules = [
-                        r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
-                        r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
-                        r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
-        ]
-
-        for rule in rcvd_rules:
-            if filter(lambda l: re.search(rule, l), self.get_rcvds(self.__RCVDS_NUM)):
-                self.rcvd_score += self._penalty_score
-
-        return self.rcvd_score
 
     def get_originator_score(self):
 
@@ -238,41 +278,12 @@ class SpamPattern(BasePattern):
             return dict([ (key, self.__dict__[key]) for key in url_features_list ])
 
         fqdn_regs = [
-                                ur'tinyurl\.',
-                                ur'(\w{3,6}-){1,3}\w{2,45}(\.\w{2,5}){0,3}',
-                                ur'\D{1,3}(\.|-)\w{1,61}(\.\w{2,5}){0,3}',
-                                # match if contains only non-ascii
-                                ur'[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
-                                ur'(\w{1,10}\.)?[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
-                                ur'(\d{1,10}\.)?[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
-                                ur'([0-9-]{1,61}\.?){1,3}(\D{2,5}\.?){0,3}',
-                                ur'(\w{3,6}-){1,3}\w{2,45}\.(\w{2,5}){0,3}',
-                                ur'\w{1,61}(\.[a-zA-z]{1,4}){0,2}\.(in|me|ua|ru|mobi|red|es)',
-                                ur'\w{1,61}\.(in.ua|ru.all.biz|gl|ee|pp.ua|kiev.ua|com.ua|ro|lviv.ua|ly|pro|co.jp|c|c=|lt|by|asia)',
-                                ur'\w{1,3}(\.[a-zA-Z]{1,4}){1,3}',
-                                ur'(.*-loader|lets-|youtu.be|goo.gl|wix.com|us\d.|jujf.ru)',
-                                ur'\w{1,61}(\.\w{1,4}){0,3}\.\w{1,3}([^\u0000-\u007F]{1,3}|\d{1,5})'
+
         ]
 
         txt_regs = [
-                                ur'(click|here|link|login|update|confirm|legilize|now|buy|online|movie|s0x(room|boat)?)+',
-                                ur'(Free|Shipping|Options|Pills|Every?|Order|Best|Deal|Today|Now|Contact|Pay|go)+',
-                                ur'(Ccылк|Курс|Цен|Посмотреть|Каталог|Здесь|Сюда|Регистрация|бесплатное|участие|на\s+сайт|подробн)',
-                                ur'(горяч|скидк|отписаться|отказаться)',
-                                ur'(message|view|can\'t\see)',
-                                ur'(background-color|text-decoration|font\scolor|color|underline|font\ssize|img|style|<\/?wbr>|font\sface|<strong>|<em>)',
-                                ur'\/[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{1,3}[^\u0000-\u007F]{2,}',
-                                ur'[^\u0000-\u007F]{2,}(\.|\?|!|;){0,}',
-                                ur'(cid:)?\w{1,40}@(\d{1,3}-){1,3}\d{1,3}(\.[A-Za-z]{1,10}){1,3}',
-                                ur'([\a\b\t\r\n\f\v]{0,}|[\?!])',
-                                ur'(\S*)http:.*',
-                                ur'[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{3,}',
-                                ur'[\+=\$]{1,3}(\w){0,}',
-                                ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
-        ]
 
-        # cause also uses netloc_list
-        self.url_score += self.get_url_score(fqdn_regs, txt_regs)
+        ]
 
         for method in [ unicode.isupper, unicode.istitle ]:
             self.url_upper += len(filter(lambda s: method(s), net_location_list))*self._penalty_score
@@ -288,52 +299,9 @@ class SpamPattern(BasePattern):
 
         return dict([ (key, self.__dict__[key]) for key in url_features_list ])
 
-    def get_text_score(self,):
-        # 9. check body
-        logger.debug('>>> 9. CONTENT\'S TEXT PARTS CHECKS:')
-
-        regexp_list = [
-                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
-                            ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
-                            ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
-                            ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
-                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
-                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
-                            ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
-                            ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
-                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
-                            ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
-                            ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
-                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
-        ]
-
-        tags_map = {
-                        'table':{
-                                    'width' : '[1-9]{3}[^%]',
-                                    'height' : '[1-9]{1,3}',
-                                    'cell(padding|spacing)' : '[1-9]',
-                                    'border-color' : '#[0-9A-F]{3,6}',
-                                    'border' : '[1-9]',
-                                    'style' : '([A-Z-][^(a-z)]){3,10}'
-                                },
-                        'span' :{
-                                    'style' : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
-                                    'lang' : '(RU|EN-US)'
-                                },
-                        'p' :   {
-                                    'style' : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
-                                    'class' : '\[\'(Mso.*|.*)\'\]',
-                                    'align' : 'center',
-                                    'css' : ''
-                                }
-                    }
-
-        return
-
-
-
-
 '''''
+
+
 if __name__ == "__main__":
 
     formatter = logging.Formatter('%(filename)s: %(message)s')

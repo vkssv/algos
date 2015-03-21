@@ -247,13 +247,6 @@ class BeautifulBody(object):
 
         return mime_parts
 
-    def get_nest_level(self):
-
-        mime_parts = self.get_mime_struct()
-        level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
-
-        return level
-
     def get_text_mime_part(self):
 
         # partial support of asian encodings, just to decode in UTF without exceptions
@@ -342,8 +335,6 @@ class BeautifulBody(object):
 
         return netloc_list
 
-    '''''
-
     def get_sentences(self, remove_url=True):
 
         tokenizer = PunktSentenceTokenizer()
@@ -412,7 +403,7 @@ class BeautifulBody(object):
 
                 yield soup
 
-
+'''''
 
 if __name__ == "__main__":
     import doctest
