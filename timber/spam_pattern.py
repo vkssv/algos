@@ -144,6 +144,7 @@ class SpamPattern(BasePattern):
         # 0. initialize vector of features explicitly,
         # for avoiding additional headaches and investigations with Python GC
         base_features = [
+                            'rcvd_score',
                             'forged_sender',
                             'disp_notification',
                             'mime_score'
@@ -160,6 +161,8 @@ class SpamPattern(BasePattern):
         [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
         # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
         [ self.__setattr__(f, self.INIT_SCORE) for f in (base_features + total) ]
+
+        self.get_rcvd_score()
 
         # 1. Originator checks
         self.get_originator_score()
@@ -186,6 +189,17 @@ class SpamPattern(BasePattern):
         for (k,v) in self.__dict__.iteritems():
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
+
+
+    def get_rcvd_score(self):
+
+        # 1. "Received:" Headers
+        logger.debug('>>> 1. RCVD_CHECKS:')
+        for rule in self.RCVD_RULES:
+            if filter(lambda l: re.search(rule, l), self.get_rcvds(self.RCVDS_NUM)):
+                self.rcvd_score += self._penalty_score
+
+        return self.rcvd_score
 
     def get_originator_score(self):
 

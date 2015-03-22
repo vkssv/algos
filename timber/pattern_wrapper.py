@@ -44,10 +44,9 @@ class BasePattern(BeautifulBody):
         self._penalty_score = score
 
         super(BasePattern, self).__init__(**kwds)
-        base_features = ['from_checksum', 'list_score', 'all_heads_checksum', 'subj_score']
+        base_features = ['from_checksum', 'list_score', 'all_heads_checksum', 'subj_score', 'rcvd_num']
 
         features_dict = {
-                            'rcvd'    :   ['num','score'],
                             'rcpt'    :   ['smtp_to','body_to'],
                             'dmarc'   :   ['spf','score'],
                             'url'     :   ['count','distinct_count','sender_count','score'],
@@ -65,7 +64,6 @@ class BasePattern(BeautifulBody):
 
         self.get_all_heads_checksum()
 
-        self.get_rcvd_score()
         self.rcvd_num = self._msg.keys().count('Received')
         self.__dict__.update(self.get_rcvd_checksum())
 
@@ -145,17 +143,6 @@ class BasePattern(BeautifulBody):
 
         return compiled_list
 
-    def get_rcvd_score(self, **kwargs):
-
-        self.__unpack_arguments('rcvds_num', **kwargs)
-        # 1. "Received:" Headers
-        logger.debug('>>> 1. RCVD_CHECKS:')
-        for rule in self.RCVD_RULES:
-            if filter(lambda l: re.search(rule, l), self.get_rcvds(self.RCVDS_NUM)):
-                self.rcvd_score += self._penalty_score
-
-        return self.rcvd_score
-
     def get_sender_domain(self):
 
         sender_domain = False
@@ -220,30 +207,7 @@ class BasePattern(BeautifulBody):
         logger.debug('rcvd_checksum :'+str(rcvd_checksum))
         return rcvd_checksum
 
-
     '''''
-    def get_emarket_metrics(self, head_pattern, known_mailers, score):
-
-        #:param head_pattern: one more regexp list with SN-header's names (X-FACEBOOK-PRIORITY, etc)
-        #:param known_mailers: X-Mailer header with value like "ZuckMail"
-        #:param score:
-        #:return: <penalizing score>, <flag of known mailer presence>
-
-
-        emarket_features = ('emarket_score', 'known_mailer_flag')
-        emarket_dict = dict(zip(emarket_features, [self.INIT_SCORE]*len(emarket_features)))
-
-        emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), self._msg.keys()))
-        emarket_dict['emarket_score'] = len(emarket_heads)*score
-
-        mailer_header = ''.join(filter(lambda h: re.match(r'^x-mailer$', h, re.I), self._msg.keys()))
-
-        if self._msg.get(mailer_header) and filter(lambda reg: re.search(reg, self._msg.get(mailer_header), re.I), known_mailers):
-            emarket_dict['known_mailer_flag'] = score
-
-        return emarket_dict
-
-
     def get_dkim_domain(self):
 
          if filter(lambda value: re.search(from_domain, value), [self._msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]):

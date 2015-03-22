@@ -22,158 +22,243 @@ class InfoPattern(BasePattern):
         -- if email looks like news-letter, it's vector will contain
             values, which are mostly don't equal to zeros ;
     """
-    #MAX_SUBJ_LEN = 2
-    #MIN_SUBJ_LEN = 7
 
-    def run(self, score):
+    RCVDS_NUM = 0
 
-        vector_dict = OrderedDict()
-
-        # 1. "Received:" Headers
-        logger.debug('>>> 1. RCVD_CHECKS:')
-
-        # get crc32 of only unique headers and their values
-        excluded_heads = [
+    EXCLUDED_HEADS = [
                             'Received', 'Subject', 'From', 'Date', 'Received-SPF', 'To', 'Content-Type',\
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
-                         ]
+    ]
 
-        vector_dict['all_heads_crc'] = self.get_all_heads_crc(excluded_heads)
-        logger.debug('\t----->'+str(vector_dict))
+    # try greedy regexes, maybe will precise them in future
+    SUBJ_RULES = [
 
-        # keep the count of traces fields
-        vector_dict ["traces_num"] = self._msg.keys().count('Received')
-        logger.debug('\t----->'+str(vector_dict))
+                            ur'([\u25a0-\u29ff]|)', # dingbats
+                            ur'([\u0370-\u03ff]|[\u2010-\u337b]|)', # separators, math, currency signs, etc
+                            ur'^(Hi|Hello|Good\s+(day|(morn|even)ing)|Dear\s+){0,1}\s{0,}[\w-]{2,10}(\s+[\w-]{2,10}){0,3},.*$',
+                            ur'^\s*(what\s+(are|is)|why|how\s+(do)?|when|since|could|may|is|in).*[\?!:;\s-]{0,}.',
+                            ur'(SALE|FREE|News?|Do\s+not\s+|Don\'t\s+|miss\s+|They.*back|is\s+here|now\s+with)+',
+                            ur'(interesting|announcing|hurry|big(gest)?|great|only|deal|groupon|tour|travel|hot|inside)+',
+                            ur'(all\s+for|price|vip|special|trends|brands|shopping|hysteria|save|kick|super(b)?)+',
+                            ur'(Now\s+or\s+Never|call|share|stock|exclusive|free\s+shipping|car|shopper|bonus)+',
+                            ur'(lpg|spa|trend|brand|opportunity|be\s+the\s+first|get\s+it\s+now|see|look|watch)+'
+                            ur'(Нов|Скидк|(Сам|Ожидаем)[аяыйео]|Распродаж|Покупк|Товар|Выгодн|Внутри)+',
+                            ur'(Дар|Отда[мёе]|предложени|горяч|Здравствуйте|Спасибо|Привет|Внимание|Больше|бешен)+',
+                            ur'(Скидк|Акци|Купон|Групон|Тур|Открой|Лет|много|Уведомля|Только|Сегодня|Сезонн|Вс(е|ё)\s+д(о|ля))+',
+                            ur'(Жар|Выходн[ыоей]|Посетите|Подготовьте|Отпуск|режем\s+цены|купи|мода|шопинг)+',
+                            ur'(теперь\s+и\s+для|ликвид|эксклюзив|информационн\s+(выпуск|анонс)|продаж|рублей|хит|топ)+',
+                            ur'(доставка\s+(бесплатн)?|сниж|низк|магаз|курьер|специал|перв|супер)+',
+                            ur'(Зим|Осен|Вес[енa]|Каникул|Празник|Год)+',
+                            ur'([\w\s-]{2,10}){1,2}\s*:([\w\s+,\.\$!]{2,15})+',
+                            ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
+                            ur'-?[\d]{1,2}\s+%\s+.*',
+                            ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
+                            ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}'
+    ]
 
-        # get crc32 from first N trace fields
-        rcvd_vect = tuple([r.partition('by')[0] for r in self.get_rcvds()])
-        logger.debug(rcvd_vect)
-        vector_dict.update(self.get_trace_crc())
-        logger.debug('\t----->'+str(vector_dict))
+    ATTACHES_RULES = [
+                                r'format\s?=\s?.fixed.'
+    ]
 
-        # 2. "To:", "SMTP RCPT TO:" Headers
-        logger.debug('>>> 2. DESTINATOR CHECKS:')
+    TEXT_REGEXP_LIST = [
+                                ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring|look|blog|spot)',
+                                ur'(news|letter|discount|sale|info|unsubscribe|bonus|ads|market)',
+                                ur'((social)?media|partage|share|actu|publicité|télécharger|download)',
+                                ur'(RECOMMENDA[TIONS]*)'
+    ]
 
-        vector_dict['rcpt_smtp_to'], vector_dict['rcpt_body_to'] = self.get_rcpts_metrics(score)
+    HTML_TAGS_MAP = {
+
+                            'img'   :{
+                                        'alt'   : '',
+                                        'src'   : '(logo|promo|content|btn\.|butt\.|avatar|user|banner|content|download|send(friend)?|actions)',
+                                        'title' : '.*'
+                            },
+                            'span'  :{
+                                        'style' : 'color\s?:\s?(\w{3,10}|#[a-z0-9]{3,6})',
+                                        'class' : '(\[\'.*\'\]|recommenda.*)'
+                            }
+
+    }
+
+    URL_FQDN_REGEXP =   [
+                                    ur'(news(letter)?|trip|sales+|offer|journal|event|post|asseccories|rasprodaga)',
+                                    ur'(global|response|click|shop|sale|flight|hotel|cit(y|ies)|campaign|bouquet)',
+                                    ur'(celebration|friday|binus|magazin|cheap|subscibe|manage|feed|list|blog)',
+                                    ur'(programm|online|create|amazon|meetup|book|flowers|app|connect|emea|habrahabr|media)',
+                                    ur'(citilink|ulmart|lamoda|nero-|vip|ideel|quora|yves-rocher|fagms.de|wix.com|papers)',
+                                    ur'(opportunity|whites+|chance|email|practice|yr-ru|us\d-|stanford|brands+|labels+)',
+                                    ur'(look-at-media|digest|the-village|ozon.ru|enter.ru)'
+
+    ]
+
+    URL_TXT_REGEXP = [
+                                    ur'(cheap.*|prices+|clothes+|action|shoes+|women|label|brand|zhensk|odezhd)',
+                                    ur'(campaign|rasprodaga|requirements|choice|personal|track|click|customer|product)',
+                                    ur'(meetup|facebook|twitter|pinterest|vk|odnoklassinki|google)_footer',
+                                    ur'(training|mailing|modify|unsub|newsletter|catalog|mdeia|graphics|announcement)',
+                                    ur'(utm_medium=|utm_source=|utm_term=|utm_campaign=|applications+|upn=|aspx\?)',
+                                    ur'(shop|magazin|collections+|lam|(mail_link_)?track(er)?|EMID=|EMV=|genders)'
+
+    ]
+
+    def __init__(self, **kwds):
+        '''
+        :param kwds:
+        # todo: initialize each <type>-pattern with it's own penalizing self.score,
+        will be useful in vector-distance calculations, for axes stretching
+
+        :return: expand msg_vector, derived from BasePattern class with
+        less-correlated metrics, which are very typical for spams,
+        '''
+
+        super(InfoPattern, self).__init__(**kwds)
+
+        # 0. initialize vector of features explicitly,
+        # for avoiding additional headaches and investigations with Python GC
+        base_features = [
+                            'dmarc_x_heads'
+
+        ]
+
+        features_dict = {
+                            'emarket': ['score','flag']
+                            'subj':   ['style','checksum','encoding']
+                            #'url' :   ['upper', 'repetitions', 'punicode', 'domain_name_level',\
+                            #'avg_len', 'onMouseOver', 'hex', 'at_sign'],
+        }
+
+        total = list()
+
+        [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
+        # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
+        [ self.__setattr__(f, self.INIT_SCORE) for f in (base_features + total) ]
+
+        self.dmarc_x_heads = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self._msg.keys()))
+        self.get_emarket_score()
+
+        # 2. Subject
+        self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
 
 
-        logger.debug('>>> 3. SPF/DKIM_CHECKS:')
-        logger.debug('>>>'+str(self.get_dmarc_metrics(score)))
-        dmarc_score, dmarc_dict, dkim_domain = self.get_dmarc_metrics(score)
-        logger.debug(str(dmarc_dict))
-        vector_dict['dmarc_score'] = dmarc_score
-        vector_dict.update(dmarc_dict)
-        vector_dict['dmarc_x_heads'] = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self._msg.keys()))
+        '''''
+        # 6. Checks for MIME-skeleton attributes
+        self.get_mime_score()
+
+        # 7. URL-checks
+        self.get_url_features(['url_'+name for name in features_dict.get('url')])
+        '''''
+        logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
+        #logger.debug(self.__dict__)
+        for (k,v) in self.__dict__.iteritems():
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
+        logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
+        #logger.debug(SpamPattern.__dict__)
+        for (k,v) in self.__dict__.iteritems():
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
+        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
-        # 4. Presense of X-EMID && X-EMMAIL, etc
-        logger.debug('>>> 4. Specific E-marketing headers checks:')
+        def get_emarket_score(self):
+            # 4. Presense of X-EMID && X-EMMAIL, etc
+            logger.debug('>>> 4. Specific E-marketing headers checks:')
 
-        head_pattern = r'^X-(EM(ID|MAIL|V-.*)|SG-.*|(rp)?campaign(id)?)$'
-        known_mailers = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver' ]
+            head_pattern = r'^X-(EM(ID|MAIL|V-.*)|SG-.*|(rp)?campaign(id)?)$'
+            known_mailers = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver' ]
 
-        vector_dict.update(self.get_emarket_metrics(head_pattern, known_mailers, score))
+            emarket_features = ('emarket_score', 'known_mailer_flag')
+            emarket_dict = dict(zip(emarket_features, [self.INIT_SCORE]*len(emarket_features)))
 
-        # 4. Subject checks
-        logger.debug('>>> 4. SUBJ CHECKS:')
+            emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), self._msg.keys()))
+            emarket_dict['emarket_score'] = len(emarket_heads)*score
 
-        features = ('len', 'style', 'score', 'checksum', 'encoding')
-        features_dict = dict(zip(['subj_'+f for f in features], [self.INIT_SCORE]*len(features)))
+            mailer_header = ''.join(filter(lambda h: re.match(r'^x-mailer$', h, re.I), self._msg.keys()))
 
-        if self._msg.get('Subject'):
+            if self._msg.get(mailer_header) and filter(lambda reg: re.search(reg, self._msg.get(mailer_header), re.I), known_mailers):
+                emarket_dict['known_mailer_flag'] = score
 
-            total_score = self.INIT_SCORE
-            unicode_subj, tokens, encodings = self.get_decoded_subj()
 
-            subject_rules = [
-                                ur'([\u25a0-\u29ff]|)', # dingbats
-                                ur'([\u0370-\u03ff]|[\u2010-\u337b]|)', # separators, math, currency signs, etc
-                                ur'^(Hi|Hello|Good\s+(day|(morn|even)ing)|Dear\s+){0,1}\s{0,}[\w-]{2,10}(\s+[\w-]{2,10}){0,3},.*$',
-                                ur'^\s*(what\s+(are|is)|why|how\s+(do)?|when|since|could|may|is|in).*[\?!:;\s-]{0,}.',
-                                ur'(SALE|FREE|News?|Do\s+not\s+|Don\'t\s+|miss\s+|They.*back|is\s+here|now\s+with)+',
-                                ur'(interesting|announcing|hurry|big(gest)?|great|only|deal|groupon|tour|travel|hot|inside)+',
-                                ur'(all\s+for|price|vip|special|trends|brands|shopping|hysteria|save|kick|super(b)?)+',
-                                ur'(Now\s+or\s+Never|call|share|stock|exclusive|free\s+shipping|car|shopper|bonus)+',
-                                ur'(lpg|spa|trend|brand|opportunity|be\s+the\s+first|get\s+it\s+now|see|look|watch)+'
-                                ur'(Нов|Скидк|(Сам|Ожидаем)[аяыйео]|Распродаж|Покупк|Товар|Выгодн|Внутри)+',
-                                ur'(Дар|Отда[мёе]|предложени|горяч|Здравствуйте|Спасибо|Привет|Внимание|Больше|бешен)+',
-                                ur'(Скидк|Акци|Купон|Групон|Тур|Открой|Лет|много|Уведомля|Только|Сегодня|Сезонн|Вс(е|ё)\s+д(о|ля))+',
-                                ur'(Жар|Выходн[ыоей]|Посетите|Подготовьте|Отпуск|режем\s+цены|купи|мода|шопинг)+',
-                                ur'(теперь\s+и\s+для|ликвид|эксклюзив|информационн\s+(выпуск|анонс)|продаж|рублей|хит|топ)+',
-                                ur'(доставка\s+(бесплатн)?|сниж|низк|магаз|курьер|специал|перв|супер)+',
-                                ur'(Зим|Осен|Вес[енa]|Каникул|Празник|Год)+',
-                                ur'([\w\s-]{2,10}){1,2}\s*:([\w\s+,\.\$!]{2,15})+',
-                                ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
-                                ur'-?[\d]{1,2}\s+%\s+.*',
-                                ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
-                                ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}'
-                            ]
+            return self.emarket_score, self.emarket_glag
 
-            subj_score, upper_flag, title_flag = self.get_subject_metrics(subject_rules, score)
-            # almoust all words in subj string are Titled
-            if (len(tokens) - title_flag ) < 3:
-                features_dict['subj_style'] = 1
 
-            # all advertising emails are made up with very similar html-patterns and rules for headers
-            # http://emailmarketing.comm100.com/email-marketing-tutorial/
-            features_dict['subj_len'] = len(tokens)
-            features_dict['subj_score'] = total_score + subj_score
+        def get_subject_features(self):
+            # 4. Subject checks
+            logger.debug('>>> 4. SUBJ CHECKS:')
 
-            # in general infos have subj lines in utf-8 or pure ascii
-            if len(set(encodings)) == 1 and set(encodings).issubset(['utf-8','ascii']):
-                features_dict['encoding'] = 1
+            features = ('len', 'style', 'score', 'checksum', 'encoding')
+            features_dict = dict(zip(['subj_'+f for f in features], [self.INIT_SCORE]*len(features)))
 
-            # take crc32 from the second half (first can vary cause of personalisation, etc)
-            subj_trace = tuple([w.encode('utf-8') for w in tokens[len(tokens)/2:]])
-            subj_trace = ''.join(subj_trace[:])
-            logger.debug(subj_trace)
-            features_dict['subj_checksum'] = binascii.crc32(subj_trace)
+            if self._msg.get('Subject'):
 
-        vector_dict.update(features_dict)
-        logger.debug('\t----->'+str(vector_dict))
+                total_score = self.INIT_SCORE
+                unicode_subj, tokens, encodings = self.get_decoded_subj()
 
-        # 5. List checks and some other RFC 5322 compliences checks for headers
-        logger.debug('>>> 5. LIST CHECKS:')
-        list_features = ('basic_checks', 'ext_checks','sender','precedence','typical_heads','reply-to','delivered')
-        list_features_dict = dict(zip(['list_'+x for x in list_features], [self.INIT_SCORE]*len(list_features)))
 
-        logger.debug('\t----->'+str(list_features_dict))
+                subj_score, upper_flag, title_flag = self.get_subject_metrics(subject_rules, score)
+                # almoust all words in subj string are Titled
+                if (len(tokens) - title_flag ) < 3:
+                    features_dict['subj_style'] = 1
 
-        if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self._msg.keys()):
-            list_features_dict['basic_checks'] = self.get_list_metrics(score)
+                # all advertising emails are made up with very similar html-patterns and rules for headers
+                # http://emailmarketing.comm100.com/email-marketing-tutorial/
+                features_dict['subj_len'] = len(tokens)
+                features_dict['subj_score'] = total_score + subj_score
+
+                # in general infos have subj lines in utf-8 or pure ascii
+                if len(set(encodings)) == 1 and set(encodings).issubset(['utf-8','ascii']):
+                    features_dict['encoding'] = 1
+
+                # take crc32 from the second half (first can vary cause of personalisation, etc)
+                subj_trace = tuple([w.encode('utf-8') for w in tokens[len(tokens)/2:]])
+                subj_trace = ''.join(subj_trace[:])
+                logger.debug(subj_trace)
+                features_dict['subj_checksum'] = binascii.crc32(subj_trace)
+
+
+'''''
+        def get_list_features():
+            # 5. List checks and some other RFC 5322 compliences checks for headers
+            logger.debug('>>> 5. LIST CHECKS:')
+            list_features = ('basic_checks', 'ext_checks','sender','precedence','typical_heads','reply-to','delivered')
+            list_features_dict = dict(zip(['list_'+x for x in list_features], [self.INIT_SCORE]*len(list_features)))
+
             logger.debug('\t----->'+str(list_features_dict))
 
-        # for old-school style emailings
-        matched = filter(lambda h_name: re.match('List-(Id|Help|Post|Archive)', h_name, re.I), self._msg.keys())
-        list_features_dict['ext_checks'] = len(matched)
+            if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self._msg.keys()):
+                list_features_dict['basic_checks'] = self.get_list_metrics(score)
+                logger.debug('\t----->'+str(list_features_dict))
 
-        keys = tuple(filter(lambda k: self._msg.get(k), ['From','Sender','Reply-To','Delivered-To','To']))
-        #addr_dict = dict([(k,self.get_addr_values(value)[1][0]) for k,value in zip(keys, tuple([self._msg.get(k) for k in keys]))])
-        logger.debug(str([ self.get_addr_values(self._msg.get_all(k)) for k in keys]))
-        addr_dict = dict([(k, (self.get_addr_values(self._msg.get_all(k)))[0]) for k in keys])
-        logger.debug('>>>>>'+str(addr_dict))
+            # for old-school style emailings
+            matched = filter(lambda h_name: re.match('List-(Id|Help|Post|Archive)', h_name, re.I), self._msg.keys())
+            list_features_dict['ext_checks'] = len(matched)
 
-        if addr_dict.get('Sender') and addr_dict.get('Sender') != addr_dict.get('From'):
-            list_features_dict['sender'] = 1
-            logger.debug('\t----->'+str(features_dict))
+            keys = tuple(filter(lambda k: self._msg.get(k), ['From','Sender','Reply-To','Delivered-To','To']))
+            #addr_dict = dict([(k,self.get_addr_values(value)[1][0]) for k,value in zip(keys, tuple([self._msg.get(k) for k in keys]))])
+            logger.debug(str([ self.get_addr_values(self._msg.get_all(k)) for k in keys]))
+            addr_dict = dict([(k, (self.get_addr_values(self._msg.get_all(k)))[0]) for k in keys])
+            logger.debug('>>>>>'+str(addr_dict))
 
-            if addr_dict.get('Reply-To'):
-                domains = [(addr_dict.get(n)).partition('@')[2] for n in ['Reply-To','Sender']]
-                if len(set(domains)) == 1:
-                    list_features_dict['reply-to'] = 1
+            if addr_dict.get('Sender') and addr_dict.get('Sender') != addr_dict.get('From'):
+                list_features_dict['sender'] = 1
+                logger.debug('\t----->'+str(features_dict))
 
-        if addr_dict.get('Delivered-To') and addr_dict.get('Delivered-To') != addr_dict.get('To'):
-            list_features_dict['delivered'] = 1
+                if addr_dict.get('Reply-To'):
+                    domains = [(addr_dict.get(n)).partition('@')[2] for n in ['Reply-To','Sender']]
+                    if len(set(domains)) == 1:
+                        list_features_dict['reply-to'] = 1
 
-        if self._msg.get('Precedence') and self._msg.get('Precedence').strip() == 'bulk':
-            list_features_dict['precedence'] = 1
+            if addr_dict.get('Delivered-To') and addr_dict.get('Delivered-To') != addr_dict.get('To'):
+                list_features_dict['delivered'] = 1
 
-        for name_reg in [r'Feedback(-ID)?', r'.*Campaign(-ID)?','Complaints(-To)?']:
-            matched_list = filter(lambda head_name: re.match(r'(X-)?'+name_reg,head_name,re.I),self._msg.keys())
-            list_features_dict['typical_heads'] = len(matched_list)
+            if self._msg.get('Precedence') and self._msg.get('Precedence').strip() == 'bulk':
+                list_features_dict['precedence'] = 1
 
-        vector_dict.update(list_features_dict)
-        logger.debug('\t----->'+str(vector_dict))
+            for name_reg in [r'Feedback(-ID)?', r'.*Campaign(-ID)?','Complaints(-To)?']:
+                matched_list = filter(lambda head_name: re.match(r'(X-)?'+name_reg,head_name,re.I),self._msg.keys())
+                list_features_dict['typical_heads'] = len(matched_list)
+
+            vector_dict.update(list_features_dict)
+            logger.debug('\t----->'+str(vector_dict))
 
         # 4. crc for From values
         # move to BasePattern
@@ -217,7 +302,7 @@ class InfoPattern(BasePattern):
             logger.debug('\t----->'+str(vector_dict))
 
             # todo: why only one here ?
-            attach_regs = [ r'format\s?=\s?.fixed.']
+            attach_regs = [ ]
 
             count, att_score, in_score = self.get_attach_metrics(mime_skeleton.values(), attach_regs, score)
             mime_dict['att_count'] = count
@@ -239,22 +324,11 @@ class InfoPattern(BasePattern):
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
             regs_for_dom_pt = [
-                                ur'(news(letter)?|trip|sales+|offer|journal|event|post|asseccories|rasprodaga)',
-                                ur'(global|response|click|shop|sale|flight|hotel|cit(y|ies)|campaign|bouquet)',
-                                ur'(celebration|friday|binus|magazin|cheap|subscibe|manage|feed|list|blog)',
-                                ur'(programm|online|create|amazon|meetup|book|flowers|app|connect|emea|habrahabr|media)',
-                                ur'(citilink|ulmart|lamoda|nero-|vip|ideel|quora|yves-rocher|fagms.de|wix.com|papers)',
-                                ur'(opportunity|whites+|chance|email|practice|yr-ru|us\d-|stanford|brands+|labels+)',
-                                ur'(look-at-media|digest|the-village|ozon.ru|enter.ru)'
+
             ]
 
             regs_for_txt_pt = [
-                                ur'(cheap.*|prices+|clothes+|action|shoes+|women|label|brand|zhensk|odezhd)',
-                                ur'(campaign|rasprodaga|requirements|choice|personal|track|click|customer|product)',
-                                ur'(meetup|facebook|twitter|pinterest|vk|odnoklassinki|google)_footer',
-                                ur'(training|mailing|modify|unsub|newsletter|catalog|mdeia|graphics|announcement)',
-                                ur'(utm_medium=|utm_source=|utm_term=|utm_campaign=|applications+|upn=|aspx\?)',
-                                ur'(shop|magazin|collections+|lam|(mail_link_)?track(er)?|EMID=|EMV=|genders)'
+
             ]
 
             basic_features_dict, netloc_list = self.get_url_metrics(regs_for_dom_pt, regs_for_txt_pt, score)
@@ -288,36 +362,7 @@ class InfoPattern(BasePattern):
         vector_dict.update(basic_features_dict)
         vector_dict.update(urls_dict)
 
-        # 9. check body
-        logger.debug('>>> 9. BODY\'S TEXT PARTS CHECKS:')
 
-        regexp_list = [
-                        ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring|look|blog|spot)',
-                        ur'(news|letter|discount|sale|info|unsubscribe|bonus|ads|market)',
-                        ur'((social)?media|partage|share|actu|publicité|télécharger|download)',
-                        ur'(RECOMMENDA[TIONS]*)'
-        ]
-
-        tags_map = {
-                        'img'   :{
-                                    'alt'   : '',
-                                    'src'   : '(logo|promo|content|btn\.|butt\.|avatar|user|banner|content|download|send(friend)?|actions)',
-                                    'title' : '.*'
-                        },
-                        'span'  :{
-                                    'style' : 'color\s?:\s?(\w{3,10}|#[a-z0-9]{3,6})',
-                                    'class' : '(\[\'.*\'\]|recommenda.*)'
-                        }
-        }
-
-
-        # move to BasePattern
-        vector_dict.update(dict(zip(('html_score', 'html_checksum'), self.get_html_parts_metrics(score, tags_map))))
-        vector_dict['text_score'] = self.get_text_parts_metrics(score, regexp_list)
-
-        logger.debug('MSG VECTOR --> '+str(vector_dict))
-
-        return vector_dict
 
 if __name__ == "__main__":
 
@@ -337,7 +382,7 @@ if __name__ == "__main__":
         raise
 
 
-
+'''''
 		
 
 
