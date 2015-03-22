@@ -33,7 +33,7 @@ class BasePattern(BeautifulBody):
     Keeps Frankenstein's DNAs.
     '''
 
-    _INIT_SCORE = 0 # can redifine for particular set of instanses, => use cls./self._INIT_SCORE in code
+    INIT_SCORE = 0 # can redifine for particular set of instanses, => use cls./self._INIT_SCORE in code
 
     EX_MIME_ATTRS_LIST=['boundary=','charset=']
 
@@ -44,7 +44,7 @@ class BasePattern(BeautifulBody):
         self._penalty_score = score
 
         super(BasePattern, self).__init__(**kwds)
-        base_features = ['from_checksum', 'list_score', 'all_heads_checksum']
+        base_features = ['from_checksum', 'list_score', 'all_heads_checksum', 'subj_score']
 
         features_dict = {
                             'rcvd'    :   ['num','score'],
@@ -53,13 +53,15 @@ class BasePattern(BeautifulBody):
                             'url'     :   ['count','distinct_count','sender_count','score'],
                             'mime'    :   ['nest_level','checksum'],
                             'html'    :   ['checksum','score'],
-                            'text'    :   ['avg_ent','comp_ratio','score']
+                            'txt'     :   ['avg_ent','compressed_ratio','score'],
+                            'attach'  :   ['count','in_score','score']
         }
 
         total = list()
         [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
 
-        [ self.__setattr__(f, self._INIT_SCORE) for f in (base_features + total) ]
+        [ self.__setattr__(f, self.INIT_SCORE) for f in (base_features + total) ]
+        print('initialized: '+str(self.__dict__))
 
         self.get_all_heads_checksum()
 
@@ -71,7 +73,9 @@ class BasePattern(BeautifulBody):
 
         self.get_from_checksum()
 
-        self.get_rcpts_metrics()
+        self.get_rcpts_features()
+
+        self.get_subj_score()
 
         self.get_list_score()
 
@@ -91,19 +95,31 @@ class BasePattern(BeautifulBody):
         self.get_attach_features()
 
 
-        logger.debug('BasePattern was created'.upper())
-        logger.debug(self.__dict__)
+        logger.debug('BasePattern was created'.upper()+': '+str(id(self)))
+        #logger.debug(self.__dict__)
+        for (k,v) in self.__dict__.iteritems():
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug("================")
-        logger.debug(BasePattern.__dict__)
+        #logger.debug(BasePattern.__dict__)
+        for (k,v) in self.__dict__.iteritems():
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
     @staticmethod
-    def _unpack_arguments(*args, **kwargs):
+    # use it only here for dirty particular needs
+    def __unpack_arguments(*args, **kwargs):
         '''
         :todo: + common value validator
         '''
-        attrs_to_set = [(n.upper(), kwargs.get(n)) for n in [name for name in args if kwargs.has_key()]]
+        print(args)
+        print(type(args))
+        attrs_to_set = [name for name in args if kwargs.has_key(name)]
+        print('__unpack_arguments: '+str(attrs_to_set))
+        if len(attrs_to_set) == 0:
+            return
+
+        attrs_to_set = [(n.upper(), kwargs.get(n)) for n in attrs_to_set]
         [self.__setattr__(key,value) for key,value in attrs_to_set]
 
         return
@@ -129,9 +145,9 @@ class BasePattern(BeautifulBody):
 
         return compiled_list
 
-    def get_rcvd_score(self, **kwds):
+    def get_rcvd_score(self, **kwargs):
 
-        self._unpack_arguments(kwds.keys())
+        self.__unpack_arguments('rcvds_num', **kwargs)
         # 1. "Received:" Headers
         logger.debug('>>> 1. RCVD_CHECKS:')
         for rule in self.RCVD_RULES:
@@ -154,40 +170,38 @@ class BasePattern(BeautifulBody):
 
     # can be called from each particular pattern with particular excluded_list
 
-    def get_all_heads_checksum(self):
+    def get_all_heads_checksum(self, **kwargs):
         #, excluded_list=None):
         '''
         :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
         :return: <CRC32 from headers names>
         '''
         logger.debug(self._msg.items())
+        self.__unpack_arguments('excluded_heads', **kwargs)
 
         heads_vector = tuple(map(itemgetter(0), self._msg.items()))
         heads_dict = dict(self._msg.items())
-        print(self._EXCLUDED_HEADS)
-        excluded_list = []
-        if self._EXCLUDED_HEADS:
-            excluded_list = self._EXCLUDED_HEADS
+        logger.debug(self.EXCLUDED_HEADS)
 
         #if cls.excluded_list:
-        for ex_head in excluded_list:
+        for ex_head in self.EXCLUDED_HEADS:
             # can use match - no new lines in r_name
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
         self.all_heads_checksum = binascii.crc32(''.join(heads_vector))
+        logger.debug('all_heads_checksum ==> '.upper()+str(self.all_heads_checksum))
 
         return self.all_heads_checksum
 
     # can be called from each particular pattern with particular rcvds_num
-    def get_rcvd_checksum(self, rcvds_num=None):
+    def get_rcvd_checksum(self, **kwargs):
         '''
         :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
         :return: dict {'rcvd_N': CRC32 } from line, formed by parsed values,
                  parser is interested only in servers IPs-literals, domains, etc
         '''
-        if rcvds_num is None:
-            rcvds_num = self._RCVDS_NUM
-        rcvds_vect = self.get_rcvds(rcvds_num)
+        logger.debug('self.RCVDS_NUM: '+str(self.RCVDS_NUM))
+        rcvds_vect = self.get_rcvds(self.RCVDS_NUM)
         logger.debug('rcvds_vect:'+str(rcvds_vect))
         rcvd_checksum = {}
 
@@ -197,11 +211,13 @@ class BasePattern(BeautifulBody):
             trace = trace.strip().lower()
             trace = binascii.crc32(trace)
 
+            self.__dict__['rcvd_'+str(n)] = trace
             rcvd_checksum['rcvd_'+str(n)] = trace
 
         # don't assign to BasePattern attribute, cause it returns slice of Pattern's Class attributes dictionary,
         # (for different Patterns calculates checksum from different count of parced RCVD headers values)
         # will call it in Pattern's Class constructor and update it's attribute dictionary by rcvd_checksum dict
+        logger.debug('rcvd_checksum :'+str(rcvd_checksum))
         return rcvd_checksum
 
 
@@ -270,7 +286,7 @@ class BasePattern(BeautifulBody):
         return (self.dmarc_spf, self.dmarc_score)
 
     def get_from_checksum(self):
-        logger.debug('>>> ORIGINATOR_CHECKS:')
+        logger.debug('>>> 2. ORIGINATOR_CHECKS:')
 
         if self._msg.get('From'):
             name_addr_tuples = self.get_addr_values(self._msg.get_all('From'))[:1]
@@ -282,12 +298,12 @@ class BasePattern(BeautifulBody):
 
             if name_addr_tuples:
                 from_value, from_addr = reduce(add, name_addr_tuples)
-                self.from_checksum = binascii.crc32(from_value.encode(self._DEFAULT_CHARSET))
+                self.from_checksum = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
                 logger.debug('\t----->'+str(self.from_checksum))
 
         return self.from_checksum
 
-    def get_rcpts_metrics(self):
+    def get_rcpts_features(self):
 
         #:param score:
         #:return: tuple with penalizing scores for To-header value from body,
@@ -365,8 +381,14 @@ class BasePattern(BeautifulBody):
         return self.list_score
 
     # call from each particular pattern
-    def get_base_subj_metrics(self, subj_regs):
+    def get_subj_score(self, **kwargs):
 
+        logger.debug('3. >>> SUBJ_CHECKS')
+
+        if self._msg.get("Subject") is None:
+            return self.subj_score
+
+        self.__unpack_arguments('subj_rules', **kwargs)
         #:param subj_regs:
         #:param score:
         #:return: <penalizing score for Subj>, <count of tokens in upper-case and in Title>
@@ -375,15 +397,12 @@ class BasePattern(BeautifulBody):
         line, tokens, encodings = self.get_decoded_subj()
         logger.debug('line : '+line)
 
-        regs = self._get_regexp(subj_regs, re.U)
+        compiled_regs = self._get_regexp(self.SUBJ_RULES, re.U)
         # check by regexp rules
-        matched = filter(lambda r: r.search(line, re.I), regs)
-        subj_score = self._penalty_score*len(matched)
+        matched = filter(lambda r: r.search(line, re.I), compiled_regs)
+        self.subj_score = self._penalty_score*len(matched)
 
-        upper_words_count = len([w for w in tokens if w.isupper()])
-        title_words_count = len([w for w in tokens if w.istitle()])
-
-        return (subj_score, upper_words_count, title_words_count)
+        return self.subj_score
 
     def get_url_base_features(self):
 
@@ -423,22 +442,22 @@ class BasePattern(BeautifulBody):
         #:param txt_regs:
         #:return:
 
-        self._unpack_arguments(list('fqdn_regexp','txt_regexp'), **kwargs)
+        self.__unpack_arguments('url_fqdn_regexp','url_txt_regexp', **kwargs)
 
         reg = namedtuple('reg', 'fqdn_regs txt_regs')
-        compiled = reg(*(self._get_regexp(l, re.I) for l in (self.FQDN_REGEXP, self.TXT_REGEXP)))
+        compiled = reg(*(self._get_regexp(l, re.I) for l in (self.URL_FQDN_REGEXP, self.URL_TXT_REGEXP)))
 
         for reg in compiled.fqdn_regs:
-            url_score += len(filter(lambda netloc: reg.search(netloc), self.get_net_location_list()))*self._penalty_score
+            self.url_score += len(filter(lambda netloc: reg.search(netloc), self.get_net_location_list()))*self._penalty_score
 
         # url_score
         metainfo_list = list()
         for attr in ['path', 'query', 'fragment']:
-            metainfo_list.extend([i.__getattribute__(attr) for i in self.url_list])
+            metainfo_list.extend([i.__getattribute__(attr) for i in self.get_url_obj_list()])
 
         if metainfo_list:
             for reg in compiled.txt_regs:
-                url_score += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*self._penalty_score
+                self.url_score += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*self._penalty_score
 
         return self.url_score
 
@@ -447,6 +466,7 @@ class BasePattern(BeautifulBody):
         mime_parts = self.get_mime_struct()
         level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
 
+        logger.debug('mime_nest_level: '.upper()+str(self.mime_nest_level))
         return self.mime_nest_level
 
     def get_mime_checksum(self, **kwargs):
@@ -455,8 +475,8 @@ class BasePattern(BeautifulBody):
         #:return: 42
 
 
-        self._unpack_arguments(list('ex_mime_attrs_list'), **kwargs)
-        logger.debug('EXL:'+str(excluded_attrs_list))
+        self.__unpack_arguments('ex_mime_attrs_list', **kwargs)
+        logger.debug('EXL:'+str(self.EX_MIME_ATTRS_LIST))
 
         for prefix in self.EX_MIME_ATTRS_LIST:
             items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in self.get_mime_struct().items()]
@@ -466,6 +486,7 @@ class BasePattern(BeautifulBody):
 
             self.checksum = binascii.crc32(''.join([''.join(i) for i in items]))
 
+        logger.debug('mime_checksum: '.upper()+str(self.mime_nest_level))
         return self.mime_checksum
 
     def get_text_score(self, **kwargs):
@@ -473,10 +494,10 @@ class BasePattern(BeautifulBody):
         #Maps input regexp list to each sentence one by one
         #:return: penalising score, gained by sentenses
 
-        self._unpack_arguments('_text_regexp_list', **kwargs)
+        self.__unpack_arguments('text_regexp_list', **kwargs)
 
         # precise flag for re.compile ?
-        regs_list = self.get_regexp_(self._TEXT_REGEXP_LIST, re.M)
+        regs_list = self._get_regexp(self.TEXT_REGEXP_LIST, re.M)
 
         sents_generator = self.get_sentences()
         print("sent_lists >>"+str(self.get_sentences()))
@@ -484,12 +505,13 @@ class BasePattern(BeautifulBody):
         while(True):
             try:
                 for reg_obj in regs_list:
-                    self.text_score += len(filter(lambda s: reg_obj.search(s,re.I), next(sents_generator)))*self._penalty_score
-                    print("text_score: "+str(text_score))
+                    self.txt_score += len(filter(lambda s: reg_obj.search(s,re.I), next(sents_generator)))*self._penalty_score
+                    print("text_score: "+str(self.txt_score))
             except StopIteration as err:
                 break
 
-        return self.text_score
+        logger.debug('text_score: '.upper()+str(self.txt_score))
+        return self.txt_score
 
     def get_html_score(self, **kwargs):
 
@@ -502,13 +524,12 @@ class BasePattern(BeautifulBody):
         #:param tags_map: expected <tags attribute="value">, described by regexes ;
         #:return: <penalizing score> and <checksum for body> ;
 
+        self.__unpack_arguments('html_tags_map', **kwargs)
         attr_value_pair = namedtuple('attr_value_pair', 'name value')
 
-        print("tags_map: "+str(self._HTML_TAGS_MAP))
+        print("tags_map: "+str(self.HTML_TAGS_MAP))
 
         soups_list = self.get_html_parts()
-        if len(soups_list) == 0:
-            return self.html_score
 
         while(True):
             try:
@@ -528,8 +549,8 @@ class BasePattern(BeautifulBody):
 
                 soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
                 print(soup_attrs_list)
-                print('type of parsing line in reg_obj: '+str(type(tags_map.get(tag))))
-                compiled_regexp_list = self.get_regexp_(tags_map.get(tag), re.U)
+                print('type of parsing line in reg_obj: '+str(type(self.HTML_TAGS_MAP[tag])))
+                compiled_regexp_list = self._get_regexp(self.HTML_TAGS_MAP.get[tag], re.U)
 
                 pairs = list()
                 for key_attr in compiled_regexp_list: # expected_attrs_dict:
@@ -548,9 +569,6 @@ class BasePattern(BeautifulBody):
 
         html_skeleton = list()
         soups_list = self.get_html_parts()
-        if len(soups_list) == 0:
-            return self.html_checksum
-
 
         for s in tuple(soups_list):
             # get table checksum
@@ -571,16 +589,19 @@ class BasePattern(BeautifulBody):
         #:return:
 
         n = 0
+        txt_avg_ent = 0
         # todo: make n-grams
         for tokens in self.get_stemmed_tokens():
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
             print('P >>> '+str(probs))
-            self.avg_ent += -sum([p * math.log(p,2) for p in probs])
-            self.avg_ent = self.avg_ent/n
+            txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
 
-        return self.avg_ent
+        self.txt_avg_ent = txt_avg_ent/n
+        logger.debug('avg_ent'.upper()+': '+str(self.txt_avg_ent))
+
+        return self.txt_avg_ent
 
     def get_text_compress_ratio(self):
 
@@ -590,35 +611,36 @@ class BasePattern(BeautifulBody):
 
         all_text_parts = list(self.get_stemmed_tokens())
         for x in all_text_parts:
-            print('>>>> '+str(x))
+            logger.debug('>>>> '+str(x))
         if all_text_parts:
             all_text = ''.join(reduce(add, all_text_parts))
             print(type(all_text))
-            self.compressed_ratio = float(len(zlib.compress(all_text.encode(self.DEFAULT_CHARSET))))/len(all_text)
+            self.txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.DEFAULT_CHARSET))))/len(all_text)
 
-        return self.compressed_ratio
+        return self.txt_compressed_ratio
 
-    def get_attach_features(self,**kwargs):
+    def get_attach_features(self, **kwargs):
 
         #:param mime_parts_list:
         #:param reg_list: scary regexes for attach attribute value from Content-Type header
         #:param score:
         #:return: attach_count, score, <score gained by inline attachements>
 
+        self.__unpack_arguments('attaches_rules', **kwargs)
         logger.debug('MIME STRUCT >>>>>'+str(self.get_mime_struct())+'/n')
 
         mime_values_list = reduce(add, self.get_mime_struct())
         attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), mime_values_list)
-        attach_attrs = [(x.partition(';')[2]).strip('\r\n\x20') for x in attach_attrs]
+        attach_attrs = [( x.partition(';')[2]).strip('\r\n\x20') for x in attach_attrs ]
         self.attach_count = len(attach_attrs)
 
-        self.in_score = self._penalty_score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), mime_values_list))
+        self.attach_in_score = self._penalty_score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), mime_values_list))
 
-        for exp in [re.compile(r,re.I) for r in self._ATTACHES_RULES]:
+        for exp in [re.compile(r,re.I) for r in self.ATTACHES_RULES]:
             x = filter(lambda value: exp.search(value,re.M), attach_attrs)
-            self.score += self._penalty_score*len(x)
+            self.attach_score += self._penalty_score*len(x)
 
-            self.attach_score += score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), attach_attrs))
+        self.attach_score += self._penalty_score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), attach_attrs))
 
         return (self.attach_count, self.attach_in_score, self.attach_score)
 

@@ -36,7 +36,7 @@ class HamPattern(BasePattern):
         if self._msg.get('Subject'):
 
             total_score = self.INIT_SCORE
-            unicode_subj, norm_words_list, encodings = self.get_decoded_subj(self._msg.get("Subject"))
+            unicode_subj, tokens, encodings = self.get_decoded_subj(self._msg.get("Subject"))
 
             features_dict['subj_len'] = len(unicode_subj)
             #if self.MIN_SUBJ_LEN < len(unicode_subj) < self.MAX_SUBJ_LEN:

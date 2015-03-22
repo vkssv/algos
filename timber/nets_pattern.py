@@ -96,7 +96,7 @@ class NetsPattern(BasePattern):
         if self._msg.get('Subject'):
 
             total_score = self.INIT_SCORE
-            unicode_subj, norm_words_list, encodings = self._get_decoded_subj_(self._msg.get("Subject"))
+            unicode_subj, tokens, encodings = self._get_decoded_subj_(self._msg.get("Subject"))
 
             subject_rule = [
                                 # dingbats
@@ -118,7 +118,7 @@ class NetsPattern(BasePattern):
 
             subj_score, upper_flag, title_flag = self.get_subject_metrics(unicode_subj, subject_rule, score)
             # almoust all words in subj string are Titled
-            if (len(norm_words_list) - title_flag ) < 5:
+            if (len(tokens) - title_flag ) < 5:
                 features_dict['subj_style'] = 1
 
             features_dict['subj_score'] = total_score + subj_score
@@ -128,8 +128,8 @@ class NetsPattern(BasePattern):
                 features_dict['encoding'] = 1
 
             # take crc32 only from words in lower case, cause Names and etc. are titled here
-            norm_words_list = tuple(filter(lambda word: not word.istitle(), norm_words_list))
-            subj_trace = ''.join(tuple([w.encode('utf-8') for w in norm_words_list]))
+            tokens = tuple(filter(lambda word: not word.istitle(), tokens))
+            subj_trace = ''.join(tuple([w.encode('utf-8') for w in tokens]))
             logger.debug('subj_trace--->'+subj_trace)
             if subj_trace:
                 features_dict['subj_checksum'] = binascii.crc32(subj_trace)

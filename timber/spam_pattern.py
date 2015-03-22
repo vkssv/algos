@@ -10,9 +10,12 @@ from pattern_wrapper import BasePattern
 
 
 
-#formatter_debug = logging.Formatter('%(message)s')
+
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(filename)s >>>> %(message)s')
+ch = logging.StreamHandler(sys.stdout)
+logger.addHandler(ch)
 
 class SpamPattern(BasePattern):
     """
@@ -21,22 +24,39 @@ class SpamPattern(BasePattern):
         values, which are mostly don't equal to zeros ;
     """
 
-    _RCVDS_NUM = 2
-    _RCVD_RULES = [
+    RCVDS_NUM = 2
+    RCVD_RULES = [
                             r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
                             r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
                             r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
     ]
-    _EXCLUDED_HEADS = [
+    EXCLUDED_HEADS = [
                             'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
     ]
-    _ATTACHES_RULES = [
+    # try greedy regexes, maybe will precise them in future
+    SUBJ_RULES = [
+
+                            ur'((S)?SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
+                            ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
+                            ur'-?[\d]{1,2}\s+%\s+.*',
+                            ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
+                            ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
+                            ur'(free.*(pills?).*(every?)*.*(order)*|online.*&.*(save)*|tablet.*(split?ed?)*.*has?le)',
+	                        ur'(cheap([est])?.*(satisf[ied]?)*.*(U[SK])*.*(CANADIAN)*.*customer|To.*Be.*Remov([ed])?.*(Please?)*)',
+	                        ur'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
+	                        ur'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
+                            ur'.*(eml|spam).*',
+                            ur'.*(payment|receipt|attach(ed)?|extra\s+inches)',
+                            ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|Только\s+для\s+(владельц.*|директор.*))',
+                            ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
+    ]
+    ATTACHES_RULES = [
                             r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
                             r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
     ]
 
-    _TEXT_REGEXP_LIST = [
+    TEXT_REGEXP_LIST = [
                             ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
                             ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
                             ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
@@ -51,7 +71,7 @@ class SpamPattern(BasePattern):
                             ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
     ]
 
-    _HTML_TAGS_MAP = {
+    HTML_TAGS_MAP = {
                             'table':{
                                         'width' : '[1-9]{3}[^%]',
                                         'height' : '[1-9]{1,3}',
@@ -72,7 +92,7 @@ class SpamPattern(BasePattern):
                             }
     }
 
-    _FQDN_REGEXP =       [
+    URL_FQDN_REGEXP =       [
                             ur'tinyurl\.',
                             ur'(\w{3,6}-){1,3}\w{2,45}(\.\w{2,5}){0,3}',
                             ur'\D{1,3}(\.|-)\w{1,61}(\.\w{2,5}){0,3}',
@@ -90,7 +110,7 @@ class SpamPattern(BasePattern):
 
     ]
 
-    _TXT_REGEXP = [
+    URL_TXT_REGEXP = [
                             ur'(click|here|link|login|update|confirm|legilize|now|buy|online|movie|s0x(room|boat)?)+',
                             ur'(Free|Shipping|Options|Pills|Every?|Order|Best|Deal|Today|Now|Contact|Pay|go)+',
                             ur'(Ccылк|Курс|Цен|Посмотреть|Каталог|Здесь|Сюда|Регистрация|бесплатное|участие|на\s+сайт|подробн)',
@@ -126,14 +146,11 @@ class SpamPattern(BasePattern):
         base_features = [
                             'forged_sender',
                             'disp_notification',
-                            'mime_score',
-                            'text_score',
-                            'html_score',
-                            'attach_score'
+                            'mime_score'
         ]
 
         features_dict = {
-                            'subj':   ['style','score','checksum','encoding'],
+                            'subj':   ['style','checksum','encoding'],
                             'url' :   ['upper', 'repetitions', 'punicode', 'domain_name_level',\
                                          'avg_len', 'onMouseOver', 'hex', 'at_sign'],
         }
@@ -142,7 +159,7 @@ class SpamPattern(BasePattern):
 
         [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
         # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
-        [ self.__setattr__(f, self._INIT_SCORE) for f in (base_features + total) ]
+        [ self.__setattr__(f, self.INIT_SCORE) for f in (base_features + total) ]
 
         # 1. Originator checks
         self.get_originator_score()
@@ -160,12 +177,15 @@ class SpamPattern(BasePattern):
         # 7. URL-checks
         self.get_url_features(['url_'+name for name in features_dict.get('url')])
 
-        logger.debug('SpamPattern was created'.upper())
-        logger.debug(self.__dict__)
+        logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
+        #logger.debug(self.__dict__)
+        for (k,v) in self.__dict__.iteritems():
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
-        logger.debug(SpamPattern.__dict__)
+        #logger.debug(SpamPattern.__dict__)
+        for (k,v) in self.__dict__.iteritems():
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-
 
     def get_originator_score(self):
 
@@ -176,18 +196,23 @@ class SpamPattern(BasePattern):
                 self.forged_sender = self._penalty_score
                 # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
                 # MUA didn't generate Sender field cause of redundancy
-        logger.debug(self.forged_sender)
+
+        logger.debug('forged_sender '.upper()+str(self.forged_sender))
         return self.forged_sender
 
     def get_subj_features(self, subj_features):
 
         # 3. "Subject:" Header (pure alchemy )) )
-        logger.debug('>>> 3. SUBJECT CHECKS:')
+        #logger.debug('>>> 3. SUBJECT CHECKS:')
 
-        if not self._msg.get("Subject"):
+        # get_subj_features() called only here, subj_features list passed
+        # just for returning particular peace of SpamPattern.__dict__
+        if self._msg.get("Subject") is None:
             return dict([ (key, self.__dict__[key]) for key in subj_features ])
 
-        unicode_subj, norm_words_list, encodings = self.get_decoded_subj()
+        unicode_subj, tokens, encodings = self.get_decoded_subj()
+        upper_count = len([w for w in tokens if w.isupper()])
+        title_count = len([w for w in tokens if w.istitle()])
 
         self.subj_encoding = len(set(encodings))
 
@@ -205,36 +230,17 @@ class SpamPattern(BasePattern):
                     found_heads = filter(lambda reg: re.match(reg, h_name, re.I), h_name)
                     self.subj_score += (len(prefix_heads_map.get(k)) - len(found_heads))*self._penalty_score
 
-        # try greedy regexes, maybe will precise them in future
-        subject_rule = [
-                            ur'((S)?SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
-                            ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
-                            ur'-?[\d]{1,2}\s+%\s+.*',
-                            ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
-                            ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
-                            ur'(free.*(pills?).*(every?)*.*(order)*|online.*&.*(save)*|tablet.*(split?ed?)*.*has?le)',
-	                        ur'(cheap([est])?.*(satisf[ied]?)*.*(U[SK])*.*(CANADIAN)*.*customer|To.*Be.*Remov([ed])?.*(Please?)*)',
-	                        ur'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
-	                        ur'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
-                            ur'.*(eml|spam).*',
-                            ur'.*(payment|receipt|attach(ed)?|extra\s+inches)',
-                            ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|Только\s+для\s+(владельц.*|директор.*))',
-                            ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
-        ]
-
-        score, upper_flag, title_flag = self.get_base_subj_metrics(subject_rule)
-        self.subj_score += score
 
         # some words in UPPER case or almoust all words in subj string are Titled
         # todo: remove magic number (after investigating how it will devide vectors inside trees)
-        if upper_flag or (len(norm_words_list) - title_flag) < 3:
+        if upper_count or (len(tokens) - title_count) < 3:
             self.subj_style = self._penalty_score
 
         # take crc32, make line only from words on even positions, not all
-        norm_words_list = tuple(norm_words_list[i] for i in filter(lambda i: i%2, range(len(norm_words_list))))
-        subj_trace = ''.join(tuple([w.encode('utf-8') for w in norm_words_list]))
+        tokens = tuple(tokens[i] for i in filter(lambda i: i%2, range(len(tokens))))
+        subj_trace = ''.join(tuple([w.encode('utf-8') for w in tokens]))
         self.subj_checksum = binascii.crc32(subj_trace)
-
+        logger.debug(str([ (key, self.__dict__[key]) for key in subj_features ]))
         return dict([ (key, self.__dict__[key]) for key in subj_features ])
 
     def get_mime_score(self):
@@ -255,7 +261,8 @@ class SpamPattern(BasePattern):
             self.mime_score += self._penalty_score
             logger.debug('\t----->'+str(self.mime_score))
 
-        logger.debug(self.mime_score)
+        logger.debug('mime_score: '.upper() +str(self.mime_score))
+
         return self.mime_score
 
     def get_url_features(self, url_features_list):
@@ -276,14 +283,6 @@ class SpamPattern(BasePattern):
 
         if not net_location_list:
             return dict([ (key, self.__dict__[key]) for key in url_features_list ])
-
-        fqdn_regs = [
-
-        ]
-
-        txt_regs = [
-
-        ]
 
         for method in [ unicode.isupper, unicode.istitle ]:
             self.url_upper += len(filter(lambda s: method(s), net_location_list))*self._penalty_score

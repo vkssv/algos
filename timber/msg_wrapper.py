@@ -26,9 +26,9 @@ from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s: %(message)s')
-ch = logging.StreamHandler(sys.stdout)
-logger.addHandler(ch)
+#formatter = logging.Formatter('%(filename)s: %(message)s')
+#ch = logging.StreamHandler(sys.stdout)
+#logger.addHandler(ch)
 
 try:
     from bs4 import BeautifulSoup, UnicodeDammit
@@ -46,12 +46,12 @@ class BeautifulBody(object):
     # now can't see any real reason to set default as private attributes,
     # so keep them here
 
-    __DEFAULT_MAX_NEST_LEVEL = 30
     __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))', re.M)
 
-    _DEFAULT_LANG = 'english'
-    _DEFAULT_CHARSET = 'utf-8'
-    _SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
+    DEFAULT_MAX_NEST_LEVEL = 30
+    DEFAULT_LANG = 'english'
+    DEFAULT_CHARSET = 'utf-8'
+    SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
 
     __slots__ = ['_msg']
 
@@ -60,7 +60,7 @@ class BeautifulBody(object):
         if msg.is_multipart():
 
             be_picky = [
-                        (lambda y: y > BeautifulBody.__DEFAULT_MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
+                        (lambda y: y > self.DEFAULT_MAX_NEST_LEVEL, lambda m: len(m.get_payload()),' mime parts... I can\'t eat so much, merci!'), \
                         (lambda y: y, lambda m: m.defects,' I don\'t eat such emails, !')
             ]
 
@@ -71,6 +71,11 @@ class BeautifulBody(object):
 
         self._msg = msg
         logger.debug(type(self._msg))
+        logger.debug('BeautifulBody was created'.upper()+' '+str(id(self)))
+        logger.debug(self.__dict__)
+        logger.debug("================")
+        logger.debug(BeautifulBody.__dict__)
+        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
         #(self.url_list, self.netloc_list) = [list()]*2
 
 
@@ -85,19 +90,22 @@ class BeautifulBody(object):
         return dammit_obj.unicode_markup.strip()
 
     @classmethod
-    def get_lang(cls, tokens_list):
+    def get_lang(cls, tokens_list, return_value=None):
+        logger.debug('in get_lang')
+        lang = cls.DEFAULT_LANG
+        logger.debug(lang)
 
-        lang = cls._DEFAULT_LANG
-
-        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in cls._SUPPORT_LANGS_LIST])
+        stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in cls.SUPPORT_LANGS_LIST])
         tokens_set = set(tokens_list)
         lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
         logger.debug(lang_ratios)
         l, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[0]
-        if ratio:
-            lang = l
-
-        return lang
+        if ratio > 0:
+            # cause we can have here: [('russian', 0), ('french', 0), ('english', 0)]
+            return l
+        else:
+            logger.debug('can\'t define language for this token list >> '+str(tokens_list))
+            return return_value
 
     def get_rcvds(self, rcvds_num=0):
         '''
@@ -170,8 +178,6 @@ class BeautifulBody(object):
     #@lazyproperty
     def get_decoded_subj(self):
 
-        #logger.debug('SUBJ_LINE: >'+str(subj_line)+'<')
-        assert self._msg.get('Subject')
         parts_list = header.decode_header(self._msg.get('Subject'))
         logger.debug('parts >>>>>'+str(parts_list))
         subj_line = u''
@@ -192,15 +198,14 @@ class BeautifulBody(object):
             subj_line += dammit_obj.unicode_markup + u' '
             encodings_list.append(dammit_obj.original_encoding)
 
-        tokens = tuple(subj_line.split())
-        lang = self.get_lang(tokens)
-        if lang in self._SUPPORT_LANGS_LIST:
-            tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
+        subj_tokens = tuple(subj_line.split())
+        lang = self.get_lang(subj_tokens)
+        if lang in self.SUPPORT_LANGS_LIST:
+            tokens = tuple(word for word in subj_tokens if word not in stopwords.words(lang))
             logger.debug('before stem: '+str(tokens))
             subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
 
         return (subj_line, subj_tokens, encodings_list)
-
 
     def get_mime_struct(self):
         """
@@ -276,7 +281,7 @@ class BeautifulBody(object):
             if decoded_line is None or len(decoded_line.strip()) == 0:
                 continue
 
-            lang = self._DEFAULT_LANG
+            lang = self.DEFAULT_LANG
             if dammit_obj.original_encoding:
                 for l in langs_map.iterkeys():
                     if filter(lambda ch: re.match(r''+ch, dammit_obj.original_encoding, re.I), langs_map.get(l)):
@@ -292,28 +297,28 @@ class BeautifulBody(object):
 
     def get_url_obj_list(self):
 
-        self.url_list = list()
+        url_list = list()
         for line, content_type, lang in list(self.get_text_mime_part()):
             if 'html' in content_type:
                 soup = BeautifulSoup(line)
                 if soup.a:
-                    self.url_list.extend([unicode(x) for x in soup.a])
+                    url_list.extend([unicode(x) for x in soup.a])
             else:
                 url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
-                self.url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
+                url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
 
 
-        if self.url_list:
-            self.url_list = [urlparse(i) for i in self.url_list]
+        if url_list:
+            url_list = [urlparse(i) for i in url_list]
 
         # todo: make it as lazy computing value
-        return self.url_list
+        return url_list
 
     def get_net_location_list(self, url_list=None):
 
         netloc_list = list()
         if url_list is None:
-            url_list = self.url_list
+            url_list = self.get_url_obj_list()
 
         for url in url_list:
             if url.netloc:
@@ -377,8 +382,8 @@ class BeautifulBody(object):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add, tokens)
             #logger.debug("tokens: "+str(tokens))
-            lang = self.get_lang_(tokens)
-            logger.debug('lang: '+lang)
+            lang = self.get_lang(tokens)
+            logger.debug(lang)
 
             if lang in self.SUPPORT_LANGS_LIST:
                 #todo: create stopwords list for jis ,

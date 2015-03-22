@@ -83,7 +83,7 @@ class InfoPattern(BasePattern):
         if self._msg.get('Subject'):
 
             total_score = self.INIT_SCORE
-            unicode_subj, norm_words_list, encodings = self.get_decoded_subj()
+            unicode_subj, tokens, encodings = self.get_decoded_subj()
 
             subject_rules = [
                                 ur'([\u25a0-\u29ff]|)', # dingbats
@@ -111,12 +111,12 @@ class InfoPattern(BasePattern):
 
             subj_score, upper_flag, title_flag = self.get_subject_metrics(subject_rules, score)
             # almoust all words in subj string are Titled
-            if (len(norm_words_list) - title_flag ) < 3:
+            if (len(tokens) - title_flag ) < 3:
                 features_dict['subj_style'] = 1
 
             # all advertising emails are made up with very similar html-patterns and rules for headers
             # http://emailmarketing.comm100.com/email-marketing-tutorial/
-            features_dict['subj_len'] = len(norm_words_list)
+            features_dict['subj_len'] = len(tokens)
             features_dict['subj_score'] = total_score + subj_score
 
             # in general infos have subj lines in utf-8 or pure ascii
@@ -124,7 +124,7 @@ class InfoPattern(BasePattern):
                 features_dict['encoding'] = 1
 
             # take crc32 from the second half (first can vary cause of personalisation, etc)
-            subj_trace = tuple([w.encode('utf-8') for w in norm_words_list[len(norm_words_list)/2:]])
+            subj_trace = tuple([w.encode('utf-8') for w in tokens[len(tokens)/2:]])
             subj_trace = ''.join(subj_trace[:])
             logger.debug(subj_trace)
             features_dict['subj_checksum'] = binascii.crc32(subj_trace)
