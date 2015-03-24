@@ -21,11 +21,76 @@ class HamPattern(BasePattern):
         values, mostly don't equal to zeros ;
     """
 
-    __RCVDS_NUM = 3
+    RCVDS_NUM = 3
+
+    RCVD_RULES = [
+                            r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
+                            r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
+                            r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
+    ]
+    EXCLUDED_HEADS = [
+                            'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
+                            'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
+    ]
+    # try greedy regexes, maybe will precise them in future
+    SUBJ_RULES = [
+                             ur'(Re\s*:|Fw(d)?\s*:|fly|ticket|account|payment|verify\s+your\s+(email|account)|bill)',
+                             ur'(support|help|participate|registration|electronic|answer|from|update|undelivered)',
+                             ur'от\s+[\w\.-]{3,10}\s+(счет|отчет|выписка|электронный\s+(билет)?)'
+
+    ]
+    ATTACHES_RULES = [
+                            r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
+                            r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+    ]
+
+    TEXT_REGEXP_LIST = [
+
+
+                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
+                            ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
+                            ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
+                            ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
+                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
+                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
+                            ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
+                            ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
+                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
+                            ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
+                            ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
+                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
+    ]
+
+    HTML_TAGS_MAP = {
+
+                                'img' :{
+                                            'src'             : '(cid:(_.*|part.*|profile|photo|logo|google|ima?ge?\d{1,3}.*@[\w.])|assets|track(ing)?|api|ticket|logo|fb|vk|tw)',
+                                            'moz-do-not-send' : 'true'
+                                },
+                                'li'  :{
+                                            'dir'             : 'ltr',
+                                            'class'           : '\[\'.*\'\]'
+                                }
+                    }
+
+
+    URL_FQDN_REGEXP = [
+                            ur'(www\.)?(registration|account|payment|confirmation|password|intranet|emarket)',
+                            ur'(www\.)?(tickets+|anywayanyday|profile|job|my\.|email|blog|support)',
+                            ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',
+                            ur'(www\.)?(linkedin\.com|facebook\.com|linternaute\.com|blablacar\.com)',
+                            ur'(www\.)?(youtube\.com|plus\.google\.com|twitter\.com|pinterest\.com|tumblr\.com)',
+                            ur'(www\.)?(instagram\.com|flickr\.com|vine\.com|tagged\.com|ask\.fm|meetme\.com)',
+                            ur'(www\.)?classmates'
+
+    ]
+
+    URL_TXT_REGEXP = [
+                            ur'(users?\/|id|sign[_\s]{0,1}(in|up)|e?ticket|kassa|account|payment|confirm(ation)?|password)',
+                            ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
+    ]
 
     def run(self, score):
-
-        vector_dict = OrderedDict()
 
         # 1. "Subject:" Header
         logger.debug('>>> 1. SUBJECT CHECKS:')
@@ -43,9 +108,7 @@ class HamPattern(BasePattern):
             #    features_dict['subj_len'] = 1
 
             subject_rule = [
-                                ur'(Re\s*:|Fw(d)?\s*:|fly|ticket|account|payment|verify\s+your\s+(email|account)|bill)',
-                                ur'(support|help|participate|registration|electronic|answer|from|update|undelivered)',
-                                ur'от\s+[\w\.-]{3,10}\s+(счет|отчет|выписка|электронный\s+(билет)?)'
+
             ]
 
             subj_score, upper_words_num, title_words_num = self.get_subjects_metrics(unicode_subj, subject_rule, self.score)
@@ -68,18 +131,10 @@ class HamPattern(BasePattern):
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
             domain_regs = [
-                                ur'(www\.)?(registration|account|payment|confirmation|password|intranet|emarket)',
-                                ur'(www\.)?(tickets+|anywayanyday|profile|job|my\.|email|blog|support)',
-                                ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',
-                                ur'(www\.)?(linkedin\.com|facebook\.com|linternaute\.com|blablacar\.com)',
-                                ur'(www\.)?(youtube\.com|plus\.google\.com|twitter\.com|pinterest\.com|tumblr\.com)',
-                                ur'(www\.)?(instagram\.com|flickr\.com|vine\.com|tagged\.com|ask\.fm|meetme\.com)',
-                                ur'(www\.)?classmates'
-            ]
+
 
             regs = [
-                                ur'(users?\/|id|sign[_\s]{0,1}(in|up)|e?ticket|kassa|account|payment|confirm(ation)?|password)',
-                                ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
+
             ]
 
             rcvds = self.get_rcvds(self.__RCVDS_NUM)
@@ -99,16 +154,7 @@ class HamPattern(BasePattern):
 
         logger.debug('>>> 3. BODY\'S TEXT PARTS CHECKS:')
 
-        tags_map = {
-                        'img' :{
-                                    'src'             : '(cid:(_.*|part.*|profile|photo|logo|google|ima?ge?\d{1,3}.*@[\w.])|assets|track(ing)?|api|ticket|logo|fb|vk|tw)',
-                                    'moz-do-not-send' : 'true'
-                        },
-                        'li'  :{
-                                    'dir'             : 'ltr',
-                                    'class'           : '\[\'.*\'\]'
-                        }
-        }
+
 
         regexp_list= [
                         ur'(track(ing)?\s+No|proc(é|e)+d(er)?|interview|invit[eation]|welcom(ing)?|introduc(tion)?|your\s.*(ticket|order)\s.*(\#|№)|day|quarter|inquir[yies])',
