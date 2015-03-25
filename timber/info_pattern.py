@@ -9,9 +9,11 @@ from collections import OrderedDict, Counter
 
 from pattern_wrapper import BasePattern
 
-# formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
+formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler(sys.stdout)
+logger.addHandler(ch)
 
 
 class InfoPattern(BasePattern):
@@ -117,13 +119,15 @@ class InfoPattern(BasePattern):
         # 0. initialize vector of features explicitly,
         # for avoiding additional headaches and investigations with Python GC
         base_features = [
-                            'dmarc_x_heads'
+                            'dmarc_x_heads',
+                            'mime_score'
 
         ]
 
         features_dict = {
-                            'emarket': ['score','flag']
-                            'subj':   ['style','checksum','encoding']
+                            'emarket': ['score','flag'],
+
+                            #'subj':   ['style','checksum','encoding']
                             #'url' :   ['upper', 'repetitions', 'punicode', 'domain_name_level',\
                             #'avg_len', 'onMouseOver', 'hex', 'at_sign'],
         }
@@ -138,17 +142,17 @@ class InfoPattern(BasePattern):
         self.get_emarket_score()
 
         # 2. Subject
-        self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
+        #self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
 
 
-        '''''
-        # 6. Checks for MIME-skeleton attributes
+
+        # 6. Checks for MIME attributes
         self.get_mime_score()
 
         # 7. URL-checks
-        self.get_url_features(['url_'+name for name in features_dict.get('url')])
-        '''''
-        logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
+        #self.get_url_features(['url_'+name for name in features_dict.get('url')])
+
+        logger.debug('InfoPattern was created'.upper()+' :'+str(id(self)))
         #logger.debug(self.__dict__)
         for (k,v) in self.__dict__.iteritems():
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
@@ -158,29 +162,28 @@ class InfoPattern(BasePattern):
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-
-        def get_emarket_score(self):
+    def get_emarket_score(self):
             # 4. Presense of X-EMID && X-EMMAIL, etc
             logger.debug('>>> 4. Specific E-marketing headers checks:')
 
             head_pattern = r'^X-(EM(ID|MAIL|V-.*)|SG-.*|(rp)?campaign(id)?)$'
+            x_mailer_pattern = r'X-Mailer-.*'
+
             known_mailers = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver' ]
 
-            emarket_features = ('emarket_score', 'known_mailer_flag')
-            emarket_dict = dict(zip(emarket_features, [self.INIT_SCORE]*len(emarket_features)))
+            func = lambda x,y: re.match(x, y, re.I)
+            emarket_heads_list = set([header for header in self._msg.keys() if func(head_pattern,header)])
+            mailer_heads_list = [mailer_head for mailer_head in self._msg.keys() if func(x_mailer_pattern,mailer_head)]
 
-            emarket_heads = set(filter(lambda header: re.match(head_pattern, header, re.I), self._msg.keys()))
-            emarket_dict['emarket_score'] = len(emarket_heads)*score
+            self.emarket_score = len(emarket_heads_list)*self._penalty_score
 
-            mailer_header = ''.join(filter(lambda h: re.match(r'^x-mailer$', h, re.I), self._msg.keys()))
-
-            if self._msg.get(mailer_header) and filter(lambda reg: re.search(reg, self._msg.get(mailer_header), re.I), known_mailers):
-                emarket_dict['known_mailer_flag'] = score
-
+            for h in mailer_heads_list:
+                if filter(lambda reg: re.search(reg, self._msg.get(h), re.I), known_mailers):
+                    self.emarket_flag += self._penalty_score
 
             return self.emarket_score, self.emarket_glag
 
-
+    '''''
         def get_subject_features(self):
             # 4. Subject checks
             logger.debug('>>> 4. SUBJ CHECKS:')
@@ -215,7 +218,7 @@ class InfoPattern(BasePattern):
                 features_dict['subj_checksum'] = binascii.crc32(subj_trace)
 
 
-'''''
+
         def get_list_features():
             # 5. List checks and some other RFC 5322 compliences checks for headers
             logger.debug('>>> 5. LIST CHECKS:')
@@ -260,61 +263,46 @@ class InfoPattern(BasePattern):
             vector_dict.update(list_features_dict)
             logger.debug('\t----->'+str(vector_dict))
 
-        # 4. crc for From values
-        # move to BasePattern
-        logger.debug('>>> 6. ORIGINATOR_CHECKS:')
-        vector_dict['from'] = self.INIT_SCORE
-        logger.debug('\t----->'+str(vector_dict))
-
-        if self._msg.get('From'):
-            from_value, from_addr = reduce(add, self.get_addr_values(self._msg.get_all('From')))
-            logger.debug(from_value)
-
-            if from_value:
-                vector_dict['from_checksum'] = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
-                logger.debug('\t----->'+str(vector_dict))
-
-        logger.debug('\t----->'+str(vector_dict)+'\n')
-
-
-        # 7. Check MIME headers
-        logger.debug('>>> 7. MIME CHECKS:')
-
-        mime_features = ('mime_score', 'checksum', 'att_count', 'att_score', 'in_score', 'nest_level')
-        mime_dict = OrderedDict(zip(mime_features, [self.INIT_SCORE]*len(mime_features)))
-
-        logger.debug('IS MULTI >>>>>> '+str(self._msg.is_multipart()))
-        if self._msg.is_multipart():
-            mime_dict['mime_score'] += score
-
-            first_content_type = self._msg.get('Content-Type')
-            if 'text/html' in first_content_type and re.search('utf-8', first_content_type, re.I):
-                mime_dict['mime_score'] += score
-
-            mime_skeleton = self.get_mime_struct()
-            logger.debug('MIME STRUCT: '+str(mime_skeleton))
-
-            # some particular rules for infos
-            if (mime_skeleton.keys()).count('text/html') and 'inline' in mime_skeleton.get('text/html'):
-                mime_dict['mime_score'] += score
-
-            mime_dict['checksum'] = self.get_mime_crc(mime_skeleton)
+            # 4. crc for From values
+            # move to BasePattern
+            logger.debug('>>> 6. ORIGINATOR_CHECKS:')
+            vector_dict['from'] = self.INIT_SCORE
             logger.debug('\t----->'+str(vector_dict))
 
-            # todo: why only one here ?
-            attach_regs = [ ]
+            if self._msg.get('From'):
+                from_value, from_addr = reduce(add, self.get_addr_values(self._msg.get_all('From')))
+                logger.debug(from_value)
 
-            count, att_score, in_score = self.get_attach_metrics(mime_skeleton.values(), attach_regs, score)
-            mime_dict['att_count'] = count
-            mime_dict['att_score'] = att_score
-            mime_dict['in_score'] = in_score
+                if from_value:
+                    vector_dict['from_checksum'] = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
+                    logger.debug('\t----->'+str(vector_dict))
 
-            # helps to outline difference between spams, which were made very similar to infos
-            mime_dict['nest_level'] = self.get_nest_level()
+            logger.debug('\t----->'+str(vector_dict)+'\n')
+        '''''
 
-        vector_dict.update(mime_dict)
-        logger.debug('\t----->'+str(vector_dict))
+    def get_mime_score(self):
 
+        logger.debug('>>> 7. MIME CHECKS:')
+        logger.debug('IS MULTI >>>>>> '+str(self._msg.is_multipart()))
+        if not self._msg.is_multipart():
+            return self.mime_score
+
+        # all infos are attractive nice multiparts...
+        self.mime_score += self._penalty_score
+
+        first_content_type = self._msg.get('Content-Type')
+        if 'text/html' in first_content_type and re.search('utf-8', first_content_type, re.I):
+            self.mime_score += self._penalty_score
+
+        mime_skeleton = self.get_mime_struct()
+        logger.debug('MIME STRUCT: '+str(mime_skeleton))
+        if (mime_skeleton.keys()).count('text/html') and 'inline' in mime_skeleton.get('text/html'):
+            self.mime_score += self._penalty_score
+
+        logger.debug(self.mime_score)
+        return(self.mime_score)
+
+        '''''
         # 8. check urls
         logger.debug('>>> 8. URL_CHECKS:')
 
@@ -323,13 +311,7 @@ class InfoPattern(BasePattern):
         if urls_list:
             logger.debug('URLS_LIST >>>>>'+str(urls_list))
 
-            regs_for_dom_pt = [
 
-            ]
-
-            regs_for_txt_pt = [
-
-            ]
 
             basic_features_dict, netloc_list = self.get_url_metrics(regs_for_dom_pt, regs_for_txt_pt, score)
 
@@ -382,10 +364,21 @@ if __name__ == "__main__":
         raise
 
 
-'''''
+    '''''
 		
 
 
+#from info_pattern import InfoPattern
+from email import parser
+
+parser = parser.Parser()
+with open('/home/calypso/train_dir/abusix/0000006177_1422258740_ff43700.eml', 'rb') as f:
+    m = parser.parse(f)
+
+print('>>>>'+str(m.keys()))
+
+i = InfoPattern(msg=m, score='1.0')
+print('>>>>'+str(i.__dict__()))
 	
 			
 

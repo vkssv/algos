@@ -13,7 +13,7 @@ from pattern_wrapper import BasePattern
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s >>>> %(message)s')
+formatter = logging.Formatter('%(filename)s %(message)s')
 ch = logging.StreamHandler(sys.stdout)
 logger.addHandler(ch)
 
@@ -190,7 +190,7 @@ class SpamPattern(BasePattern):
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-
+    # particular feature and method
     def get_rcvd_score(self):
 
         # 1. "Received:" Headers
@@ -201,6 +201,7 @@ class SpamPattern(BasePattern):
 
         return self.rcvd_score
 
+    # particular feature and method
     def get_originator_score(self):
 
         logger.debug('>>> 2. ORIG_CHECKS:')
@@ -257,6 +258,7 @@ class SpamPattern(BasePattern):
         logger.debug(str([ (key, self.__dict__[key]) for key in subj_features ]))
         return dict([ (key, self.__dict__[key]) for key in subj_features ])
 
+    # particular feature and method
     def get_mime_score(self):
 
         # 7. MIME-headers checks

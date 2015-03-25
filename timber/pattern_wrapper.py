@@ -49,7 +49,7 @@ class BasePattern(BeautifulBody):
         features_dict = {
                             'rcpt'    :   ['smtp_to','body_to'],
                             'dmarc'   :   ['spf','score'],
-                            'url'     :   ['count','distinct_count','sender_count','score'],
+                            'url'     :   ['count','distinct_count','sender_count','score', 'avg_len'],
                             'mime'    :   ['nest_level','checksum'],
                             'html'    :   ['checksum','score'],
                             'txt'     :   ['avg_ent','compressed_ratio','score'],
@@ -143,6 +143,7 @@ class BasePattern(BeautifulBody):
 
         return compiled_list
 
+    '''''
     def get_sender_domain(self):
 
         sender_domain = False
@@ -156,7 +157,7 @@ class BasePattern(BeautifulBody):
             sender_domain = (orig_addr.split('@')[1]).strip()
 
     # can be called from each particular pattern with particular excluded_list
-
+    '''''
     def get_all_heads_checksum(self, **kwargs):
         #, excluded_list=None):
         '''
@@ -286,23 +287,24 @@ class BasePattern(BeautifulBody):
 
         if not (smtp_to_list or only_addr_list):
             # can't check without data => leave zeros
-            return (self.rcpt_smtp_to, self.rcpt_body_to)
+            return self.rcpt_smtp_to, self.rcpt_body_to
 
-        for key, l in zip((self.rcpt_smtp_to, self.rcpt_body_to), (smtp_to_list, only_addr_list)):
+        for attr, l in zip((self.rcpt_smtp_to, self.rcpt_body_to), (smtp_to_list, only_addr_list)):
+            print(attr)
             if filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), l):
-                print(key)
+                print(attr)
                 print(l)
                 key += self._penalty_score
 
         if len(only_addr_list) == 1 and ''.join(smtp_to_addr) != ''.join(only_addr_list):
-            self.rcpt_body_to += self._penalty_score
+            self.rcpt_body_to = self._penalty_score
             logger.debug('\t----->'+str(self.rcpt_body_to))
 
         elif len(only_addr_list) > 2 and smtp_to_addr != '<multiple recipients>':
             self.rcpt_body_to += self._penalty_score
             logger.debug('\t----->'+str(self.rcpt_body_to))
 
-        return (self.rcpt_body_to, self.rcpt_smtp_to)
+        return self.rcpt_body_to, self.rcpt_smtp_to
 
     def get_list_score(self):
 
@@ -377,7 +379,8 @@ class BasePattern(BeautifulBody):
         # which are the same with sender domain from RCVD-headers.
 
         # url_count
-        self.url_count = len(self.get_url_obj_list())
+        url_list = self.get_url_obj_list()
+        self.url_count = len(url_list)
 
         if self.url_count > 0:
             net_location_list = self.get_net_location_list()
@@ -398,7 +401,12 @@ class BasePattern(BeautifulBody):
                 pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
                 self.url_sender_count += len(filter(lambda d: re.search(pattern, d, re.I), net_location_list))
 
-        return (self.url_count, self.url_distinct_count, self.url_sender_count)
+                l = [ len(url) for url in [ obj.geturl() for obj in urls_list ]]
+                self.url_avg_len = math.ceil(float(sum(l))/float(len(urls_list)))
+
+        logger.debug((self.url_count, self.url_distinct_count, self.url_sender_count, self.url_avg_len))
+
+        return (self.url_count, self.url_distinct_count, self.url_sender_count, self.url_avg_len)
 
     def get_url_score(self, **kwargs):
 
@@ -607,7 +615,6 @@ class BasePattern(BeautifulBody):
         self.attach_score += self._penalty_score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), attach_attrs))
 
         return (self.attach_count, self.attach_in_score, self.attach_score)
-
 
 if __name__ == "__main__":
     import doctest
