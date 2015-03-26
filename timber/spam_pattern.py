@@ -127,6 +127,8 @@ class SpamPattern(BasePattern):
                             ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
     ]
 
+
+
     def __init__(self, **kwds):
         '''
         :param kwds:
@@ -255,6 +257,8 @@ class SpamPattern(BasePattern):
         tokens = tuple(tokens[i] for i in filter(lambda i: i%2, range(len(tokens))))
         subj_trace = ''.join(tuple([w.encode('utf-8') for w in tokens]))
         self.subj_checksum = binascii.crc32(subj_trace)
+
+        # there is no any needs to kick-off searching attrs in MRO
         logger.debug(str([ (key, self.__dict__[key]) for key in subj_features ]))
         return dict([ (key, self.__dict__[key]) for key in subj_features ])
 
