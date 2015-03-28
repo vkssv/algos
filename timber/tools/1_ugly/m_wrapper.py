@@ -9,7 +9,10 @@ which can be checked by rules (features-triggers) from each pattern_class.
 import sys, os, importlib, logging, re, binascii, unicodedata
 import pdb
 
-
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+from nltk.probability import FreqDist, ConditionalFreqDist
 
 from email import iterators, header, utils
 

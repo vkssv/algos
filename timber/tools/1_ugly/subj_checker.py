@@ -43,6 +43,8 @@ class SubjectChecker(BeautifulBody):
         #self._penalty_score = score
 
         super(SubjectChecker, self).__init__(**kwds)
+        self.subj_line, self.subj_tokens, self.encodings_list = self.get_decoded_subj()
+       
 
 
 

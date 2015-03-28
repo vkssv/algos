@@ -7,6 +7,10 @@ from operator import add, itemgetter
 from collections import defaultdict, namedtuple, Counter, OrderedDict
 from itertools import ifilterfalse
 
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+from nltk.probability import FreqDist, ConditionalFreqDist
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -44,7 +48,7 @@ class BasePattern(BeautifulBody):
 
         self._penalty_score = score
 
-
+        print('IN BASEPATTERN CONSTRUCTOR, DELEGATE INSTANCE CREATION')
         super(BasePattern, self).__init__(**kwds)
 
 
