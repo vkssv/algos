@@ -197,7 +197,9 @@ class BeautifulBody(object):
                     continue
 
             subj_line += dammit_obj.unicode_markup + u' '
-            encodings_list.append(dammit_obj.original_encoding)
+            if dammit_obj.original_encoding is not None:
+                encodings_list.append(dammit_obj.original_encoding)
+
 
         subj_tokens = tuple(subj_line.split())
         lang = self.get_lang(subj_tokens)
