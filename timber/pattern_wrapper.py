@@ -26,6 +26,9 @@ except ImportError:
 
 from msg_wrapper import BeautifulBody
 
+
+
+
 class BasePattern(BeautifulBody):
     '''
     Base parent class for created all other four pattern classes.
@@ -99,7 +102,7 @@ class BasePattern(BeautifulBody):
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug("================")
         #logger.debug(BasePattern.__dict__)
-        for (k,v) in self.__dict__.iteritems():
+        for (k,v) in BasePattern.__dict__.iteritems():
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
@@ -306,6 +309,31 @@ class BasePattern(BeautifulBody):
 
         return self.rcpt_body_to, self.rcpt_smtp_to
 
+    # call from each particular pattern
+    @excluded_for_hams
+    def get_subj_score(self, **kwargs):
+
+        logger.debug('3. >>> SUBJ_CHECKS')
+
+        if self._msg.get("Subject") is None:
+            return self.subj_score
+
+        self.__unpack_arguments('subj_rules', **kwargs)
+        #:param subj_regs:
+        #:param score:
+        #:return: <penalizing score for Subj>, <count of tokens in upper-case and in Title>
+        #cause russian unconditional spam is more complicated than abusix )
+
+        line, tokens, encodings = self.get_decoded_subj()
+        logger.debug('line : '+line)
+
+        compiled_regs = self._get_regexp(self.SUBJ_RULES, re.U)
+        # check by regexp rules
+        matched = filter(lambda r: r.search(line, re.I), compiled_regs)
+        self.subj_score = self._penalty_score*len(matched)
+
+        return self.subj_score
+
     def get_list_score(self):
 
         #:return: penalizing score for List-* headers
@@ -347,28 +375,7 @@ class BasePattern(BeautifulBody):
         return self.list_score
 
     # call from each particular pattern
-    def get_subj_score(self, **kwargs):
 
-        logger.debug('3. >>> SUBJ_CHECKS')
-
-        if self._msg.get("Subject") is None:
-            return self.subj_score
-
-        self.__unpack_arguments('subj_rules', **kwargs)
-        #:param subj_regs:
-        #:param score:
-        #:return: <penalizing score for Subj>, <count of tokens in upper-case and in Title>
-        #cause russian unconditional spam is more complicated than abusix )
-
-        line, tokens, encodings = self.get_decoded_subj()
-        logger.debug('line : '+line)
-
-        compiled_regs = self._get_regexp(self.SUBJ_RULES, re.U)
-        # check by regexp rules
-        matched = filter(lambda r: r.search(line, re.I), compiled_regs)
-        self.subj_score = self._penalty_score*len(matched)
-
-        return self.subj_score
 
     def get_url_base_features(self):
 

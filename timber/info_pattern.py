@@ -183,7 +183,7 @@ class InfoPattern(BasePattern):
 
             return self.emarket_score, self.emarket_glag
 
-    '''''
+
         def get_subject_features(self):
             # 4. Subject checks
             logger.debug('>>> 4. SUBJ CHECKS:')
@@ -278,7 +278,7 @@ class InfoPattern(BasePattern):
                     logger.debug('\t----->'+str(vector_dict))
 
             logger.debug('\t----->'+str(vector_dict)+'\n')
-        '''''
+
 
     def get_mime_score(self):
 
@@ -375,10 +375,7 @@ parser = parser.Parser()
 with open('/home/calypso/train_dir/abusix/0000006177_1422258740_ff43700.eml', 'rb') as f:
     m = parser.parse(f)
 
-print('>>>>'+str(m.keys()))
 
-i = InfoPattern(msg=m, score='1.0')
-print('>>>>'+str(i.__dict__()))
 	
 			
 
