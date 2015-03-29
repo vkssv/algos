@@ -75,7 +75,7 @@ class BeautifulBody(object):
         logger.debug('BeautifulBody was created'.upper()+' '+str(id(self)))
         logger.debug("================")
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-    
+
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None):

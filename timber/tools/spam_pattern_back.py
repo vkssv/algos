@@ -7,7 +7,8 @@ import os, sys, logging, re, binascii, math
 from operator import add, itemgetter
 from collections import OrderedDict, Counter, namedtuple
 from pattern_wrapper import BasePattern
-from checkers import SubjectChecker, URLChecker, AttachChecker, ListChecker, OriginatorChecker, ContentChecker
+
+
 
 
 logger = logging.getLogger('')
@@ -16,10 +17,6 @@ formatter = logging.Formatter('%(filename)s %(message)s')
 ch = logging.StreamHandler(sys.stdout)
 logger.addHandler(ch)
 
-from email import parser
-parser = parser.Parser()
-with open('/home/calypso/train_dir/abusix/0000006187_1422258870_ff43700.eml','rb') as f:
-    M = parser.parse(f)
 
 class SpamPattern(BasePattern):
     """
@@ -27,7 +24,7 @@ class SpamPattern(BasePattern):
     -- if email looks like unconditional spam, it's vector will contain
         values, which are mostly don't equal to zeros ;
     """
-    print('SPAMPATTERN ----------> FILL CLASS ATTRIBUTE TABLE')
+
     RCVDS_NUM = 2
     RCVD_RULES = [
                             r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
@@ -39,8 +36,6 @@ class SpamPattern(BasePattern):
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
     ]
     # try greedy regexes, maybe will precise them in future
-
-
     SUBJ_RULES = [
 
                             ur'((S)?SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
@@ -57,11 +52,7 @@ class SpamPattern(BasePattern):
                             ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|Только\s+для\s+(владельц.*|директор.*))',
                             ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
     ]
-
-    SUBJ_FUNCTION = lambda z,x,y: y.index(x)%2
-
-    SUBJ_TITLES_THRESHOLD = 3
-    ATTACH_RULES = [
+    ATTACHES_RULES = [
                             r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
                             r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
     ]
@@ -137,7 +128,6 @@ class SpamPattern(BasePattern):
                             ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
     ]
 
-    print('SPAMPATTERN ----------> FISNISH CLASS ATTRIBUTE TABLE')
     def __init__(self, **kwds):
         '''
         :param kwds:
@@ -146,88 +136,151 @@ class SpamPattern(BasePattern):
 
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
-
         '''
-        print('IN SPAMPATTERN CONSTRUCTOR, DELEGATE INSTANCE CREATION')
 
         super(SpamPattern, self).__init__(**kwds)
 
-        #todo: factory method here
-        subject_checker = SubjectChecker(self)
-        url_checker = URLChecker(self)
-        attach_checker = AttachChecker(self)
-        list_checker = ListChecker(self)
-        orig_checker = OriginatorChecker(self)
-        content_checker = ContentChecker(self)
 
 
-        features_map = { 'particular': (lambda name: 'get_'+name+'_score', ['rcvd', 'mime', 'disp_notification'], None),
-                         'subject'   : (lambda name: 'get_subj_'+name, ['score','encoding','style','checksum'], subject_checker),
-                         'url'       : (lambda name: 'get_url_'+name, ['score','avg_len','distinct_count','sender_count',\
-                                                                       'uppercase','punicode','fqdn','ascii','repetitions'], url_checker),
-                         'list'      : (lambda name: 'get_list_'+name, ['score','delivered'], list_checker),
-                         'attach'    : (lambda name: 'get_attach_'+name, ['score','in_score','count'], attach_checker),
-                         'originator': (lambda name: 'get_orig_'+name, ['checksum'], orig_checker),
-                         'content'   : (lambda name: 'get_content_'+name, ['comp_ratio','avg_entropy','txt_score','html_score'], content_checker)
+        # 0. initialize vector of features explicitly,
+        # for avoiding additional headaches and investigations with Python GC
+        base_features = [
+                            'rcvd_score',
+                            'forged_sender',
+                            'disp_notification',
+                            'mime_score'
+        ]
 
+        features_dict = {
+                            'subj':   ['style','checksum','encoding'],
+                            'url' :   ['upper', 'repetitions', 'punicode', 'domain_name_level',\
+                                         'avg_len', 'onMouseOver', 'hex', 'at_sign'],
         }
 
-        for key in features_map.iterkeys():
-            logger.debug('Add '+key+'features to '+str(self.__class__))
-            f, features_list, checker_obj = features_map[key]
-            features = map(f,features_list)
-            if checker_obj is None:
-                checker_obj = self
+        total = list()
 
-            functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
-            [checker_obj.__setattr__(name, f()) for name,f in functions_map]
+        [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
+        # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
+        [ self.__setattr__(f, self.INIT_SCORE) for f in (base_features + total) ]
 
+        self.get_rcvd_score()
+
+        # 1. Originator checks
+        self.get_originator_score()
+
+        # 2. Subject
+        self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
+
+        # 3. Typical spams headers
+        if self._msg.keys().count('Disposition-Notification-To'):
+            self.disp_notification = self._penalty_score
+
+        # 6. Checks for MIME-skeleton attributes
+        self.get_mime_score()
+
+        # 7. URL-checks
+        self.get_url_features(['url_'+name for name in features_dict.get('url')])
 
         logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
-        logger.debug('SpamPattern instance final dict '+str(self.__dict__))
-
+        #logger.debug(self.__dict__)
+        for (k,v) in SpamPattern.__dict__.iteritems():
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
-
+        #logger.debug(SpamPattern.__dict__)
+        for (k,v) in self.__dict__.iteritems():
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-
-    def get_rcvd_score(self):
-
-        # 1. "Received:" Headers
-        rcvd_score = self.INIT_SCORE
-        logger.debug('>>> 1. RCVD_CHECKS:')
-        for rule in self.RCVD_RULES:
-            if filter(lambda l: re.search(rule, l), self.get_rcvds(self.RCVDS_NUM)):
-                rcvd_score += self._penalty_score
-
-        return rcvd_score
-
     # particular feature and method
-    def get_mime_score(self):
-        mime_score = self.INIT_SCORE
-        # 7. MIME-headers checks
-        logger.debug('>>> 7. MIME_CHECKS:')
 
-        if not self._msg.is_multipart() and self._msg.get('MIME-Version'):
-            mime_score += self._penalty_score
-            logger.debug(mime_score)
 
-        elif not self._msg.is_multipart():
-            logger.debug(mime_score)
+    def get_url_features(self, url_features_list):
 
-        if self._msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self._msg.preamble, re.I):
-            mime_score += self._penalty_score
-            logger.debug('\t----->'+str(mime_score))
+        # 8. URL-checks
+        logger.debug('>>> 8. URL_CHECKS:')
 
-        logger.debug('mime_score: '.upper() +str(mime_score))
+        # ['score', 'upper', 'repetitions', 'punicode', 'domain_name_level', 'avg_len', 'onMouseOver', 'hex', 'at_sign']
+        # URL_UPPER: presense of elements in upper-case in URL
+        # REPETITIONS: presense of repetitions like:
+        # PUNICODE: respectively (very often for russian spams)
+        # DOMAIN NAME LEVEL: very often russian spams are send from third-level domains
+        # URL_AVG_LENGTH: they are short in general, cause of url-short services, etc
+        # todo: many usual and not usual ideas about phising urls:
+        # http://www.isteams.org/conference/pdf/Paper%20111-%20iSTEAMS%202014%20-Asani%20et%20al%20-%20MAXIMUM%20PHISH%20BAIT%20-%20TOWARDS%20FEATURE%20BASED%20DETECTION%20OF%20PHISING%20USING%20MAXIMUM%20ENTROPY%20CLASSIFICATION%20TECHNIQUE.pdf
 
-        return mime_score
+        net_location_list = self.get_net_location_list()
 
-    def get_disp_notification(self):
-        disp_notification = self.INIT_SCORE
-        if self._msg.keys().count('Disposition-Notification-To'):
-            disp_notification = self._penalty_score
+        if not net_location_list:
+            return dict([ (key, self.__dict__[key]) for key in url_features_list ])
 
-        return disp_notification
+        for method in [ unicode.isupper, unicode.istitle ]:
+            self.url_upper += len(filter(lambda s: method(s), net_location_list))*self._penalty_score
+
+        # mostly thinking about shortened urls, created by tinyurl and other services,
+        # but maybe this is weak feature
+        self.url_avg_len = math.ceil(float(sum([len(s) for s in net_location_list]))/len(net_location_list))
+
+        puni_regex = ur'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
+        self.url_punicode = len(filter(lambda u: re.search(puni_regex, u, re.I), net_location_list))*self._penalty_score
+        self.url_domain_name_level = len(filter(lambda n: n>=2, [s.count('.') for s in net_location_list]))*self._penalty_score
+        logger.debug(dict([ (key, self.__dict__[key]) for key in url_features_list ]))
+
+        return dict([ (key, self.__dict__[key]) for key in url_features_list ])
+
+
+
+'''''
+
+
+if __name__ == "__main__":
+
+    formatter = logging.Formatter('%(filename)s: %(message)s')
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    try:
+        pattern = SpamPattern(msg)
+        vector = pattern.run(score)
+        logger.debug(vector)
+
+
+    except Exception as details:
+        raise
+
+'''''
+
+
+from email import parser
+
+parser = parser.Parser()
+with open('/home/calypso/train_dir/abusix/0000006177_1422258740_ff43700.eml', 'rb') as f:
+    m = parser.parse(f)
+	
+			
+'''''
+TODO:
+1. could we somehow change attributes of the python class without making an instance
+compile all regexp by static function - and save in class attributes lists of compiled objects
+2. will it give real increase in runtime
+
+    @staticmethod
+    def compile_regexes(aClass):
+        attrs = [(key, value) for key, value in aClass.__dict__.iteritems() if not key.startswith('__')]
+        attrs = [(k,v) for k,v in attrs if not k.startswith('_')]
+        attrs = [(k,v) for k,v in attrs if type(v) is list]
+
+        comp = [(key, aClass._get_regexp(value)) for key,value in attrs]
+        print([(key, aClass._get_regexp(value)) for key,value in attrs])
+
+
+        print('-----')
+        for key, value in comp:
+            aClass.<key> = value
+
+        return aClass
+
+'''''
 
 

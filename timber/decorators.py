@@ -24,16 +24,7 @@ except ImportError:
 
 #from m_wrapper import BeautifulBody
 
-class FeatureTrigger(object):
-
-    def __init__(self, aClass):
-        self.aClass = aClass
-
-    def __call__(self, *args):
-        self.wrapped = self.aClass(*args)
-        return self
-
-class SpamDecorator(object):
+class HamDecorator(object):
     pass
 
 

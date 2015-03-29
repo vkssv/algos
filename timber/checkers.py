@@ -272,7 +272,7 @@ class URLChecker(object):
 
         return query_absence
 
-'''''
+    '''''
     def get_url_hex(self):
 
         pass
@@ -280,8 +280,281 @@ class URLChecker(object):
     def get_url_onMouseOver(self):
         pass
 
-'''''
+    '''''
 
+class AttachChecker(object):
+    def __init__(self, pattern_obj):
+        print('ATTACH CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
+
+        self.attach_rules = BasePattern.get_regexp(pattern_obj.ATTACH_RULES)
+        self.mime_struct = reduce(add, pattern_obj.get_mime_struct())
+        self.attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), self.mime_struct)
+        self.score = pattern_obj._penalty_score
+        #
+
+        print(pattern_obj.__class__)
+
+        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
+
+        logger.debug("================")
+        print(self.__dict__)
+
+        logger.debug("================")
+
+    def get_attach_count(self):
+
+        logger.debug('MIME STRUCT >>>>>'+str(self.mime_struct())+'/n')
+        attach_attrs = [( x.partition(';')[2]).strip('\r\n\x20') for x in self.attach_attrs ]
+
+        return len(attach_attrs)
+
+    def get_attach_in_score(self):
+
+        in_score = self.score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), self.mime_struct))
+
+        return in_score
+
+    def get_attach_score(self):
+
+        score = self.score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), self.attach_attrs))
+        x = list()
+        for regexp_obj in self.attach_rules:
+            x.extend([value for value in self.attach_attrs if regexp_obj.search(value,re.M)])
+
+        score += self.score*len(x)
+
+        return score
+
+
+class ListChecker(object):
+
+    def __init__(self, pattern_obj):
+        print('LIST CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
+
+        self.attach_rules = BasePattern.get_regexp(pattern_obj.ATTACH_RULES)
+        self.mime_struct = reduce(add, pattern_obj.get_mime_struct())
+        self.attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), self.mime_struct)
+        self.score = pattern_obj._penalty_score
+        #
+
+        print(pattern_obj.__class__)
+
+        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
+
+        logger.debug("================")
+        print(self.__dict__)
+
+        logger.debug("================")
+
+
+    def get_list_score(self):
+
+        #:return: penalizing score for List-* headers
+
+        if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
+            return self.list_score
+
+        # check Reply-To only with infos, cause it is very controversial,
+        # here are only pure RFC 2369 checks
+        # leave Errors-To cause all russian email-market players
+        # put exactly Errors-To in their advertising emails instead of List-Unsubscribe
+        rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
+        presented = [ head for head in rfc_heads if self._msg.keys().count(head) ]
+
+        # alchemy, probably was written just for fun, e.g this body doesn't support RFC 2369 in a proper way ))
+        self.list_score += (len(rfc_heads)-len(presented))*self._penalty_score
+
+        #body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
+        sender_domain = False
+        while not (sender_domain):
+            sender_domain = self.get_smtp_originator_domain()
+            originator = self.get_addr_values(self._msg.get_all('From'))
+            if not originator:
+                return self.list_score
+
+            orig_name, orig_addr = reduce(add, originator)
+            sender_domain = (orig_addr.split('@')[1]).strip()
+
+
+        patterns = [
+                        r'https?:\/\/.*'+sender_domain+'\/.*(listinfo|unsub|email=).*', \
+                        r'mailto:.*@.*\.'+sender_domain+'.*'
+        ]
+
+        for uri in [ heads_dict.get(head) for head in presented ]:
+            if not filter(lambda reg: re.search(reg, uri, re.M), patterns):
+                self.list_score += self._penalty_score
+
+        return self.list_score
+
+
+    def get_delivered_to(self):
+        pass
+
+class OriginatorChecker(object):
+    def get_from_checksum(self):
+        logger.debug('>>> 2. ORIGINATOR_CHECKS:')
+
+        if self._msg.get('From'):
+            name_addr_tuples = self.get_addr_values(self._msg.get_all('From'))[:1]
+            logger.debug('\tFROM:----->'+str(name_addr_tuples))
+            print(name_addr_tuples)
+
+            if len(name_addr_tuples) != 1:
+                logger.warning('\t----->'+str(name_addr_tuples))
+
+            if name_addr_tuples:
+                from_value, from_addr = reduce(add, name_addr_tuples)
+                self.from_checksum = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
+                logger.debug('\t----->'+str(self.from_checksum))
+
+        return self.from_checksum
+
+    # particular feature and method
+    def get_originator_score(self):
+
+        logger.debug('>>> 2. ORIG_CHECKS:')
+
+        if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
+            if self._msg.keys().count('Sender') and self._msg.keys().count('From'):
+                self.forged_sender = self._penalty_score
+                # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
+                # MUA didn't generate Sender field cause of redundancy
+
+        logger.debug('forged_sender '.upper()+str(self.forged_sender))
+        return self.forged_sender
+
+
+class ContentChecker(object):
+    def get_text_score(self, **kwargs):
+
+        #Maps input regexp list to each sentence one by one
+        #:return: penalising score, gained by sentenses
+
+        self.__unpack_arguments('text_regexp_list', **kwargs)
+
+        # precise flag for re.compile ?
+        regs_list = self._get_regexp(self.TEXT_REGEXP_LIST, re.M)
+
+        sents_generator = self.get_sentences()
+        print("sent_lists >>"+str(self.get_sentences()))
+
+        while(True):
+            try:
+                for reg_obj in regs_list:
+                    self.txt_score += len(filter(lambda s: reg_obj.search(s,re.I), next(sents_generator)))*self._penalty_score
+                    print("text_score: "+str(self.txt_score))
+            except StopIteration as err:
+                break
+
+        logger.debug('text_score: '.upper()+str(self.txt_score))
+        return self.txt_score
+
+    def get_html_score(self, **kwargs):
+
+        #1. from the last text/html part creates HTML-body skeleton from end-tags,
+        #    takes checksum from it, cause spammer's and info's/net's HTML patterns
+        #    are mostly the same ;
+        #2. if HTML-body includes table - analyze tags and values inside, cause
+        #    info's and net's HTML-patterns mostly made up with pretty same <tables> ;
+
+        #:param tags_map: expected <tags attribute="value">, described by regexes ;
+        #:return: <penalizing score> and <checksum for body> ;
+
+        self.__unpack_arguments('html_tags_map', **kwargs)
+        attr_value_pair = namedtuple('attr_value_pair', 'name value')
+
+        print("tags_map: "+str(self.HTML_TAGS_MAP))
+
+        soups_list = self.get_html_parts()
+
+        while(True):
+            try:
+                soup = next(soups_list)
+            except StopIteration as err:
+                return self.html_score
+
+                if not soup.body.table:
+                    continue
+
+                # analyze tags and their attributes
+                soup_attrs_list = filter(lambda y: y, [ x.attrs.items() for x in soup.body.table.findAll(tag) ])
+                print(soup_attrs_list)
+                logger.debug('soup_attrs_list '+str(soup_attrs_list))
+                if not soup_attrs_list:
+                    continue
+
+                soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
+                print(soup_attrs_list)
+                print('type of parsing line in reg_obj: '+str(type(self.HTML_TAGS_MAP[tag])))
+                compiled_regexp_list = self._get_regexp(self.HTML_TAGS_MAP.get[tag], re.U)
+
+                pairs = list()
+                for key_attr in compiled_regexp_list: # expected_attrs_dict:
+                    print(key_attr)
+                    pairs = filter(lambda pair: key_attr.match(pair.name, re.I), soup_attrs_list)
+                    print(pairs)
+
+                    check_values = list()
+                    if pairs:
+                        check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
+                        self.html_score += self._penalty_score*len(check_values)
+
+        return self.html_score
+
+    def get_html_checksum(self):
+
+        html_skeleton = list()
+        soups_list = self.get_html_parts()
+
+        for s in tuple(soups_list):
+            # get table checksum
+            comments = s.body.findAll( text=lambda text: isinstance(text, Comment) )
+            [comment.extract() for comment in comments]
+            # leave only closing tags struct
+            reg = re.compile(ur'<[a-z]*/[a-z]*>',re.I)
+            # todo: investigate the order of elems within included generators
+            html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(s.body.prettify(), re.M)))
+
+        self.html_checksum = binascii.crc32(''.join(html_skeleton))
+
+        return self.html_checksum
+
+    def get_text_parts_avg_entropy(self):
+
+        #for fun
+        #:return:
+
+        n = 0
+        txt_avg_ent = 0
+        # todo: make n-grams
+        for tokens in self.get_stemmed_tokens():
+            n +=1
+            freqdist = FreqDist(tokens)
+            probs = [freqdist.freq(l) for l in FreqDist(tokens)]
+            print('P >>> '+str(probs))
+            txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
+
+        self.txt_avg_ent = txt_avg_ent/n
+        logger.debug('avg_ent'.upper()+': '+str(self.txt_avg_ent))
+
+        return self.txt_avg_ent
+
+    def get_text_compress_ratio(self):
+
+        #maybe
+        #:return: compress ratio of stemmed text-strings from
+        #all text/mime-parts
+
+        all_text_parts = list(self.get_stemmed_tokens())
+        for x in all_text_parts:
+            logger.debug('>>>> '+str(x))
+        if all_text_parts:
+            all_text = ''.join(reduce(add, all_text_parts))
+            print(type(all_text))
+            self.txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.DEFAULT_CHARSET))))/len(all_text)
+
+        return self.txt_compressed_ratio
 
 if __name__ == "__main__":
     import doctest
