@@ -73,12 +73,9 @@ class BeautifulBody(object):
         self._msg = msg
         logger.debug(type(self._msg))
         logger.debug('BeautifulBody was created'.upper()+' '+str(id(self)))
-        logger.debug(self.__dict__)
         logger.debug("================")
-        logger.debug(BeautifulBody.__dict__)
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-        #(self.url_list, self.netloc_list) = [list()]*2
-
+    
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None):
