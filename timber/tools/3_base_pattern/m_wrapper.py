@@ -9,7 +9,10 @@ which can be checked by rules (features-triggers) from each pattern_class.
 import sys, os, importlib, logging, re, binascii, unicodedata
 import pdb
 
-
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+from nltk.probability import FreqDist, ConditionalFreqDist
 
 from email import iterators, header, utils
 
@@ -18,11 +21,8 @@ from operator import add, itemgetter
 from collections import defaultdict, namedtuple, OrderedDict
 from itertools import islice
 
-from nltk.tokenize import WordPunctTokenizer, PunktSentenceTokenizer
-from nltk.corpus import stopwords
-from nltk.stem import SnowballStemmer
 
-from timber_exceptions import NaturesError
+#from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -46,6 +46,8 @@ class BeautifulBody(object):
     # now can't see any real reason to set default as private attributes,
     # so keep them here
 
+    print('BEAUTIFULBODY ----------> FILL ATTRS TAB')
+
     __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))', re.M)
 
     DEFAULT_MAX_NEST_LEVEL = 30
@@ -53,7 +55,14 @@ class BeautifulBody(object):
     DEFAULT_CHARSET = 'utf-8'
     SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
 
+    # cause inherited from object!
+    __slots__ = ['msg']
+
+    print('BEAUTIFULBODY ----------> CLASS OBJ CREATED')
+
     def __init__(self, msg, **kwds):
+
+        print('IN BEAUTIFULBODY CONSTRUCTOR ----------> FILL INSTANCE TABLE')
 
         if msg.is_multipart():
 
@@ -70,12 +79,9 @@ class BeautifulBody(object):
         self._msg = msg
         logger.debug(type(self._msg))
         logger.debug('BeautifulBody was created'.upper()+' '+str(id(self)))
-        logger.debug(self.__dict__)
-        logger.debug("================")
-        logger.debug(BeautifulBody.__dict__)
+
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
         #(self.url_list, self.netloc_list) = [list()]*2
-
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None):
@@ -105,10 +111,10 @@ class BeautifulBody(object):
             logger.debug('can\'t define language for this token list >> '+str(tokens_list))
             return return_value
 
-    #@lazyproperty
+
     def get_decoded_subj(self):
 
-        parts_list = header.decode_header(self._msg.get('Subject'))
+        parts_list = header.decode_header(self._msg.get('Subject',''))
         logger.debug('parts >>>>>'+str(parts_list))
         subj_line = u''
         encodings_list = list()
@@ -126,7 +132,8 @@ class BeautifulBody(object):
                     continue
 
             subj_line += dammit_obj.unicode_markup + u' '
-            encodings_list.append(dammit_obj.original_encoding)
+            if dammit_obj.original_encoding is not None:
+                encodings_list.append(dammit_obj.original_encoding)
 
         subj_tokens = tuple(subj_line.split())
         lang = self.get_lang(subj_tokens)
@@ -136,6 +143,8 @@ class BeautifulBody(object):
             subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
 
         return (subj_line, subj_tokens, encodings_list)
+
+
 
 '''''
 

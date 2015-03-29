@@ -302,7 +302,7 @@ class InfoPattern(BasePattern):
         logger.debug(self.mime_score)
         return(self.mime_score)
 
-        '''''
+
         # 8. check urls
         logger.debug('>>> 8. URL_CHECKS:')
 
