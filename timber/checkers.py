@@ -122,7 +122,7 @@ class SubjectChecker(object):
         return binascii.crc32(subj_trace)
 
 
-class URLChecker(object):
+class UrlChecker(object):
 
     def __init__(self, pattern_obj):
         print('URL CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')

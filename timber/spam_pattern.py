@@ -6,8 +6,10 @@ import os, sys, logging, re, binascii, math
 
 from operator import add, itemgetter
 from collections import OrderedDict, Counter, namedtuple
+
+import checkers
 from pattern_wrapper import BasePattern
-from checkers import SubjectChecker, URLChecker, AttachChecker, ListChecker, OriginatorChecker, ContentChecker
+
 
 
 logger = logging.getLogger('')
@@ -152,32 +154,28 @@ class SpamPattern(BasePattern):
 
         super(SpamPattern, self).__init__(**kwds)
 
-        #todo: factory method here
-        subject_checker = SubjectChecker(self)
-        url_checker = URLChecker(self)
-        attach_checker = AttachChecker(self)
-        list_checker = ListChecker(self)
-        orig_checker = OriginatorChecker(self)
-        content_checker = ContentChecker(self)
 
-
-        features_map = { 'particular': (lambda name: 'get_'+name+'_score', ['rcvd', 'mime', 'disp_notification'], None),
-                         'subject'   : (lambda name: 'get_subj_'+name, ['score','encoding','style','checksum'], subject_checker),
-                         'url'       : (lambda name: 'get_url_'+name, ['score','avg_len','distinct_count','sender_count',\
-                                                                       'uppercase','punicode','fqdn','ascii','repetitions'], url_checker),
-                         'list'      : (lambda name: 'get_list_'+name, ['score','delivered'], list_checker),
-                         'attach'    : (lambda name: 'get_attach_'+name, ['score','in_score','count'], attach_checker),
-                         'originator': (lambda name: 'get_orig_'+name, ['checksum'], orig_checker),
-                         'content'   : (lambda name: 'get_content_'+name, ['comp_ratio','avg_entropy','txt_score','html_score'], content_checker)
-
+        features_map = {
+                         'score'  : ['rcvd', 'mime', 'disp_notification'],
+                         'sub'    : ['score','encoding','style','checksum'],
+                         'url'    : ['score','avg_len','distinct_count','sender_count',\
+                                        'uppercase','punicode','fqdn','ascii','repetitions'],
+                         'list'   : ['score','delivered'],
+                         'attach' : ['score','in_score','count'],
+                         'orig'   : ['checksum'],
+                         'content': ['comp_ratio','avg_entropy','txt_score','html_score']
         }
 
         for key in features_map.iterkeys():
             logger.debug('Add '+key+'features to '+str(self.__class__))
-            f, features_list, checker_obj = features_map[key]
-            features = map(f,features_list)
-            if checker_obj is None:
+
+            if key == 'score':
+                features = ['get_'+name+'_'+key for name in features_map[key]]
                 checker_obj = self
+            else:
+                features = ['get_'+key+'_'+name for name in features_map[key]]
+                checker_obj = checker.__getattribute__(key.title()+'Checker')
+                checker_obj = checker_obj(self)
 
             functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
             [checker_obj.__setattr__(name, f()) for name,f in functions_map]
