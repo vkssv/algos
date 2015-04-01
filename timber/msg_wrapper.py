@@ -70,8 +70,8 @@ class BeautifulBody(object):
                 if whim(y):
                     raise NaturesError(str(y)+text)
 
-        self._msg = msg
-        logger.debug(type(self._msg))
+        self.msg = msg
+        logger.debug(type(self.msg))
         logger.debug('BeautifulBody was created'.upper()+' '+str(id(self)))
         logger.debug("================")
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
@@ -111,7 +111,7 @@ class BeautifulBody(object):
         :return: left parts of Received header's values, everything before ';'
         '''
         # parse all RCVD headers by default if rcvds_num wasn't defined
-        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self._msg.get_all('Received'))[ -1*rcvds_num : ]
+        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received'))[ -1*rcvds_num : ]
 
         return parsed_rcvds
 
@@ -176,7 +176,7 @@ class BeautifulBody(object):
     #@lazyproperty
     def get_decoded_subj(self):
 
-        parts_list = header.decode_header(self._msg.get('Subject'))
+        parts_list = header.decode_header(self.msg.get('Subject'))
         logger.debug('parts >>>>>'+str(parts_list))
         subj_line = u''
         encodings_list = list()
@@ -216,7 +216,7 @@ class BeautifulBody(object):
         needed_heads = ['content-type', 'content-transfer-encoding', 'content-id', 'content-disposition',\
                       'content-description','content-class']
 
-        for part in self._msg.walk():
+        for part in self.msg.walk():
 
             part_key = 'text/plain'
             # default initialization, but expected that Content-Type always goes first in MIME-headers set for body's part?
@@ -262,7 +262,7 @@ class BeautifulBody(object):
                         'jis'       :  ['shift_jis','ISO-2022-JP','big5']
         }
 
-        for p in iterators.typed_subpart_iterator(self._msg):
+        for p in iterators.typed_subpart_iterator(self.msg):
             (decoded_line, decode_flag, dammit_obj) = [None]*3
             if p.get('Content-Transfer-Encoding'):
                 decode_flag=True
@@ -289,9 +289,9 @@ class BeautifulBody(object):
                         yield(decoded_line, p.get_content_type(), lang)
 
             # from r'(Content|Accept)-Language' headers
-            l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0),self._msg.items()))[-1:]
+            l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0),self.msg.items()))[-1:]
             if l:
-                lang = ''.join(self._msg.get(''.join(l)).split('-')[:1])
+                lang = ''.join(self.msg.get(''.join(l)).split('-')[:1])
 
             yield (decoded_line, p.get_content_type(), lang)
 

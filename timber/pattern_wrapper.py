@@ -45,51 +45,28 @@ class BasePattern(BeautifulBody):
         self._penalty_score = score
 
         super(BasePattern, self).__init__(**kwds)
-        base_features = ['from_checksum', 'list_score', 'all_heads_checksum', 'rcvd_num']
 
-        features_dict = {
-                            'rcpt'    :   ['smtp_to','body_to'],
-                            'dmarc'   :   ['spf','score'],
-                            'mime'    :   ['nest_level','checksum'],
-                            'html'    :   ['checksum','score'],
-                            'txt'     :   ['avg_ent','compressed_ratio','score'],
-                            'attach'  :   ['count','in_score','score']
+        features_map = {
+                            'base'  : ['all_heads_checksum'],
+                            'rcpt'  : ['smtp_to','body_to'],
+                            'dmarc' : ['spf','score'],
+                            'mime'  : ['nest_level','checksum']
+
         }
 
-        total = list()
-        [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
+        for key in features_map.iterkeys():
+            logger.debug('Add '+key+'features to '+str(self.__class__))
 
-        [ self.__setattr__(f, self.INIT_SCORE) for f in (base_features + total) ]
-        print('initialized: '+str(self.__dict__))
+            if key == 'base':
+                features = ['get_'+name for name in features_map[key]]
+            else:
+                features = ['get_'+key+'_'+name for name in features_map[key]]
 
-        self.get_all_heads_checksum()
+            [self.__getattribute__(name)() for name in features]
+        
 
-        self.rcvd_num = self._msg.keys().count('Received')
+        self.rcvd_num = self.msg.keys().count('Received')
         self.__dict__.update(self.get_rcvd_checksum())
-
-        self.get_dmarc_features()
-
-        self.get_from_checksum()
-
-        self.get_rcpts_features()
-
-        self.get_list_score()
-
-        self.get_mime_nest_level()
-        self.get_mime_checksum()
-
-        self.get_attach_features()
-
-        '''''
-        self.get_text_score()
-        self.get_text_parts_avg_entropy()
-        self.get_text_compress_ratio()
-
-        self.get_html_score()
-        self.get_html_checksum()
-        '''''
-
-
 
         logger.debug('BasePattern was created'.upper()+': '+str(id(self)))
         #logger.debug(self.__dict__)
@@ -106,7 +83,7 @@ class BasePattern(BeautifulBody):
     # use it only here for dirty particular needs
     def __unpack_arguments(*args, **kwargs):
         '''
-        :todo: + common value validator
+        #:todo: + common value validator
         '''
         print(args)
         print(type(args))
@@ -119,7 +96,7 @@ class BasePattern(BeautifulBody):
         [self.__setattr__(key,value) for key,value in attrs_to_set]
 
         return
-
+    
     @staticmethod
     def get_regexp(regexp_list, compilation_flag=None):
         '''
@@ -147,7 +124,7 @@ class BasePattern(BeautifulBody):
         sender_domain = False
         while not (sender_domain):
             sender_domain = self.get_smtp_originator_domain()
-            originator = self.get_addr_values(self._msg.get_all('From'))
+            originator = self.get_addr_values(self.msg.get_all('From'))
             if not originator:
                 return self.list_score
 
@@ -156,17 +133,17 @@ class BasePattern(BeautifulBody):
 
     # can be called from each particular pattern with particular excluded_list
     '''''
-    def get_all_heads_checksum(self, **kwargs):
+    def get_all_heads_checksum(self):
         #, excluded_list=None):
         '''
         :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
         :return: <CRC32 from headers names>
         '''
-        logger.debug(self._msg.items())
-        self.__unpack_arguments('excluded_heads', **kwargs)
+        logger.debug(self.msg.items())
+        #self.__unpack_arguments('excluded_heads', **kwargs)
 
-        heads_vector = tuple(map(itemgetter(0), self._msg.items()))
-        heads_dict = dict(self._msg.items())
+        heads_vector = tuple(map(itemgetter(0), self.msg.items()))
+        heads_dict = dict(self.msg.items())
         logger.debug(self.EXCLUDED_HEADS)
 
         #if cls.excluded_list:
@@ -180,7 +157,7 @@ class BasePattern(BeautifulBody):
         return self.all_heads_checksum
 
     # can be called from each particular pattern with particular rcvds_num
-    def get_rcvd_checksum(self, **kwargs):
+    def get_rcvd_checksum(self):
         '''
         :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
         :return: dict {'rcvd_N': CRC32 } from line, formed by parsed values,
@@ -204,14 +181,14 @@ class BasePattern(BeautifulBody):
         # (for different Patterns calculates checksum from different count of parced RCVD headers values)
         # will call it in Pattern's Class constructor and update it's attribute dictionary by rcvd_checksum dict
         logger.debug('rcvd_checksum :'+str(rcvd_checksum))
-        return rcvd_checksum
+        return self.rcvd_checksum
 
     '''''
     def get_dkim_domain(self):
 
-         if filter(lambda value: re.search(from_domain, value), [self._msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]):
+         if filter(lambda value: re.search(from_domain, value), [self.msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]):
             logger.debug(from_domain)
-            logger.debug(str([self._msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]))
+            logger.debug(str([self.msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]))
             self.dkim_domain = from_domain
 
 
@@ -226,12 +203,12 @@ class BasePattern(BeautifulBody):
         features_heads_map = { 'dmarc_spf':'Received-SPF', 'dmarc_dkim':'(DKIM|DomainKey)-Signature' }
 
         # RFC 7001, this header has always to be included
-        if not (self._msg.keys()).count('Authentication-Results'):
+        if not (self.msg.keys()).count('Authentication-Results'):
             return (self.dmarc_spf, self.dmarc_score)
 
         found_heads = list()
         for h in features_heads_map.values():
-            found_heads.extend(filter(lambda z: re.match(h, z, re.I), self._msg.keys()))
+            found_heads.extend(filter(lambda z: re.match(h, z, re.I), self.msg.keys()))
 
         logger.debug('TOTAL:'+str(found_heads))
 
@@ -243,7 +220,7 @@ class BasePattern(BeautifulBody):
         self.dmarc_score += (len(features_heads_map.values()) - len(set(found_heads)))*self._penalty_score
 
         # simple checks for Received-SPF and DKIM/DomainKey-Signature
-        if self._msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self._msg.get('Received-SPF'), re.I):
+        if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
             self.dmarc_spf += self._penalty_score
 
         return (self.dmarc_spf, self.dmarc_score)
@@ -256,7 +233,7 @@ class BasePattern(BeautifulBody):
 
         #for debut works only with To-header values
 
-        name_addr_tuples = self.get_addr_values(self._msg.get_all('To'))
+        name_addr_tuples = self.get_addr_values(self.msg.get_all('To'))
         only_addr_list = map(itemgetter(1), name_addr_tuples)
         logger.debug(only_addr_list)
 
@@ -287,7 +264,6 @@ class BasePattern(BeautifulBody):
         return self.rcpt_body_to, self.rcpt_smtp_to
 
 
-
     def get_mime_nest_level(self):
 
         mime_parts = self.get_mime_struct()
@@ -296,13 +272,13 @@ class BasePattern(BeautifulBody):
         logger.debug('mime_nest_level: '.upper()+str(self.mime_nest_level))
         return self.mime_nest_level
 
-    def get_mime_checksum(self, **kwargs):
+    def get_mime_checksum(self):
 
         #:param excluded_atrs_list: values of uninteresting mime-attrs
         #:return: 42
 
 
-        self.__unpack_arguments('ex_mime_attrs_list', **kwargs)
+        #self.__unpack_arguments('ex_mime_attrs_list', **kwargs)
         logger.debug('EXL:'+str(self.EX_MIME_ATTRS_LIST))
 
         for prefix in self.EX_MIME_ATTRS_LIST:

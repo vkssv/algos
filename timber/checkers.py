@@ -9,6 +9,8 @@ from itertools import ifilterfalse
 
 from pattern_wrapper import BasePattern
 
+INIT_SCORE = BasePattern.INIT_SCORE
+get_regexp = BasePattern.get_regexp
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -24,22 +26,32 @@ except ImportError:
 
 #from m_wrapper import BeautifulBody
 
+'''''
+?? Do I really need it
+class BaseChecker(object):
+
+    #Base Checker class for obtaining
+    #and keeping common Pattern-instance
+    #attributes
+
+
+    INIT_SCORE = BasePattern.INIT_SCORE
+
+    def __init__(self, pattern_obj):
+
+'''''
 
 class SubjectChecker(object):
     '''
-    Base parent class for created all other four pattern classes.
-    Provides some basic checks and metrics for email's headers and bodies.
-    Keeps Frankenstein's DNAs.
+
     '''
     print('SUBJECTCHECKER ----------> CREATE CLASS OBJ TABLE')
 
     print('SUBJECTCHECKER ----------> FINISH CLASS ATTRIBUTE TABLE')
-    # BASE_FEATURES = ('rcvd_traces_num','rcpt_smtp_to', 'rcpt_body_to', 'list', 'avg_entropy')
 
     def __init__(self, pattern_obj):
 
         print('SUBJECTCHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
-
         self.score = pattern_obj._penalty_score
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
         print(pattern_obj.__class__)
@@ -54,7 +66,7 @@ class SubjectChecker(object):
         self.titles_threshold = pattern_obj.SUBJ_TITLES_THRESHOLD
         self.f = pattern_obj.SUBJ_FUNCTION
         print('func '+str(self.f))
-        self.msg_heads_list = pattern_obj._msg.keys()
+        self.msg_heads_list = pattern_obj.msg.keys()
 
         logger.debug('SubjectChecker was created'.upper()+': '+str(id(self)))
 
@@ -98,7 +110,7 @@ class SubjectChecker(object):
 
     def get_subj_style(self):
 
-        subj_style = BasePattern.INIT_SCORE
+        subj_style = INIT_SCORE
         upper_count = len([w for w in self.subj_tokens if w.isupper()])
         title_count = len([w for w in self.subj_tokens if w.istitle()])
 
@@ -144,9 +156,9 @@ class UrlChecker(object):
 
     def get_url_score(self):
 
-        url_score = BasePattern.INIT_SCORE
+        url_score = INIT_SCORE
         reg = namedtuple('reg', 'fqdn txt')
-        regexes = reg(*(BasePattern.get_regexp(l, re.I) for l in (self.obj.URL_FQDN_REGEXP, self.obj.URL_TXT_REGEXP)))
+        regexes = reg(*(get_regexp(l, re.I) for l in (self.obj.URL_FQDN_REGEXP, self.obj.URL_TXT_REGEXP)))
 
         for reg in regexes.fqdn:
             url_score += len([domain for domain in self.urls_domains if reg.search(domain)])*self.score
@@ -181,10 +193,10 @@ class UrlChecker(object):
     def get_url_sender_count(self):
 
         sender_domain = False
-        sender_count = BasePattern.INIT_SCORE
+        sender_count = INIT_SCORE
         while not (sender_domain):
             sender_domain = self.obj.get_smtp_originator_domain()
-            originator = self.obj.get_addr_values(self.obj._msg.get_all('From'))
+            originator = self.obj.get_addr_values(self.obj.msg.get_all('From'))
             if not originator:
                 return sender_count
 
@@ -202,7 +214,7 @@ class UrlChecker(object):
 
         # 8. URL-checks
         logger.debug('>>> 8. URL_CHECKS:')
-        uppercase = BasePattern.INIT_SCORE
+        uppercase = INIT_SCORE
         for method in [ unicode.isupper, unicode.istitle ]:
             uppercase += len(filter(lambda s: method(s), self.urls_domains))*self.score
 
@@ -224,7 +236,7 @@ class UrlChecker(object):
         return domain_name_level
 
     def get_url_ascii(self):
-        ascii = BasePattern.INIT_SCORE
+        ascii = INIT_SCORE
 
         url_lines = [ ''.join(u._asdict().values()) for u in self.urls ]
         if list( x for x in  [line for line in url_lines] if x in string.printable ):
@@ -233,7 +245,7 @@ class UrlChecker(object):
         return ascii
 
     def get_url_sim(self):
-        similarity = BasePattern.INIT_SCORE
+        similarity = INIT_SCORE
 
         for attr in ['path','query']:
             obj_list = [ url.__getattribute__(attr) for url in self.urls ]
@@ -244,7 +256,7 @@ class UrlChecker(object):
 
     def get_url_avg_query_len(self):
 
-        avg_query_len = BasePattern.INIT_SCORE
+        avg_query_len = INIT_SCORE
         lengthes_list = [ len(url.query) for url in self.urls ]
         if lengthes_list:
             avg_query_len = sum(lengthes_list)/len(lengthes_list)
@@ -264,7 +276,7 @@ class UrlChecker(object):
 
     def get_url_query_absence(self):
         # alchemi again
-        query_absence = BasePattern.INIT_SCORE
+        query_absence = INIT_SCORE
         q_list = [u.query for u in self.urls]
         queries_count = float(len(filter(lambda line: line, [ u.query for u in self.urls ])))
         if math.floor(queries_count/float(len(self.urls_list))) == 0.0:
@@ -327,13 +339,13 @@ class AttachChecker(object):
 
 
 class ListChecker(object):
+    '''
 
+    '''
     def __init__(self, pattern_obj):
         print('LIST CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
 
-        self.attach_rules = BasePattern.get_regexp(pattern_obj.ATTACH_RULES)
-        self.mime_struct = reduce(add, pattern_obj.get_mime_struct())
-        self.attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), self.mime_struct)
+        self.obj = pattern_obj
         self.score = pattern_obj._penalty_score
         #
 
@@ -350,27 +362,27 @@ class ListChecker(object):
     def get_list_score(self):
 
         #:return: penalizing score for List-* headers
-
-        if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
-            return self.list_score
+        list_score = INIT_SCORE
+        if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.obj.msg.keys()):
+            return list_score
 
         # check Reply-To only with infos, cause it is very controversial,
         # here are only pure RFC 2369 checks
         # leave Errors-To cause all russian email-market players
         # put exactly Errors-To in their advertising emails instead of List-Unsubscribe
         rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
-        presented = [ head for head in rfc_heads if self._msg.keys().count(head) ]
+        presented = [ head for head in rfc_heads if self.obj.msg.keys().count(head) ]
 
         # alchemy, probably was written just for fun, e.g this body doesn't support RFC 2369 in a proper way ))
-        self.list_score += (len(rfc_heads)-len(presented))*self._penalty_score
+        list_score += (len(rfc_heads)-len(presented))*self.score
 
         #body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
         sender_domain = False
         while not (sender_domain):
-            sender_domain = self.get_smtp_originator_domain()
-            originator = self.get_addr_values(self._msg.get_all('From'))
+            sender_domain = self.obj.get_smtp_originator_domain()
+            originator = self.obj.get_addr_values(self.obj.msg.get_all('From'))
             if not originator:
-                return self.list_score
+                return list_score
 
             orig_name, orig_addr = reduce(add, originator)
             sender_domain = (orig_addr.split('@')[1]).strip()
@@ -383,74 +395,119 @@ class ListChecker(object):
 
         for uri in [ heads_dict.get(head) for head in presented ]:
             if not filter(lambda reg: re.search(reg, uri, re.M), patterns):
-                self.list_score += self._penalty_score
+                list_score += self.score
 
-        return self.list_score
-
+        return list_score
 
     def get_delivered_to(self):
         pass
 
 class OriginatorChecker(object):
+    '''
+    Class keeps trigger-methods for describing
+    originators values by following features:
+    ORIG_CHECKSUM:
+    ORIG_SCORE:
+    '''
+
+    def __init__(self, pattern_obj):
+
+        print('ORIG CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
+        self.obj = pattern_obj
+        self.score = pattern_obj._penalty_score
+
+        print(pattern_obj.__class__)
+
+        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
+
+        logger.debug("================")
+        print(self.__dict__)
+
+        logger.debug("================")
+
     def get_from_checksum(self):
-        logger.debug('>>> 2. ORIGINATOR_CHECKS:')
+        '''
+        :return: ORIG_CHECKSUM from mailbox element
+        of field value (From: <mail-box> <address>)
+        '''
+        logger.debug('>>> 2. ORIGINATOR_FEATURES:')
+        #todo: rfc6854 support of new format lists for From: values
+        name_addr_tuples = self.obj.get_addr_values(self.obj.msg.get_all('From'))[:1]
+        logger.debug('\tFROM:----->'+str(name_addr_tuples))
 
-        if self._msg.get('From'):
-            name_addr_tuples = self.get_addr_values(self._msg.get_all('From'))[:1]
-            logger.debug('\tFROM:----->'+str(name_addr_tuples))
-            print(name_addr_tuples)
+        if len(name_addr_tuples) != 1:
+            logger.warning('\t----->'+str(name_addr_tuples))
 
-            if len(name_addr_tuples) != 1:
-                logger.warning('\t----->'+str(name_addr_tuples))
+        if name_addr_tuples:
+            from_value, from_addr = reduce(add, name_addr_tuples)
+            from_checksum = binascii.crc32(from_value.encode(self.obj.DEFAULT_CHARSET))
+            logger.debug('\t----->'+str(from_checksum))
 
-            if name_addr_tuples:
-                from_value, from_addr = reduce(add, name_addr_tuples)
-                self.from_checksum = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
-                logger.debug('\t----->'+str(self.from_checksum))
-
-        return self.from_checksum
+        return from_checksum
 
     # particular feature and method
     def get_originator_score(self):
+        '''
+        :return: ORIG_SCORE
+        '''
 
         logger.debug('>>> 2. ORIG_CHECKS:')
-
-        if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self._msg.keys()):
-            if self._msg.keys().count('Sender') and self._msg.keys().count('From'):
-                self.forged_sender = self._penalty_score
+        #todo: rfc6854 support of new format lists for From: values
+        if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.obj.msg.keys()):
+            if self.obj.msg.keys().count('Sender') and self.obj.msg.keys().count('From'):
+                forged_sender = self.score
                 # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
                 # MUA didn't generate Sender field cause of redundancy
 
-        logger.debug('forged_sender '.upper()+str(self.forged_sender))
-        return self.forged_sender
+        logger.debug('forged_sender '.upper()+str(forged_sender))
+        return forged_sender
 
 
 class ContentChecker(object):
-    def get_text_score(self, **kwargs):
+    '''
+    Class keeps trigger-methods for describing
+    <mime>/text-parts content by following features:
+    ORIG_CHECKSUM:
+    TXT_SCORE: for plain/text, html/text parts
+    '''
+
+    def __init__(self, pattern_obj):
+
+        print('CONTENT CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
+        self.obj = pattern_obj
+        self.score = pattern_obj._penalty_score
+
+        print(pattern_obj.__class__)
+
+        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
+
+        logger.debug("================")
+        print(self.__dict__)
+
+        logger.debug("=================")
+
+    def get_text_score(self):
 
         #Maps input regexp list to each sentence one by one
-        #:return: penalising score, gained by sentenses
-
-        self.__unpack_arguments('text_regexp_list', **kwargs)
-
+        #:return: penalising score, gained by sentense
         # precise flag for re.compile ?
-        regs_list = self._get_regexp(self.TEXT_REGEXP_LIST, re.M)
+        regs_list = get_regexp(self.obj.TEXT_REGEXP_LIST, re.M)
 
-        sents_generator = self.get_sentences()
-        print("sent_lists >>"+str(self.get_sentences()))
+        sents_generator = self.obj.get_sentences()
+        print("sent_lists >>"+str(self.obj.get_sentences()))
 
         while(True):
             try:
                 for reg_obj in regs_list:
-                    self.txt_score += len(filter(lambda s: reg_obj.search(s,re.I), next(sents_generator)))*self._penalty_score
-                    print("text_score: "+str(self.txt_score))
+                    txt_score += len(filter(lambda s: reg_obj.search(s,re.I), next(sents_generator)))*self.score
+                    print("text_score: "+str(txt_score))
             except StopIteration as err:
                 break
 
-        logger.debug('text_score: '.upper()+str(self.txt_score))
-        return self.txt_score
+        logger.debug('text_score: '.upper()+str(txt_score))
+        return txt_score
 
-    def get_html_score(self, **kwargs):
+    def get_html_score(self):
 
         #1. from the last text/html part creates HTML-body skeleton from end-tags,
         #    takes checksum from it, cause spammer's and info's/net's HTML patterns
@@ -460,19 +517,18 @@ class ContentChecker(object):
 
         #:param tags_map: expected <tags attribute="value">, described by regexes ;
         #:return: <penalizing score> and <checksum for body> ;
-
-        self.__unpack_arguments('html_tags_map', **kwargs)
+        html_score = INIT_SCORE
         attr_value_pair = namedtuple('attr_value_pair', 'name value')
 
-        print("tags_map: "+str(self.HTML_TAGS_MAP))
+        print("tags_map: "+str(self.obj.HTML_TAGS_MAP))
 
-        soups_list = self.get_html_parts()
+        soups_list = self.obj.get_html_parts()
 
         while(True):
             try:
                 soup = next(soups_list)
             except StopIteration as err:
-                return self.html_score
+                return html_score
 
                 if not soup.body.table:
                     continue
@@ -486,8 +542,8 @@ class ContentChecker(object):
 
                 soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
                 print(soup_attrs_list)
-                print('type of parsing line in reg_obj: '+str(type(self.HTML_TAGS_MAP[tag])))
-                compiled_regexp_list = self._get_regexp(self.HTML_TAGS_MAP.get[tag], re.U)
+                print('type of parsing line in reg_obj: '+str(type(self.obj.HTML_TAGS_MAP[tag])))
+                compiled_regexp_list = get_regexp(self.obj.HTML_TAGS_MAP.get[tag], re.U)
 
                 pairs = list()
                 for key_attr in compiled_regexp_list: # expected_attrs_dict:
@@ -498,14 +554,14 @@ class ContentChecker(object):
                     check_values = list()
                     if pairs:
                         check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
-                        self.html_score += self._penalty_score*len(check_values)
+                        html_score += self.score*len(check_values)
 
-        return self.html_score
+        return html_score
 
     def get_html_checksum(self):
 
         html_skeleton = list()
-        soups_list = self.get_html_parts()
+        soups_list = self.obj.get_html_parts()
 
         for s in tuple(soups_list):
             # get table checksum
@@ -516,9 +572,9 @@ class ContentChecker(object):
             # todo: investigate the order of elems within included generators
             html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(s.body.prettify(), re.M)))
 
-        self.html_checksum = binascii.crc32(''.join(html_skeleton))
+        html_checksum = binascii.crc32(''.join(html_skeleton))
 
-        return self.html_checksum
+        return html_checksum
 
     def get_text_parts_avg_entropy(self):
 
@@ -528,17 +584,17 @@ class ContentChecker(object):
         n = 0
         txt_avg_ent = 0
         # todo: make n-grams
-        for tokens in self.get_stemmed_tokens():
+        for tokens in self.obj.get_stemmed_tokens():
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
             print('P >>> '+str(probs))
             txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
 
-        self.txt_avg_ent = txt_avg_ent/n
-        logger.debug('avg_ent'.upper()+': '+str(self.txt_avg_ent))
+        txt_avg_ent = txt_avg_ent/n
+        logger.debug('avg_ent'.upper()+': '+str(txt_avg_ent))
 
-        return self.txt_avg_ent
+        return txt_avg_ent
 
     def get_text_compress_ratio(self):
 
@@ -546,15 +602,16 @@ class ContentChecker(object):
         #:return: compress ratio of stemmed text-strings from
         #all text/mime-parts
 
-        all_text_parts = list(self.get_stemmed_tokens())
+        all_text_parts = list(self.obj.get_stemmed_tokens())
         for x in all_text_parts:
             logger.debug('>>>> '+str(x))
         if all_text_parts:
             all_text = ''.join(reduce(add, all_text_parts))
             print(type(all_text))
-            self.txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.DEFAULT_CHARSET))))/len(all_text)
+            txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.obj.DEFAULT_CHARSET))))/len(all_text)
 
-        return self.txt_compressed_ratio
+        return txt_compressed_ratio
+
 
 if __name__ == "__main__":
     import doctest

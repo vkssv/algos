@@ -11,7 +11,6 @@ import checkers
 from pattern_wrapper import BasePattern
 
 
-
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(filename)s %(message)s')
@@ -56,7 +55,7 @@ class SpamPattern(BasePattern):
 	                        ur'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
                             ur'.*(eml|spam).*',
                             ur'.*(payment|receipt|attach(ed)?|extra\s+inches)',
-                            ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|Только\s+для\s+(владельц.*|директор.*))',
+                            ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|ssТолько\s+для\s+(владельц.*|директор.*))',
                             ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
     ]
 
