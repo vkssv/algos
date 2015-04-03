@@ -47,8 +47,7 @@ class BasePattern(BeautifulBody):
         super(BasePattern, self).__init__(**kwds)
 
         features_map = {
-                            'base'  : ['all_heads_checksum'],
-                            'rcpt'  : ['smtp_to','body_to'],
+                            'base'  : ['all_heads_checksum','rcpt_score'],
                             'dmarc' : ['spf','score'],
                             'mime'  : ['nest_level','checksum']
 
@@ -194,38 +193,37 @@ class BasePattern(BeautifulBody):
 
         return self.dkim_domain
     '''''
-    def get_dmarc_features(self):
+    def get_dmarc_spf(self):
+
+        if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
+            self.dmarc_spf += self._penalty_score
+
+        return self.dmarc_spf
+
+    def get_dmarc_score(self):
 
         #:param score:
         #:param dmarc_heads: list of headers, described in RFC 6376, RFC 7208
         #:return: <DMARC metrics dict>
 
-        features_heads_map = { 'dmarc_spf':'Received-SPF', 'dmarc_dkim':'(DKIM|DomainKey)-Signature' }
+        self.dmarc_score = self.INIT_SCORE
 
         # RFC 7001, this header has always to be included
         if not (self.msg.keys()).count('Authentication-Results'):
-            return (self.dmarc_spf, self.dmarc_score)
+            self.dmarc_score += self._penalty_score
+        #    return (self.dmarc_spf, self.dmarc_score)
 
-        found_heads = list()
-        for h in features_heads_map.values():
-            found_heads.extend(filter(lambda z: re.match(h, z, re.I), self.msg.keys()))
+        dmark_heads = [ 'Received-SPF', 'DKIM-Signature', 'DomainKey-Signature']
+        found = [ head for head in self.msg.keys() if head in dmark_heads ]
+        logger.debug('TOTAL:'+str(found))
 
-        logger.debug('TOTAL:'+str(found_heads))
-
-        # (len(required_heads_list)+1, cause we can find DKIM-Signature and DomainKey-Signature in one doc
-        logger.debug('req_head:'+str(len(features_heads_map.values())))
-        #logger.debug('req_head:'+str(len(required_heads_list)+1))
-        #logger.debug('found:'+str(len(set(total))*score))
-
-        self.dmarc_score += (len(features_heads_map.values()) - len(set(found_heads)))*self._penalty_score
+        self.dmarc_score += (len(dmark_heads) - len(found))*self._penalty_score
 
         # simple checks for Received-SPF and DKIM/DomainKey-Signature
-        if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
-            self.dmarc_spf += self._penalty_score
 
-        return (self.dmarc_spf, self.dmarc_score)
+        return self.dmarc_score
 
-    def get_rcpts_features(self):
+    def get_rcpt_score(self):
 
         #:param score:
         #:return: tuple with penalizing scores for To-header value from body,
@@ -244,30 +242,25 @@ class BasePattern(BeautifulBody):
 
         if not (smtp_to_list or only_addr_list):
             # can't check without data => leave zeros
-            return self.rcpt_smtp_to, self.rcpt_body_to
+            #return self.rcpt_smtp_to, self.rcpt_body_to
+            return self.INIT_SCORE
 
-        for attr, l in zip((self.rcpt_smtp_to, self.rcpt_body_to), (smtp_to_list, only_addr_list)):
-            print(attr)
-            if filter(lambda x: re.search(r'undisclosed-recipients', x, re.I), l):
-                print(attr)
-                print(l)
-                key += self._penalty_score
+        self.rcpt_score = len([value for value in smtp_to_list + only_addr_list if re.search(r'undisclosed-recipients', value, re.I)])*self._penalty_score
 
         if len(only_addr_list) == 1 and ''.join(smtp_to_addr) != ''.join(only_addr_list):
-            self.rcpt_body_to = self._penalty_score
-            logger.debug('\t----->'+str(self.rcpt_body_to))
+            self.rcpt_score += self._penalty_score
+            logger.debug('\t----->'+str(self.rcpt_score))
 
         elif len(only_addr_list) > 2 and smtp_to_addr != '<multiple recipients>':
-            self.rcpt_body_to += self._penalty_score
-            logger.debug('\t----->'+str(self.rcpt_body_to))
+            self.rcpt_score += self._penalty_score
+            logger.debug('\t----->'+str(self.rcpt_score))
 
-        return self.rcpt_body_to, self.rcpt_smtp_to
-
+        return self.rcpt_score
 
     def get_mime_nest_level(self):
 
         mime_parts = self.get_mime_struct()
-        level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
+        self.mime_nest_level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
 
         logger.debug('mime_nest_level: '.upper()+str(self.mime_nest_level))
         return self.mime_nest_level
