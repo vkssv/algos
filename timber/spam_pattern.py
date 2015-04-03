@@ -19,7 +19,7 @@ logger.addHandler(ch)
 
 from email import parser
 parser = parser.Parser()
-with open('/home/calypso/train_dir/abusix/0000006187_1422258870_ff43700.eml','rb') as f:
+with open('/home/valya/flash/pure_spam/bright.eml','rb') as f:
     M = parser.parse(f)
 
 class SpamPattern(BasePattern):

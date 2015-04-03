@@ -43,6 +43,7 @@ class BeautifulBody(object):
     some kind of BeautifulSoup objects from bs4.
 
     """
+
     # now can't see any real reason to set default as private attributes,
     # so keep them here
 
