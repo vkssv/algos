@@ -61,7 +61,8 @@ class BasePattern(BeautifulBody):
             else:
                 features = ['get_'+key+'_'+name for name in features_map[key]]
 
-            [self.__getattribute__(name)() for name in features]
+            functions = [self.__getattribute__(name) for name in features]
+            [f() for f in functions]
         
 
         self.rcvd_num = self.msg.keys().count('Received')
