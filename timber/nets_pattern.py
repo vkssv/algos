@@ -20,7 +20,17 @@ class NetsPattern(BasePattern):
         -- if email looks like notification from SN, it's vector will contain
             values, which are mostly don't equal to zeros ;
     """
-    __RCVDS_NUM = 3
+    excluded_heads = [
+                            'Received', 'X-Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID',\
+                            'Delivered-To', 'Authentication-Results', 'DKIM-Signature','Content-Type'
+                            ]
+
+    RCVDS_NUM = 3
+
+    EMARKET_PATTERN = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|Auto-Response-Suppress)$'
+    KNOWN_MAILERS   = [ r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow' ]
+
+
 
     def run(self, score):
 
@@ -30,10 +40,7 @@ class NetsPattern(BasePattern):
         logger.debug('>>> 1. RCVD_CHECKS:')
 
         # get crc32 of only unique headers and their values
-        excluded_heads = [
-                            'Received', 'X-Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID',\
-                            'Delivered-To', 'Authentication-Results', 'DKIM-Signature','Content-Type'
-                            ]
+
 
         vector_dict.update(self.get_all_heads_crc(excluded_heads))
         logger.debug('\t----->'+str(vector_dict))
@@ -79,8 +86,8 @@ class NetsPattern(BasePattern):
         # 4. special headers checks
         logger.debug('>>> 4. Specific SN-headers checks:')
 
-        heads_pattern = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|Auto-Response-Suppress)$'
-        known_senders = [ r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow' ]
+        heads_pattern =
+        known_senders =
 
         heads_score, known_mailer_flag = self.get_headers_metrics(heads_pattern, known_senders, self._msg.items(), score)
 

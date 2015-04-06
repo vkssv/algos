@@ -2,12 +2,7 @@
 
 import sys, os, importlib, logging, re, binascii, zlib, math
 
-from urlparse import urlparse
-from operator import add, itemgetter
-from collections import defaultdict, namedtuple, Counter, OrderedDict
-from itertools import ifilterfalse
 
-from p_wrapper import BasePattern
 
 
 logger = logging.getLogger('')
@@ -16,11 +11,6 @@ logger.setLevel(logging.DEBUG)
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
-try:
-    from bs4 import BeautifulSoup, Comment
-except ImportError:
-    print('Can\'t find bs4 module, probably, it isn\'t installed.')
-    print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 #from m_wrapper import BeautifulBody
 
@@ -28,5 +18,5 @@ class HamDecorator(object):
     pass
 
 
-class Validator(object):
-    pass
+
+

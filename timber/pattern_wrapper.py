@@ -66,7 +66,7 @@ class BasePattern(BeautifulBody):
         
 
         self.rcvd_num = self.msg.keys().count('Received')
-        self.__dict__.update(self.get_rcvd_checksum())
+        self.get_rcvd_checksum()
 
         logger.debug('BasePattern was created'.upper()+': '+str(id(self)))
         #logger.debug(self.__dict__)
@@ -77,6 +77,11 @@ class BasePattern(BeautifulBody):
         for (k,v) in BasePattern.__dict__.iteritems():
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
+
+    def __getattr__(self, name):
+        print('Can\'t find '+name)
+        self.__dict__[name] = self.INIT_SCORE
+        return self.name
 
 
     @staticmethod

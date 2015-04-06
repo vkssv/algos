@@ -32,6 +32,13 @@ class InfoPattern(BasePattern):
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
     ]
 
+    EMARKET_HEADS = r'^X-(EM(ID|MAIL|V-.*)|SG-.*|(rp)?campaign(id)?)$'
+    KNOWN_MAILERS   = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver' ]
+
+    # take crc32 from the second half (first can vary cause of personalisation, etc)
+    SUBJ_FUNCTION = lambda z,y: y[len(y)/2:]
+    SUBJ_TITLES_THRESHOLD = 3
+
     # try greedy regexes, maybe will precise them in future
     SUBJ_RULES = [
 
@@ -113,33 +120,51 @@ class InfoPattern(BasePattern):
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
         '''
+        print('IN INFO_PATTERN CONSTRUCTOR, DELEGATE INSTANCE CREATION')
 
         super(InfoPattern, self).__init__(**kwds)
 
-        # 0. initialize vector of features explicitly,
-        # for avoiding additional headaches and investigations with Python GC
-        base_features = [
-                            'dmarc_x_heads',
-                            'mime_score'
 
-        ]
-
-        features_dict = {
-                            'emarket': ['score','flag'],
-
-                            #'subj':   ['style','checksum','encoding']
-                            #'url' :   ['upper', 'repetitions', 'punicode', 'domain_name_level',\
-                            #'avg_len', 'onMouseOver', 'hex', 'at_sign'],
+        features_map = {
+                         'score'        : ['mime'],
+                         'subject'      : ['score','len','encoding','style','checksum'],
+                         'emarket'      : ['score','flag'],
+                         'url'          : ['score','count','avg_query_len','distinct_count','sender_count','ascii',\
+                                           'query_sim','path_sim','avg_path_len'],
+                         'list'         : ['score','delivered_to'],
+                         'attach'       : ['score','in_score','count'],
+                         'originator'   : ['checksum'],
+                         'content'      : ['compress_ratio','avg_entropy','txt_score','html_score','html_checksum']
         }
 
-        total = list()
+        for key in features_map.iterkeys():
+            logger.debug('Add '+key+'features to '+str(self.__class__))
 
-        [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
-        # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
-        [ self.__setattr__(f, self.INIT_SCORE) for f in (base_features + total) ]
+            if key == 'score':
+                features = ['get_'+name+'_'+key for name in features_map[key]]
+                checker_obj = self
+            else:
+                features = ['get_'+key+'_'+name for name in features_map[key]]
+                checker_obj = checkers.__getattribute__(key.title()+'Checker')
+                checker_obj = checker_obj(self)
 
-        self.dmarc_x_heads = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self._msg.keys()))
-        self.get_emarket_score()
+            functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
+            [self.__setattr__(name, f()) for name,f in functions_map]
+
+            self.dmarc_x_score = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self._msg.keys()))
+
+
+        logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
+        logger.debug('SpamPattern instance final dict '+str(self.__dict__))
+
+        logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
+        super(InfoPattern, self).__init__(**kwds)
+
+
+
+
 
         # 2. Subject
         #self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
@@ -147,7 +172,7 @@ class InfoPattern(BasePattern):
 
 
         # 6. Checks for MIME attributes
-        self.get_mime_score()
+
 
         # 7. URL-checks
         #self.get_url_features(['url_'+name for name in features_dict.get('url')])
@@ -162,60 +187,7 @@ class InfoPattern(BasePattern):
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-    def get_emarket_score(self):
-            # 4. Presense of X-EMID && X-EMMAIL, etc
-            logger.debug('>>> 4. Specific E-marketing headers checks:')
 
-            head_pattern = r'^X-(EM(ID|MAIL|V-.*)|SG-.*|(rp)?campaign(id)?)$'
-            x_mailer_pattern = r'X-Mailer-.*'
-
-            known_mailers = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver' ]
-
-            func = lambda x,y: re.match(x, y, re.I)
-            emarket_heads_list = set([header for header in self._msg.keys() if func(head_pattern,header)])
-            mailer_heads_list = [mailer_head for mailer_head in self._msg.keys() if func(x_mailer_pattern,mailer_head)]
-
-            self.emarket_score = len(emarket_heads_list)*self._penalty_score
-
-            for h in mailer_heads_list:
-                if filter(lambda reg: re.search(reg, self._msg.get(h), re.I), known_mailers):
-                    self.emarket_flag += self._penalty_score
-
-            return self.emarket_score, self.emarket_glag
-
-
-        def get_subject_features(self):
-            # 4. Subject checks
-            logger.debug('>>> 4. SUBJ CHECKS:')
-
-            features = ('len', 'style', 'score', 'checksum', 'encoding')
-            features_dict = dict(zip(['subj_'+f for f in features], [self.INIT_SCORE]*len(features)))
-
-            if self._msg.get('Subject'):
-
-                total_score = self.INIT_SCORE
-                unicode_subj, tokens, encodings = self.get_decoded_subj()
-
-
-                subj_score, upper_flag, title_flag = self.get_subject_metrics(subject_rules, score)
-                # almoust all words in subj string are Titled
-                if (len(tokens) - title_flag ) < 3:
-                    features_dict['subj_style'] = 1
-
-                # all advertising emails are made up with very similar html-patterns and rules for headers
-                # http://emailmarketing.comm100.com/email-marketing-tutorial/
-                features_dict['subj_len'] = len(tokens)
-                features_dict['subj_score'] = total_score + subj_score
-
-                # in general infos have subj lines in utf-8 or pure ascii
-                if len(set(encodings)) == 1 and set(encodings).issubset(['utf-8','ascii']):
-                    features_dict['encoding'] = 1
-
-                # take crc32 from the second half (first can vary cause of personalisation, etc)
-                subj_trace = tuple([w.encode('utf-8') for w in tokens[len(tokens)/2:]])
-                subj_trace = ''.join(subj_trace[:])
-                logger.debug(subj_trace)
-                features_dict['subj_checksum'] = binascii.crc32(subj_trace)
 
 
 
@@ -284,13 +256,13 @@ class InfoPattern(BasePattern):
 
         logger.debug('>>> 7. MIME CHECKS:')
         logger.debug('IS MULTI >>>>>> '+str(self._msg.is_multipart()))
-        if not self._msg.is_multipart():
+        if not self.msg.is_multipart():
             return self.mime_score
 
         # all infos are attractive nice multiparts...
         self.mime_score += self._penalty_score
 
-        first_content_type = self._msg.get('Content-Type')
+        first_content_type = self.msg.get('Content-Type')
         if 'text/html' in first_content_type and re.search('utf-8', first_content_type, re.I):
             self.mime_score += self._penalty_score
 
@@ -300,51 +272,7 @@ class InfoPattern(BasePattern):
             self.mime_score += self._penalty_score
 
         logger.debug(self.mime_score)
-        return(self.mime_score)
-
-
-        # 8. check urls
-        logger.debug('>>> 8. URL_CHECKS:')
-
-        if not self.url_list:
-
-        if urls_list:
-            logger.debug('URLS_LIST >>>>>'+str(urls_list))
-
-
-
-            basic_features_dict, netloc_list = self.get_url_metrics(regs_for_dom_pt, regs_for_txt_pt, score)
-
-            urls_features = ('query_sim', 'path_sim', 'avg_query_len', 'avg_path_len', 'ascii')
-            # initialize OrderedDict exactly by this way cause of
-            # http://stackoverflow.com/questions/16553506/python-ordereddict-iteration
-            # and vector of metrics is wanted, so order is important
-            print('NETLOC_LIST >>>'+str(netloc_list))
-            print('DICT >>>'+str(basic_features_dict))
-
-            urls_dict = OrderedDict(zip(urls_features, [self.INIT_SCORE]*len(urls_features)))
-
-            url_lines = [ ''.join(u._asdict().values()) for u in urls_list ]
-            if list( x for x in  [line for line in url_lines] if x in string.printable ):
-                urls_dict['ascii'] = score
-
-            for attr in ['path','query']:
-                obj_list = [ url.__getattribute__(attr) for url in urls_list ]
-
-                lengthes_list = [len(line) for line in obj_list]
-                urls_dict['avg_'+attr+'_len'] = sum(lengthes_list)/len(obj_list)
-
-                if math.ceil(float(len(set(obj_list)))/float(len(urls_list))) < 1.0:
-                    urls_dict[attr+'_sim'] = score
-
-        else:
-            basics = ('url_count', 'url_score', 'distinct_count', 'sender_count')
-            basic_features_dict = dict(zip(basics, [self.INIT_SCORE]*len(basics)))
-
-        vector_dict.update(basic_features_dict)
-        vector_dict.update(urls_dict)
-
-
+        return mime_score
 
 if __name__ == "__main__":
 
@@ -363,17 +291,6 @@ if __name__ == "__main__":
     except Exception as details:
         raise
 
-
-    '''''
-		
-
-
-#from info_pattern import InfoPattern
-from email import parser
-
-parser = parser.Parser()
-with open('/home/calypso/train_dir/abusix/0000006177_1422258740_ff43700.eml', 'rb') as f:
-    m = parser.parse(f)
 
 
 	

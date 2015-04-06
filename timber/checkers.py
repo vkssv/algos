@@ -7,6 +7,11 @@ from operator import add, itemgetter
 from collections import defaultdict, namedtuple, Counter, OrderedDict
 from itertools import ifilterfalse
 
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+from nltk.probability import FreqDist, ConditionalFreqDist
+
 from pattern_wrapper import BasePattern
 
 INIT_SCORE = BasePattern.INIT_SCORE
@@ -24,22 +29,6 @@ except ImportError:
     print('Can\'t find bs4 module, probably, it isn\'t installed.')
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
-#from m_wrapper import BeautifulBody
-
-'''''
-?? Do I really need it
-class BaseChecker(object):
-
-    #Base Checker class for obtaining
-    #and keeping common Pattern-instance
-    #attributes
-
-
-    INIT_SCORE = BasePattern.INIT_SCORE
-
-    def __init__(self, pattern_obj):
-
-'''''
 
 class SubjectChecker(object):
     '''
@@ -78,7 +67,7 @@ class SubjectChecker(object):
 
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-    def get_subj_score(self):
+    def get_subject_score(self):
 
         logger.debug('3. >>> SUBJ_CHECKS')
 
@@ -91,7 +80,8 @@ class SubjectChecker(object):
 
         prefix_heads_map = {
                                 'RE' : ['In-Reply-To', 'Thread(-.*)?', 'References'],
-                                'FW' : ['(X-)?Forward']
+                                'FW' : ['(X-)?Forward'],
+                                'TR' : ['(X-)?Forward'] # for french MUA
         }
 
         for k in prefix_heads_map.iterkeys():
@@ -104,11 +94,11 @@ class SubjectChecker(object):
 
         return subj_score
 
-    def get_subj_encoding(self):
+    def get_subject_encoding(self):
 
         return len(set(self.encodings_list))
 
-    def get_subj_style(self):
+    def get_subject_style(self):
 
         subj_style = INIT_SCORE
         upper_count = len([w for w in self.subj_tokens if w.isupper()])
@@ -119,7 +109,7 @@ class SubjectChecker(object):
 
         return subj_style
 
-    def get_subj_checksum(self):
+    def get_subject_checksum(self):
         # take crc32, make line only from words on even positions, not all
 
         tokens = self.subj_tokens
@@ -132,6 +122,45 @@ class SubjectChecker(object):
         print(binascii.crc32(subj_trace))
 
         return binascii.crc32(subj_trace)
+
+    def get_subject_len(self):
+        return len(self.subj_tokens)
+
+class EMarketHeadsChecker(object):
+
+    def __init__(self, pattern_obj):
+
+        print('EMARKET CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
+        self.obj=pattern_obj
+        self.score = pattern_obj._penalty_score
+        self.f = lambda x,y: re.match(x, y, re.I)
+        #
+
+        print(pattern_obj.__class__)
+
+        logger.debug("================")
+        print(self.__dict__)
+
+        logger.debug("================")
+
+    def get_emarket_score(self):
+        # 4. Presense of X-EMID && X-EMMAIL, etc
+        logger.debug('>>> 4. Specific E-market-headers checks:')
+
+        emarket_heads_list = set([header for header in self.obj.keys() if self.f(self.obj.EMARKET_HEADS, header)])
+
+        return len(emarket_heads_list)*self.score
+
+    def get_emarket_flag(self):
+
+        x_mailer_pattern = r'X-Mailer-.*'
+
+        mailer_names = [mailer_head for mailer_head in self.obj.keys() if self.f(x_mailer_pattern, mailer_head)]
+
+        if [mailer_name for mailer_name in mailer_names if filter(lambda reg: re.search(reg, self.obj.get(mailer_name), re.I), self.obj.KNOWN_MAILERS)]:
+            emarket_flag = self.score
+
+            return emarket_flag
 
 
 class UrlChecker(object):
@@ -315,7 +344,7 @@ class AttachChecker(object):
 
     def get_attach_count(self):
 
-        logger.debug('MIME STRUCT >>>>>'+str(self.mime_struct())+'/n')
+        logger.debug('MIME STRUCT >>>>>'+str(self.mime_struct)+'/n')
         attach_attrs = [( x.partition(';')[2]).strip('\r\n\x20') for x in self.attach_attrs ]
 
         return len(attach_attrs)
@@ -399,7 +428,7 @@ class ListChecker(object):
 
         return list_score
 
-    def get_delivered_to(self):
+    def get_list_delivered_to(self):
         pass
 
 class OriginatorChecker(object):
@@ -425,7 +454,7 @@ class OriginatorChecker(object):
 
         logger.debug("================")
 
-    def get_from_checksum(self):
+    def get_originator_checksum(self):
         '''
         :return: ORIG_CHECKSUM from mailbox element
         of field value (From: <mail-box> <address>)
@@ -486,7 +515,7 @@ class ContentChecker(object):
 
         logger.debug("=================")
 
-    def get_text_score(self):
+    def get_content_txt_score(self):
 
         #Maps input regexp list to each sentence one by one
         #:return: penalising score, gained by sentense
@@ -496,6 +525,7 @@ class ContentChecker(object):
         sents_generator = self.obj.get_sentences()
         print("sent_lists >>"+str(self.obj.get_sentences()))
 
+        txt_score = INIT_SCORE
         while(True):
             try:
                 for reg_obj in regs_list:
@@ -507,7 +537,7 @@ class ContentChecker(object):
         logger.debug('text_score: '.upper()+str(txt_score))
         return txt_score
 
-    def get_html_score(self):
+    def get_content_html_score(self):
 
         #1. from the last text/html part creates HTML-body skeleton from end-tags,
         #    takes checksum from it, cause spammer's and info's/net's HTML patterns
@@ -558,7 +588,7 @@ class ContentChecker(object):
 
         return html_score
 
-    def get_html_checksum(self):
+    def get_content_html_checksum(self):
 
         html_skeleton = list()
         soups_list = self.obj.get_html_parts()
@@ -576,13 +606,13 @@ class ContentChecker(object):
 
         return html_checksum
 
-    def get_text_parts_avg_entropy(self):
+    def get_content_avg_entropy(self):
 
         #for fun
         #:return:
 
         n = 0
-        txt_avg_ent = 0
+        txt_avg_ent = INIT_SCORE
         # todo: make n-grams
         for tokens in self.obj.get_stemmed_tokens():
             n +=1
@@ -596,7 +626,7 @@ class ContentChecker(object):
 
         return txt_avg_ent
 
-    def get_text_compress_ratio(self):
+    def get_content_compress_ratio(self):
 
         #maybe
         #:return: compress ratio of stemmed text-strings from

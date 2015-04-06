@@ -19,7 +19,7 @@ logger.addHandler(ch)
 
 from email import parser
 parser = parser.Parser()
-with open('/home/valya/flash/pure_spam/bright.eml','rb') as f:
+with open('/tmp/20150212_vr2_fn/0000256189_1423726287_43be5950.eml','rb') as f:
     M = parser.parse(f)
 
 class SpamPattern(BasePattern):
@@ -139,6 +139,7 @@ class SpamPattern(BasePattern):
     ]
 
     print('SPAMPATTERN ----------> FISNISH CLASS ATTRIBUTE TABLE')
+
     def __init__(self, **kwds):
         '''
         :param kwds:
@@ -155,14 +156,14 @@ class SpamPattern(BasePattern):
 
 
         features_map = {
-                         'score'  : ['rcvd', 'mime', 'disp_notification'],
-                         'sub'    : ['score','encoding','style','checksum'],
-                         'url'    : ['score','avg_len','distinct_count','sender_count',\
+                         'score'        : ['rcvd', 'mime', 'disp_notification'],
+                         'subject'      : ['score','encoding','style','checksum'],
+                         'url'          : ['score','avg_len','distinct_count','sender_count',\
                                         'uppercase','punicode','fqdn','ascii','repetitions'],
-                         'list'   : ['score','delivered'],
-                         'attach' : ['score','in_score','count'],
-                         'orig'   : ['checksum'],
-                         'content': ['comp_ratio','avg_entropy','txt_score','html_score']
+                         'list'         : ['score','delivered_to'],
+                         'attach'       : ['score','in_score','count'],
+                         'originator'   : ['checksum'],
+                         'content'      : ['compress_ratio','avg_entropy','txt_score','html_score','html_checksum']
         }
 
         for key in features_map.iterkeys():
@@ -173,11 +174,11 @@ class SpamPattern(BasePattern):
                 checker_obj = self
             else:
                 features = ['get_'+key+'_'+name for name in features_map[key]]
-                checker_obj = checker.__getattribute__(key.title()+'Checker')
+                checker_obj = checkers.__getattribute__(key.title()+'Checker')
                 checker_obj = checker_obj(self)
 
             functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
-            [checker_obj.__setattr__(name, f()) for name,f in functions_map]
+            [self.__setattr__(name, f()) for name,f in functions_map]
 
 
         logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
@@ -187,6 +188,12 @@ class SpamPattern(BasePattern):
 
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
+    '''
+    def __getattr__(self, name):
+        print('Can\'t find '+name)
+        self.__dict__[name] = self.INIT_SCORE
+        return self.name
+    '''
 
     def get_rcvd_score(self):
 
@@ -205,14 +212,14 @@ class SpamPattern(BasePattern):
         # 7. MIME-headers checks
         logger.debug('>>> 7. MIME_CHECKS:')
 
-        if not self._msg.is_multipart() and self._msg.get('MIME-Version'):
+        if not self.msg.is_multipart() and self.msg.get('MIME-Version'):
             mime_score += self._penalty_score
             logger.debug(mime_score)
 
-        elif not self._msg.is_multipart():
+        elif not self.msg.is_multipart():
             logger.debug(mime_score)
 
-        if self._msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self._msg.preamble, re.I):
+        if self.msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self.msg.preamble, re.I):
             mime_score += self._penalty_score
             logger.debug('\t----->'+str(mime_score))
 
@@ -220,9 +227,9 @@ class SpamPattern(BasePattern):
 
         return mime_score
 
-    def get_disp_notification(self):
+    def get_disp_notification_score(self):
         disp_notification = self.INIT_SCORE
-        if self._msg.keys().count('Disposition-Notification-To'):
+        if self.msg.keys().count('Disposition-Notification-To'):
             disp_notification = self._penalty_score
 
         return disp_notification
