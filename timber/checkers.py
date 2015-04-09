@@ -147,6 +147,8 @@ class EMarketHeadsChecker(object):
         # 4. Presense of X-EMID && X-EMMAIL, etc
         logger.debug('>>> 4. Specific E-market-headers checks:')
 
+
+
         emarket_heads_list = set([header for header in self.obj.keys() if self.f(self.obj.EMARKET_HEADS, header)])
 
         return len(emarket_heads_list)*self.score
@@ -428,8 +430,31 @@ class ListChecker(object):
 
         return list_score
 
-    def get_list_delivered_to(self):
-        pass
+    def get_list_ext_headers_set(self):
+        ext_heads =  BasePattern.get_regexp([r'(List|Errors)(-.*)?',r'X-(.*-){0,2}Complaints(-To)?', r'X-(.*-){0,2}(Report-)?Abuse'], re.I)
+        found_ext_headers = list()
+        for regexp_obj in ext_heads:
+            found_ext_headers.extend([ head for head in self.obj.msg.keys() if regexp_obj.match(head) ])
+
+        return len(found_ext_headers)*self.score
+
+    def get_list_sender_flag(self):
+        # rfc 2369, 5322, but doesn't support rfc6854
+        originators = set(map(itemgetter(1),[self.obj.get_addr_values(self.obj.msg.get(key)) for key in ['Sender','From']]))
+        # get_addr_values() strips '<>' on boundaries for address values
+        if len(originators) > 1:
+            return self.score
+
+    def get_list_precedence(self):
+        originators = set(map(itemgetter(1),[self.obj.get_addr_values(self.obj.msg.get(key)) for key in ['Sender','From']]))
+        if self.obj.msg.get('Precedence').strip() == 'bulk':
+            return self.score
+
+    def get_list_reply_to(self):
+        originators = map(itemgetter(1),[self.obj.get_addr_values(self.obj.msg.get(key)) for key in ['Sender','Reply-To']])
+        domains = set([ orig.partition('@')[2] for address in originators ])
+        if len(set(domains)) == 1:
+            return self.score
 
 class OriginatorChecker(object):
     '''
@@ -458,6 +483,7 @@ class OriginatorChecker(object):
         '''
         :return: ORIG_CHECKSUM from mailbox element
         of field value (From: <mail-box> <address>)
+        # this trigger is inverse to get_list_sender_flag(), and they are slightly different
         '''
         logger.debug('>>> 2. ORIGINATOR_FEATURES:')
         #todo: rfc6854 support of new format lists for From: values
@@ -485,8 +511,8 @@ class OriginatorChecker(object):
         if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.obj.msg.keys()):
             if self.obj.msg.keys().count('Sender') and self.obj.msg.keys().count('From'):
                 forged_sender = self.score
-                # if we don't have List header, From value has to be equal to Sender value (RFC 5322),
-                # MUA didn't generate Sender field cause of redundancy
+                # if we don't have List header, From value has to be the one (RFC 5322),
+                # MUA didn't generate Sender field with the same name, cause of redundancy
 
         logger.debug('forged_sender '.upper()+str(forged_sender))
         return forged_sender

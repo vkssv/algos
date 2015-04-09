@@ -32,7 +32,8 @@ class InfoPattern(BasePattern):
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
     ]
 
-    EMARKET_HEADS = r'^X-(EM(ID|MAIL|V-.*)|SG-.*|(rp)?campaign(id)?)$'
+    EMARKET_HEADS = r'^(X-)?((EM(ID|MAIL|V-.*)|SG-E?ID|(rp)?campaign(id)?|Feedback(-ID)?)$'
+
     KNOWN_MAILERS   = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver' ]
 
     # take crc32 from the second half (first can vary cause of personalisation, etc)
@@ -129,11 +130,11 @@ class InfoPattern(BasePattern):
                          'score'        : ['mime'],
                          'subject'      : ['score','len','encoding','style','checksum'],
                          'emarket'      : ['score','flag'],
-                         'url'          : ['score','count','avg_query_len','distinct_count','sender_count','ascii',\
+                         'url'          : ['score','count','avg_len','distinct_count','sender_count','ascii',\
                                            'query_sim','path_sim','avg_path_len'],
-                         'list'         : ['score','delivered_to'],
+                         'list'         : ['score', 'ext_headers_set', 'sender_flag', 'precedence', 'reply-to'],
                          'attach'       : ['score','in_score','count'],
-                         'originator'   : ['checksum'],
+                         'originator'   : ['checksum'],  # ['checksum','eq_to_dkim']
                          'content'      : ['compress_ratio','avg_entropy','txt_score','html_score','html_checksum']
         }
 
@@ -162,21 +163,6 @@ class InfoPattern(BasePattern):
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
         super(InfoPattern, self).__init__(**kwds)
 
-
-
-
-
-        # 2. Subject
-        #self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
-
-
-
-        # 6. Checks for MIME attributes
-
-
-        # 7. URL-checks
-        #self.get_url_features(['url_'+name for name in features_dict.get('url')])
-
         logger.debug('InfoPattern was created'.upper()+' :'+str(id(self)))
         #logger.debug(self.__dict__)
         for (k,v) in self.__dict__.iteritems():
@@ -186,70 +172,6 @@ class InfoPattern(BasePattern):
         for (k,v) in self.__dict__.iteritems():
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-
-
-
-
-
-        def get_list_features():
-            # 5. List checks and some other RFC 5322 compliences checks for headers
-            logger.debug('>>> 5. LIST CHECKS:')
-            list_features = ('basic_checks', 'ext_checks','sender','precedence','typical_heads','reply-to','delivered')
-            list_features_dict = dict(zip(['list_'+x for x in list_features], [self.INIT_SCORE]*len(list_features)))
-
-            logger.debug('\t----->'+str(list_features_dict))
-
-            if filter(lambda list_field: re.match('(List|Errors)(-.*)?', list_field,re.I), self._msg.keys()):
-                list_features_dict['basic_checks'] = self.get_list_metrics(score)
-                logger.debug('\t----->'+str(list_features_dict))
-
-            # for old-school style emailings
-            matched = filter(lambda h_name: re.match('List-(Id|Help|Post|Archive)', h_name, re.I), self._msg.keys())
-            list_features_dict['ext_checks'] = len(matched)
-
-            keys = tuple(filter(lambda k: self._msg.get(k), ['From','Sender','Reply-To','Delivered-To','To']))
-            #addr_dict = dict([(k,self.get_addr_values(value)[1][0]) for k,value in zip(keys, tuple([self._msg.get(k) for k in keys]))])
-            logger.debug(str([ self.get_addr_values(self._msg.get_all(k)) for k in keys]))
-            addr_dict = dict([(k, (self.get_addr_values(self._msg.get_all(k)))[0]) for k in keys])
-            logger.debug('>>>>>'+str(addr_dict))
-
-            if addr_dict.get('Sender') and addr_dict.get('Sender') != addr_dict.get('From'):
-                list_features_dict['sender'] = 1
-                logger.debug('\t----->'+str(features_dict))
-
-                if addr_dict.get('Reply-To'):
-                    domains = [(addr_dict.get(n)).partition('@')[2] for n in ['Reply-To','Sender']]
-                    if len(set(domains)) == 1:
-                        list_features_dict['reply-to'] = 1
-
-            if addr_dict.get('Delivered-To') and addr_dict.get('Delivered-To') != addr_dict.get('To'):
-                list_features_dict['delivered'] = 1
-
-            if self._msg.get('Precedence') and self._msg.get('Precedence').strip() == 'bulk':
-                list_features_dict['precedence'] = 1
-
-            for name_reg in [r'Feedback(-ID)?', r'.*Campaign(-ID)?','Complaints(-To)?']:
-                matched_list = filter(lambda head_name: re.match(r'(X-)?'+name_reg,head_name,re.I),self._msg.keys())
-                list_features_dict['typical_heads'] = len(matched_list)
-
-            vector_dict.update(list_features_dict)
-            logger.debug('\t----->'+str(vector_dict))
-
-            # 4. crc for From values
-            # move to BasePattern
-            logger.debug('>>> 6. ORIGINATOR_CHECKS:')
-            vector_dict['from'] = self.INIT_SCORE
-            logger.debug('\t----->'+str(vector_dict))
-
-            if self._msg.get('From'):
-                from_value, from_addr = reduce(add, self.get_addr_values(self._msg.get_all('From')))
-                logger.debug(from_value)
-
-                if from_value:
-                    vector_dict['from_checksum'] = binascii.crc32(from_value.encode(self.DEFAULT_CHARSET))
-                    logger.debug('\t----->'+str(vector_dict))
-
-            logger.debug('\t----->'+str(vector_dict)+'\n')
 
 
     def get_mime_score(self):

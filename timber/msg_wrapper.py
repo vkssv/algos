@@ -162,7 +162,7 @@ class BeautifulBody(object):
         orig_domain = ''
 
         l = filter(lambda value: regexp.search(value), self.get_rcvds())
-        logger.debug(l) # check that regexp matched exactlu first
+        logger.debug(l) # check that regexp matched exactly first
         if l:
             orig_domain = reduce(add,l)
             print('+++++++++++++++++++++++++++++++++++++++')
@@ -178,7 +178,7 @@ class BeautifulBody(object):
     def get_decoded_subj(self):
 
         parts_list = header.decode_header(self.msg.get('Subject'))
-        logger.debug('parts >>>>>'+str(parts_list))
+        logger.debug('subject parts >>>>>'+str(parts_list))
         subj_line = u''
         encodings_list = list()
 

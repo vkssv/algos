@@ -19,7 +19,7 @@ logger.addHandler(ch)
 
 from email import parser
 parser = parser.Parser()
-with open('/tmp/20150212_vr2_fn/0000256189_1423726287_43be5950.eml','rb') as f:
+with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
     M = parser.parse(f)
 
 class SpamPattern(BasePattern):
@@ -160,10 +160,10 @@ class SpamPattern(BasePattern):
                          'subject'      : ['score','encoding','style','checksum'],
                          'url'          : ['score','avg_len','distinct_count','sender_count',\
                                         'uppercase','punicode','fqdn','ascii','repetitions'],
-                         'list'         : ['score','delivered_to'],
+                         'list'         : ['score'],
                          'attach'       : ['score','in_score','count'],
                          'originator'   : ['checksum'],
-                         'content'      : ['compress_ratio','avg_entropy','txt_score','html_score','html_checksum']
+                         'content'      : ['compress_ratio','avg_entropy','txt_score','html_score']
         }
 
         for key in features_map.iterkeys():
