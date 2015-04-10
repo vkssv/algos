@@ -13,6 +13,8 @@ from nltk.stem import SnowballStemmer
 from nltk.probability import FreqDist, ConditionalFreqDist
 
 from pattern_wrapper import BasePattern
+from decorators import validator
+
 
 INIT_SCORE = BasePattern.INIT_SCORE
 get_regexp = BasePattern.get_regexp
@@ -30,6 +32,7 @@ except ImportError:
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 
+@validator
 class SubjectChecker(object):
     '''
 
@@ -40,6 +43,8 @@ class SubjectChecker(object):
 
     def __init__(self, pattern_obj):
 
+        #self.header_value = pattern_obj.get('Subject')
+        # seulement initialization, pas checks
         print('SUBJECTCHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
         self.score = pattern_obj._penalty_score
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
@@ -126,7 +131,17 @@ class SubjectChecker(object):
     def get_subject_len(self):
         return len(self.subj_tokens)
 
+
+@validator
 class EMarketHeadsChecker(object):
+
+    '''
+    1. simply checks just presense or absence of emarket-headers,
+    which are typical for info/nets-email-patterns --> fills  get_emarket_score() attribute
+    (typical pattern's emarket-headers names are defined in pattern_instance.EMARKET_HEADS) ;
+    2. creates list of existed emarket-headers for current msg-instance ;
+    3. checks values of existed emarket-headers with regexp from KNOWN_MAILERS --> fills get_emarket_flag() attribute;
+    '''
 
     def __init__(self, pattern_obj):
 
@@ -155,17 +170,24 @@ class EMarketHeadsChecker(object):
 
     def get_emarket_flag(self):
 
+        emarket_flag = INIT_SCORE
         x_mailer_pattern = r'X-Mailer-.*'
-
         mailer_names = [mailer_head for mailer_head in self.obj.keys() if self.f(x_mailer_pattern, mailer_head)]
 
         if [mailer_name for mailer_name in mailer_names if filter(lambda reg: re.search(reg, self.obj.get(mailer_name), re.I), self.obj.KNOWN_MAILERS)]:
             emarket_flag = self.score
 
-            return emarket_flag
+        return emarket_flag
 
 
+@validator
 class UrlChecker(object):
+    '''
+    returned features values are depended from presense or absence of
+    self.urls (URL list from msg body):
+    if we don't have self.urls => @validator(UrlChecker) initialiases dummy UrlChecker,
+    which will return BasePattern.INIT_SCORE for each method-attribute call
+    '''
 
     def __init__(self, pattern_obj):
         print('URL CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
@@ -324,8 +346,19 @@ class UrlChecker(object):
         pass
 
     '''''
-
+@validator
 class AttachChecker(object):
+
+    '''
+    1. checks attachements count ;
+    2. get_attach_in_score() --> how many "inline" attachements (Content-Disposition attribute value),
+    inlined mailicious attachements are very often in russian spams ;
+    3. check attachments attribute "filename/name" with pattern.ATTACH_RULES;
+
+    returned values are depended from pattern_obj.get_mime_struct().
+    if it returns empty < mime_sctruct > dict --> @validator returns BasePattern.INIT_SCORE for each method-attribute call
+    '''
+
     def __init__(self, pattern_obj):
         print('ATTACH CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
 
@@ -368,7 +401,7 @@ class AttachChecker(object):
 
         return score
 
-
+@validator
 class ListChecker(object):
     '''
 
@@ -378,7 +411,6 @@ class ListChecker(object):
 
         self.obj = pattern_obj
         self.score = pattern_obj._penalty_score
-        #
 
         print(pattern_obj.__class__)
 
@@ -389,6 +421,14 @@ class ListChecker(object):
 
         logger.debug("================")
 
+    def __get_orig_addrs(self, heads_names):
+
+        # msg.get_all cause email.utils.getaddresses(msg.get_all('From')) works properly only with list-type args !
+        raw_values = [ self.obj.msg.get_all(key) for key in heads_names if self.obj.msg.get_all(key)]
+        print(raw_values)
+        self.parsed_addr_list = [self.obj.get_addr_values(value) for value in raw_values ]
+
+        return self.parsed_addr_list
 
     def get_list_score(self):
 
@@ -439,23 +479,32 @@ class ListChecker(object):
         return len(found_ext_headers)*self.score
 
     def get_list_sender_flag(self):
+        list_score = INIT_SCORE
         # rfc 2369, 5322, but doesn't support rfc6854
-        originators = set(map(itemgetter(1),[self.obj.get_addr_values(self.obj.msg.get(key)) for key in ['Sender','From']]))
+        originators = set(map(itemgetter(1), self.__get_orig_addrs(['Sender','From'])))
         # get_addr_values() strips '<>' on boundaries for address values
         if len(originators) > 1:
-            return self.score
+            list_score += self.score
+
+        return list_score
 
     def get_list_precedence(self):
-        originators = set(map(itemgetter(1),[self.obj.get_addr_values(self.obj.msg.get(key)) for key in ['Sender','From']]))
+        list_score = INIT_SCORE
         if self.obj.msg.get('Precedence').strip() == 'bulk':
-            return self.score
+            list_score += self.score
+
+        return list_score
 
     def get_list_reply_to(self):
-        originators = map(itemgetter(1),[self.obj.get_addr_values(self.obj.msg.get(key)) for key in ['Sender','Reply-To']])
+        list_score = INIT_SCORE
+        originators = map(itemgetter(1), self.__get_orig_addrs(['Sender','Reply-To']))
         domains = set([ orig.partition('@')[2] for address in originators ])
         if len(set(domains)) == 1:
-            return self.score
+            list_score += self.score
 
+        return list_score
+
+@validator
 class OriginatorChecker(object):
     '''
     Class keeps trigger-methods for describing

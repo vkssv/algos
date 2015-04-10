@@ -118,6 +118,7 @@ class BeautifulBody(object):
 
     def get_addr_values(self, header_value):
         '''
+        returnes tuple (< mail box name (utf-8)>, < address (without angle braces) >)
         '''
 
         logger.debug('+++++>'+str(header_value))
@@ -210,6 +211,7 @@ class BeautifulBody(object):
 
     def get_mime_struct(self):
         """
+        try to parse
         :return: dict { mime_type  : [attribute : value] }
         """
         mime_parts = defaultdict(list)

@@ -78,6 +78,7 @@ class BasePattern(BeautifulBody):
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
+
     def __getattr__(self, name):
         print('Can\'t find '+name)
         self.__dict__[name] = self.INIT_SCORE
