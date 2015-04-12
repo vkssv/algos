@@ -13,7 +13,7 @@ from nltk.stem import SnowballStemmer
 from nltk.probability import FreqDist, ConditionalFreqDist
 
 from pattern_wrapper import BasePattern
-from decorators import validator
+from decorators import Validator
 
 
 INIT_SCORE = BasePattern.INIT_SCORE
@@ -32,7 +32,7 @@ except ImportError:
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 
-@validator
+#@Validator
 class SubjectChecker(object):
     '''
 
@@ -132,7 +132,7 @@ class SubjectChecker(object):
         return len(self.subj_tokens)
 
 
-@validator
+#@validator
 class EMarketHeadsChecker(object):
 
     '''
@@ -180,7 +180,7 @@ class EMarketHeadsChecker(object):
         return emarket_flag
 
 
-@validator
+#@validator
 class UrlChecker(object):
     '''
     returned features values are depended from presense or absence of
@@ -346,7 +346,7 @@ class UrlChecker(object):
         pass
 
     '''''
-@validator
+#@validator
 class AttachChecker(object):
 
     '''
@@ -401,7 +401,7 @@ class AttachChecker(object):
 
         return score
 
-@validator
+@Validator
 class ListChecker(object):
     '''
 
@@ -409,7 +409,7 @@ class ListChecker(object):
     def __init__(self, pattern_obj):
         print('LIST CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
 
-        self.obj = pattern_obj
+        self.obj = pxattern_obj
         self.score = pattern_obj._penalty_score
 
         print(pattern_obj.__class__)
@@ -504,7 +504,7 @@ class ListChecker(object):
 
         return list_score
 
-@validator
+#@Validator
 class OriginatorChecker(object):
     '''
     Class keeps trigger-methods for describing

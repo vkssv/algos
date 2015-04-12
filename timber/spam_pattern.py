@@ -19,8 +19,8 @@ logger.addHandler(ch)
 
 from email import parser
 parser = parser.Parser()
-#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
-with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
+with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
 
 class SpamPattern(BasePattern):
@@ -180,10 +180,11 @@ class SpamPattern(BasePattern):
                 checker_obj = checker_obj(self)
 
 
-                # ??? probably less memory consuming for each iteration (create one checker instance, compute all features, ),
-                # thought : what if features keeps all pattern's features
-                functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
-                [self.__setattr__(name, f()) for name,f in functions_map]
+            # ??? probably less memory consuming for each iteration (create one checker instance, compute all features, ),
+            # thought : what if features keeps all pattern's features
+
+            functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
+            [self.__setattr__(name, f()) for name,f in functions_map]
 
         logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
         logger.debug('SpamPattern instance final dict '+str(self.__dict__))
