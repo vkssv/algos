@@ -35,10 +35,7 @@ class BasePattern(BeautifulBody):
     '''
 
     INIT_SCORE = 0 # can redifine for particular set of instanses, => use cls./self._INIT_SCORE in code
-
     EX_MIME_ATTRS_LIST=['boundary=','charset=']
-
-    # BASE_FEATURES = ('rcvd_traces_num','rcpt_smtp_to', 'rcpt_body_to', 'list', 'avg_entropy')
 
     def __init__(self, score, **kwds):
 
@@ -61,7 +58,9 @@ class BasePattern(BeautifulBody):
             else:
                 features = ['get_'+key+'_'+name for name in features_map[key]]
 
-            functions = [self.__getattribute__(name) for name in features]
+            functions = [getattr(self, name, lambda : INIT_SCORE) for name in features]
+            print(functions)
+            #functions = [self.__getattribute__(name) for name in features]
             [f() for f in functions]
         
 
@@ -77,13 +76,6 @@ class BasePattern(BeautifulBody):
         for (k,v) in BasePattern.__dict__.iteritems():
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-
-
-    def __getattr__(self, name):
-        print('Can\'t find '+name)
-        self.__dict__[name] = self.INIT_SCORE
-        return self.name
-
 
     @staticmethod
     # use it only here for dirty particular needs
@@ -169,12 +161,14 @@ class BasePattern(BeautifulBody):
         :return: dict {'rcvd_N': CRC32 } from line, formed by parsed values,
                  parser is interested only in servers IPs-literals, domains, etc
         '''
+
         logger.debug('self.RCVDS_NUM: '+str(self.RCVDS_NUM))
         rcvds_vect = self.get_rcvds(self.RCVDS_NUM)
         logger.debug('rcvds_vect:'+str(rcvds_vect))
         rcvd_checksum = {}
 
         for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
+            self.__dict__['rcvd_'+str(n)] = self.INIT_SCORE
             logger.debug(rcvd_line)
             trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
             trace = trace.strip().lower()
@@ -183,11 +177,8 @@ class BasePattern(BeautifulBody):
             self.__dict__['rcvd_'+str(n)] = trace
             rcvd_checksum['rcvd_'+str(n)] = trace
 
-        # don't assign to BasePattern attribute, cause it returns slice of Pattern's Class attributes dictionary,
-        # (for different Patterns calculates checksum from different count of parced RCVD headers values)
-        # will call it in Pattern's Class constructor and update it's attribute dictionary by rcvd_checksum dict
         logger.debug('rcvd_checksum :'+str(rcvd_checksum))
-        return self.rcvd_checksum
+        return rcvd_checksum
 
     '''''
     def get_dkim_domain(self):
@@ -201,6 +192,8 @@ class BasePattern(BeautifulBody):
         return self.dkim_domain
     '''''
     def get_dmarc_spf(self):
+
+        self.dmarc_spf = self.INIT_SCORE
 
         if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
             self.dmarc_spf += self._penalty_score
@@ -274,9 +267,12 @@ class BasePattern(BeautifulBody):
 
     def get_mime_checksum(self):
 
-        #:param excluded_atrs_list: values of uninteresting mime-attrs
-        #:return: 42
+        '''
+        self.EX_MIME_ATTRS_LIST: values of uninteresting mime-attrs
+        :return: 42
+        '''
 
+        self.mime_checksum = self.INIT_SCORE
 
         #self.__unpack_arguments('ex_mime_attrs_list', **kwargs)
         logger.debug('EXL:'+str(self.EX_MIME_ATTRS_LIST))
@@ -287,7 +283,7 @@ class BasePattern(BeautifulBody):
             if items:
                 items = reduce(add, items)
 
-            self.checksum = binascii.crc32(''.join([''.join(i) for i in items]))
+            self.mime_checksum = binascii.crc32(''.join([''.join(i) for i in items]))
 
         logger.debug('mime_checksum: '.upper()+str(self.mime_nest_level))
         return self.mime_checksum

@@ -131,7 +131,6 @@ class SubjectChecker(object):
     def get_subject_len(self):
         return len(self.subj_tokens)
 
-
 @Wrapper
 class EMarketHeadsChecker(object):
 
@@ -346,6 +345,7 @@ class UrlChecker(object):
         pass
 
     '''''
+
 @Wrapper
 class AttachChecker(object):
 
@@ -409,8 +409,7 @@ class ListChecker(object):
     def __init__(self, pattern_obj):
         print('LIST CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
 
-        self.obj = pxattern_obj
-        #self.obj = pattern_obj
+        self.obj = pattern_obj
         self.score = pattern_obj._penalty_score
 
         print(pattern_obj.__class__)
@@ -480,30 +479,30 @@ class ListChecker(object):
         return len(found_ext_headers)*self.score
 
     def get_list_sender_flag(self):
-        list_score = INIT_SCORE
+        sender_flag = INIT_SCORE
         # rfc 2369, 5322, but doesn't support rfc6854
         originators = set(map(itemgetter(1), self.__get_orig_addrs(['Sender','From'])))
         # get_addr_values() strips '<>' on boundaries for address values
         if len(originators) > 1:
-            list_score += self.score
+            sender_flag += self.score
 
-        return list_score
+        return sender_flag
 
     def get_list_precedence(self):
-        list_score = INIT_SCORE
+        precedence_flag = INIT_SCORE
         if self.obj.msg.get('Precedence').strip() == 'bulk':
-            list_score += self.score
+            precedence_flag += self.score
 
-        return list_score
+        return precedence_flag
 
     def get_list_reply_to(self):
-        list_score = INIT_SCORE
+        reply_to_flag = INIT_SCORE
         originators = map(itemgetter(1), self.__get_orig_addrs(['Sender','Reply-To']))
         domains = set([ orig.partition('@')[2] for address in originators ])
         if len(set(domains)) == 1:
-            list_score += self.score
+            reply_to_flag += self.score
 
-        return list_score
+        return reply_to_flag
 
 @Wrapper
 class OriginatorChecker(object):
@@ -535,6 +534,8 @@ class OriginatorChecker(object):
         of field value (From: <mail-box> <address>)
         # this trigger is inverse to get_list_sender_flag(), and they are slightly different
         '''
+
+        from_checksum = INIT_SCORE
         logger.debug('>>> 2. ORIGINATOR_FEATURES:')
         #todo: rfc6854 support of new format lists for From: values
         name_addr_tuples = self.obj.get_addr_values(self.obj.msg.get_all('From'))[:1]
@@ -555,7 +556,7 @@ class OriginatorChecker(object):
         '''
         :return: ORIG_SCORE
         '''
-
+        forged_sender = INIT_SCORE
         logger.debug('>>> 2. ORIG_CHECKS:')
         #todo: rfc6854 support of new format lists for From: values
         if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.obj.msg.keys()):
@@ -708,6 +709,7 @@ class ContentChecker(object):
         #:return: compress ratio of stemmed text-strings from
         #all text/mime-parts
 
+        txt_compressed_ratio = INIT_SCORE
         all_text_parts = list(self.obj.get_stemmed_tokens())
         for x in all_text_parts:
             logger.debug('>>>> '+str(x))

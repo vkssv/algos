@@ -9,8 +9,7 @@ from collections import OrderedDict, Counter, namedtuple
 
 import checkers
 from pattern_wrapper import BasePattern
-
-from decorators import dummy_method
+from decorators import Wrapper
 
 
 logger = logging.getLogger('')
@@ -21,8 +20,8 @@ logger.addHandler(ch)
 
 from email import parser
 parser = parser.Parser()
-with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
-#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
+#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
 
 class SpamPattern(BasePattern):
@@ -178,36 +177,39 @@ class SpamPattern(BasePattern):
                 checker_obj = self
             else:
                 features = ['get_'+key+'_'+name for name in features_map[key]]
+                # initialize  checker_obj with decorated particular Checker class,
+                # see Wrapper class-decorator from decorators.py module
                 checker_obj = checkers.__getattribute__(key.title()+'Checker')
-                print('create checker class from checkers')
+                # if fails in checker_obj.__init__() --> checker_obj will be
+                # intercepted by Wrapper decorated class itself from decorators.py module
                 checker_obj = checker_obj(self)
 
 
-            # ??? probably less memory consuming for each iteration (create one checker instance, compute all features, ),
+            # todo: probably less memory consuming for each iteration (create one checker instance, compute all features, ),
             # thought : what if features keeps all pattern's features
-            print('create func map')
-            functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
-            #functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
+
+            # checker_obj.__getattr__(), which is overloaded in Wrapper class, would be called for instances intercepted by Wrapper ;
+            # checker_obj.__getattr__() raises AttributeError, if attribute-method in < name > wasn't implemented in real Checker instance :
+            # cause this is interface mistake, rooted from code architecture, not from processing email's oddities.
+            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
+
             print('call functions')
-            [self.__setattr__(name, f()) for name,f in functions_map]
+            for name, f in functions_map:
+                feature_value = lambda: BasePattern.INIT_SCORE
+                print(name)
+                print(f)
+                try:
+                    feature_value = f()
+                except Exception as err:
+                    logger.error(str(err).upper())
+                    pass
+
+                self.__setattr__(name, feature_value)
 
         logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
         logger.debug('SpamPattern instance final dict '+str(self.__dict__))
-
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
-
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-
-
-    '''''
-    def __getattr__(self, name):
-        print('Can\'t find here '+name)
-        self.__dict__[name] = self.INIT_SCORE
-        if callable(getattr(self, name)):
-            self.__dict__[name] = (lambda x: INIT_SCORE)
-
-        return getattr(self, name)
-    '''''
 
 
     def get_rcvd_score(self):
@@ -223,6 +225,7 @@ class SpamPattern(BasePattern):
 
     # particular feature and method
     def get_mime_score(self):
+
         mime_score = self.INIT_SCORE
         # 7. MIME-headers checks
         logger.debug('>>> 7. MIME_CHECKS:')
@@ -243,6 +246,7 @@ class SpamPattern(BasePattern):
         return mime_score
 
     def get_disp_notification_score(self):
+
         disp_notification = self.INIT_SCORE
         if self.msg.keys().count('Disposition-Notification-To'):
             disp_notification = self._penalty_score
