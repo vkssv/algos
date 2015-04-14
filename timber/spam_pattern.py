@@ -9,7 +9,6 @@ from collections import OrderedDict, Counter, namedtuple
 
 import checkers
 from pattern_wrapper import BasePattern
-from decorators import Wrapper
 
 
 logger = logging.getLogger('')
@@ -166,6 +165,7 @@ class SpamPattern(BasePattern):
                          'attach'       : ['score','in_score','count'],
                          'originator'   : ['checksum'],
                          'content'      : ['compress_ratio','avg_entropy','txt_score','html_score']
+                         # would it be usefull compress_ratio for spams (search consequences here)
         }
 
         for key in features_map.iterkeys():
@@ -195,7 +195,7 @@ class SpamPattern(BasePattern):
 
             print('call functions')
             for name, f in functions_map:
-                feature_value = lambda: BasePattern.INIT_SCORE
+                feature_value = lambda: self.INIT_SCORE
                 print(name)
                 print(f)
                 try:

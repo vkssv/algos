@@ -44,9 +44,6 @@ class BeautifulBody(object):
 
     """
 
-    # now can't see any real reason to set default as private attributes,
-    # so keep them here
-
     __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))', re.M)
 
     DEFAULT_MAX_NEST_LEVEL = 30
@@ -54,7 +51,7 @@ class BeautifulBody(object):
     DEFAULT_CHARSET = 'utf-8'
     SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
 
-    # cause inherited from object!
+    # BeautifulBody inherited from object! ??
     __slots__ = ['msg']
 
     def __init__(self, msg, **kwds):
@@ -67,16 +64,15 @@ class BeautifulBody(object):
             ]
 
             for whim, f, text in be_picky:
-                y=f(msg) # cause don't want to calculate it again in exception's text
+                y=f(msg) # cause don't want to calculate nested mime-parts count again in exception's text
                 if whim(y):
                     raise NaturesError(str(y)+text)
 
         self.msg = msg
-        logger.debug(type(self.msg))
-        logger.debug('BeautifulBody was created'.upper()+' '+str(id(self)))
-        logger.debug("================")
-        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
+        #logger.debug('BeautifulBody was created'.upper()+' '+str(id(self)))
+        #logger.debug("================")
+        #logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None):

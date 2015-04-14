@@ -5,8 +5,6 @@ from pattern_wrapper import BasePattern
 
 INIT_SCORE = BasePattern.INIT_SCORE
 
-
-
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 #formatter = logging.Formatter('%(filename)s: %(message)s')
@@ -14,10 +12,9 @@ logger.setLevel(logging.DEBUG)
 #logger.addHandler(ch)
 
 
-#from m_wrapper import BeautifulBody
-
 class HamDecorator(object):
     pass
+
 
 class Wrapper(object):
     '''
@@ -48,7 +45,7 @@ class Wrapper(object):
         return self.checker_inst
 
     def __getattr__(self, attr_name):
-        return lambda : BasePattern.INIT_SCORE
+        return lambda : INIT_SCORE
 
 
 

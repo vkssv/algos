@@ -7,13 +7,21 @@ import os, sys, logging, re, binascii, math, string
 from operator import add
 from collections import OrderedDict, Counter
 
+import checkers
 from pattern_wrapper import BasePattern
+
 
 formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler(sys.stdout)
 logger.addHandler(ch)
+
+from email import parser
+parser = parser.Parser()
+#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
+    M = parser.parse(f)
 
 
 class InfoPattern(BasePattern):
@@ -121,8 +129,6 @@ class InfoPattern(BasePattern):
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
         '''
-        print('IN INFO_PATTERN CONSTRUCTOR, DELEGATE INSTANCE CREATION')
-
         super(InfoPattern, self).__init__(**kwds)
 
 
@@ -130,16 +136,17 @@ class InfoPattern(BasePattern):
                          'score'        : ['mime'],
                          'subject'      : ['score','len','encoding','style','checksum'],
                          'emarket'      : ['score','flag'],
-                         'url'          : ['score','count','avg_len','distinct_count','sender_count','ascii',\
-                                           'query_sim','path_sim','avg_path_len'],
-                         'list'         : ['score', 'ext_headers_set', 'sender_flag', 'precedence', 'reply-to'],
-                         'attach'       : ['score','in_score','count'],
+                         'url'          : ['score','count','avg_len','distinct_count','sender_count','ascii','sim'],
+                         'list'         : ['score', 'ext_headers_set', 'sender_flag', 'precedence', 'reply_to'], #delivered-to
+                         'attaches'       : ['score','in_score','count'],
                          'originator'   : ['checksum'],  # ['checksum','eq_to_dkim']
                          'content'      : ['compress_ratio','avg_entropy','txt_score','html_score','html_checksum']
         }
 
-        for key in features_map.iterkeys():
-            logger.debug('Add '+key+'features to '+str(self.__class__))
+        logger.debug('Start vectorize msg with rules from InfoPattern...')
+
+        for n, key in enumerate(features_map.keys(),start=1):
+            logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: '+str(self.__class__))
 
             if key == 'score':
                 features = ['get_'+name+'_'+key for name in features_map[key]]
@@ -149,35 +156,39 @@ class InfoPattern(BasePattern):
                 checker_obj = checkers.__getattribute__(key.title()+'Checker')
                 checker_obj = checker_obj(self)
 
-            functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
-            [self.__setattr__(name, f()) for name,f in functions_map]
+            logger.debug('Instance of '+str(checker_obj.__class__)+' was initialized:')
+            logger.debug('>> '+str(checker_obj.__dict__))
+            logger.debug("================")
 
-            self.dmarc_x_score = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self._msg.keys()))
+            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
 
+            for name, f in functions_map:
+                feature_value = self.INIT_SCORE
+                print(name)
+                print(f)
+                try:
+                    feature_value = f()
+                except Exception as err:
+                    logger.error(str(f)+' : '+str(err))
+                    pass
 
-        logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
-        logger.debug('SpamPattern instance final dict '+str(self.__dict__))
+                self.__setattr__(name, feature_value)
+
+            self.dmarc_x_score = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self.msg.keys()))
+
+        logger.debug('\n>> info-features vector : \n'.upper())
+        for (k,v) in self.__dict__.iteritems():
+            logger.debug('>>> '+str(k).upper()+' ==> '+str(v).upper())
 
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
-
-        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-        super(InfoPattern, self).__init__(**kwds)
-
-        logger.debug('InfoPattern was created'.upper()+' :'+str(id(self)))
-        #logger.debug(self.__dict__)
-        for (k,v) in self.__dict__.iteritems():
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
-        logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
-        #logger.debug(SpamPattern.__dict__)
-        for (k,v) in self.__dict__.iteritems():
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
     def get_mime_score(self):
 
-        logger.debug('>>> 7. MIME CHECKS:')
-        logger.debug('IS MULTI >>>>>> '+str(self._msg.is_multipart()))
+        self.mime_score = self.INIT_SCORE
+        #logger.debug('>>> 7. MIME CHECKS:')
+        #logger.debug('IS MULTI >>>>>> '+str(self.msg.is_multipart()))
         if not self.msg.is_multipart():
             return self.mime_score
 
@@ -193,9 +204,12 @@ class InfoPattern(BasePattern):
         if (mime_skeleton.keys()).count('text/html') and 'inline' in mime_skeleton.get('text/html'):
             self.mime_score += self._penalty_score
 
-        logger.debug(self.mime_score)
-        return mime_score
+        logger.debug('>>> MIME_SCORE: '+str(self.mime_score))
 
+        return self.mime_score
+
+
+'''''
 if __name__ == "__main__":
 
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
@@ -212,7 +226,7 @@ if __name__ == "__main__":
 
     except Exception as details:
         raise
-
+'''''
 
 
 	

@@ -37,40 +37,17 @@ class SubjectChecker(object):
     '''
 
     '''
-    print('SUBJECTCHECKER ----------> CREATE CLASS OBJ TABLE')
-
-    print('SUBJECTCHECKER ----------> FINISH CLASS ATTRIBUTE TABLE')
 
     def __init__(self, pattern_obj):
 
-        #self.header_value = pattern_obj.get('Subject')
-        # seulement initialization, pas checks
-        print('SUBJECTCHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
         self.score = pattern_obj._penalty_score
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
-        print(pattern_obj.__class__)
         self.subj_rules = BasePattern.get_regexp(pattern_obj.SUBJ_RULES)
-
-
-
         self.f = pattern_obj.SUBJ_FUNCTION
-        print(self.f)
-
         # magic number !
         self.titles_threshold = pattern_obj.SUBJ_TITLES_THRESHOLD
         self.f = pattern_obj.SUBJ_FUNCTION
-        print('func '+str(self.f))
         self.msg_heads_list = pattern_obj.msg.keys()
-
-        logger.debug('SubjectChecker was created'.upper()+': '+str(id(self)))
-
-        logger.debug("================")
-        print(self.__dict__)
-
-        logger.debug("================")
-
-
-        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
     def get_subject_score(self):
 
@@ -132,7 +109,7 @@ class SubjectChecker(object):
         return len(self.subj_tokens)
 
 @Wrapper
-class EMarketHeadsChecker(object):
+class EmarketChecker(object):
 
     '''
     1. simply checks just presense or absence of emarket-headers,
@@ -144,27 +121,14 @@ class EMarketHeadsChecker(object):
 
     def __init__(self, pattern_obj):
 
-        print('EMARKET CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
         self.obj=pattern_obj
         self.score = pattern_obj._penalty_score
         self.f = lambda x,y: re.match(x, y, re.I)
-        #
-
-        print(pattern_obj.__class__)
-
-        logger.debug("================")
-        print(self.__dict__)
-
-        logger.debug("================")
 
     def get_emarket_score(self):
         # 4. Presense of X-EMID && X-EMMAIL, etc
         logger.debug('>>> 4. Specific E-market-headers checks:')
-
-
-
         emarket_heads_list = set([header for header in self.obj.keys() if self.f(self.obj.EMARKET_HEADS, header)])
-
         return len(emarket_heads_list)*self.score
 
     def get_emarket_flag(self):
@@ -189,22 +153,11 @@ class UrlChecker(object):
     '''
 
     def __init__(self, pattern_obj):
-        print('URL CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
 
         self.obj = pattern_obj
         self.urls = pattern_obj.get_url_obj_list()
         self.urls_domains = pattern_obj.get_net_location_list()
         self.score = pattern_obj._penalty_score
-        #
-
-        print(pattern_obj.__class__)
-
-        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
-
-        logger.debug("================")
-        print(self.__dict__)
-
-        logger.debug("================")
 
     def get_url_score(self):
 
@@ -347,7 +300,7 @@ class UrlChecker(object):
     '''''
 
 @Wrapper
-class AttachChecker(object):
+class AttachesChecker(object):
 
     '''
     1. checks attachements count ;
@@ -360,37 +313,26 @@ class AttachChecker(object):
     '''
 
     def __init__(self, pattern_obj):
-        print('ATTACH CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
 
-        self.attach_rules = BasePattern.get_regexp(pattern_obj.ATTACH_RULES)
+        self.attach_rules = BasePattern.get_regexp(pattern_obj.ATTACHES_RULES)
         self.mime_struct = reduce(add, pattern_obj.get_mime_struct())
         self.attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), self.mime_struct)
         self.score = pattern_obj._penalty_score
-        #
 
-        print(pattern_obj.__class__)
-
-        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
-
-        logger.debug("================")
-        print(self.__dict__)
-
-        logger.debug("================")
-
-    def get_attach_count(self):
+    def get_attaches_count(self):
 
         logger.debug('MIME STRUCT >>>>>'+str(self.mime_struct)+'/n')
         attach_attrs = [( x.partition(';')[2]).strip('\r\n\x20') for x in self.attach_attrs ]
 
         return len(attach_attrs)
 
-    def get_attach_in_score(self):
+    def get_attaches_in_score(self):
 
         in_score = self.score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), self.mime_struct))
 
         return in_score
 
-    def get_attach_score(self):
+    def get_attaches_score(self):
 
         score = self.score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), self.attach_attrs))
         x = list()
@@ -407,25 +349,15 @@ class ListChecker(object):
 
     '''
     def __init__(self, pattern_obj):
-        print('LIST CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
 
         self.obj = pattern_obj
         self.score = pattern_obj._penalty_score
-
-        print(pattern_obj.__class__)
-
-        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
-
-        logger.debug("================")
-        print(self.__dict__)
-
-        logger.debug("================")
 
     def __get_orig_addrs(self, heads_names):
 
         # msg.get_all cause email.utils.getaddresses(msg.get_all('From')) works properly only with list-type args !
         raw_values = [ self.obj.msg.get_all(key) for key in heads_names if self.obj.msg.get_all(key)]
-        print(raw_values)
+        logger.debug(raw_values)
         self.parsed_addr_list = [self.obj.get_addr_values(value) for value in raw_values ]
 
         return self.parsed_addr_list
@@ -515,18 +447,8 @@ class OriginatorChecker(object):
 
     def __init__(self, pattern_obj):
 
-        print('ORIG CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
         self.obj = pattern_obj
         self.score = pattern_obj._penalty_score
-
-        print(pattern_obj.__class__)
-
-        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
-
-        logger.debug("================")
-        print(self.__dict__)
-
-        logger.debug("================")
 
     def get_originator_checksum(self):
         '''
@@ -579,18 +501,8 @@ class ContentChecker(object):
 
     def __init__(self, pattern_obj):
 
-        print('CONTENT CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
         self.obj = pattern_obj
         self.score = pattern_obj._penalty_score
-
-        print(pattern_obj.__class__)
-
-        logger.debug('URLChecker was created'.upper()+': '+str(id(self)))
-
-        logger.debug("================")
-        print(self.__dict__)
-
-        logger.debug("=================")
 
     def get_content_txt_score(self):
 

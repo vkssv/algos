@@ -51,7 +51,7 @@ class BasePattern(BeautifulBody):
         }
 
         for key in features_map.iterkeys():
-            logger.debug('Add '+key+'features to '+str(self.__class__))
+            logger.debug('Add '+key.upper()+' features set to '+str(self.__class__))
 
             if key == 'base':
                 features = ['get_'+name for name in features_map[key]]
@@ -59,8 +59,8 @@ class BasePattern(BeautifulBody):
                 features = ['get_'+key+'_'+name for name in features_map[key]]
 
             functions = [getattr(self, name, lambda : INIT_SCORE) for name in features]
-            print(functions)
-            #functions = [self.__getattribute__(name) for name in features]
+            logger.debug(functions)
+
             [f() for f in functions]
         
 
@@ -72,28 +72,7 @@ class BasePattern(BeautifulBody):
         for (k,v) in self.__dict__.iteritems():
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug("================")
-        #logger.debug(BasePattern.__dict__)
-        for (k,v) in BasePattern.__dict__.iteritems():
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-
-    @staticmethod
-    # use it only here for dirty particular needs
-    def __unpack_arguments(*args, **kwargs):
-        '''
-        #:todo: + common value validator
-        '''
-        print(args)
-        print(type(args))
-        attrs_to_set = [name for name in args if kwargs.has_key(name)]
-        print('__unpack_arguments: '+str(attrs_to_set))
-        if len(attrs_to_set) == 0:
-            return
-
-        attrs_to_set = [(n.upper(), kwargs.get(n)) for n in attrs_to_set]
-        [self.__setattr__(key,value) for key,value in attrs_to_set]
-
-        return
     
     @staticmethod
     def get_regexp(regexp_list, compilation_flag=None):
@@ -138,7 +117,6 @@ class BasePattern(BeautifulBody):
         :return: <CRC32 from headers names>
         '''
         logger.debug(self.msg.items())
-        #self.__unpack_arguments('excluded_heads', **kwargs)
 
         heads_vector = tuple(map(itemgetter(0), self.msg.items()))
         heads_dict = dict(self.msg.items())
@@ -274,7 +252,6 @@ class BasePattern(BeautifulBody):
 
         self.mime_checksum = self.INIT_SCORE
 
-        #self.__unpack_arguments('ex_mime_attrs_list', **kwargs)
         logger.debug('EXL:'+str(self.EX_MIME_ATTRS_LIST))
 
         for prefix in self.EX_MIME_ATTRS_LIST:
