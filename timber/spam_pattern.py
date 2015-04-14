@@ -10,6 +10,8 @@ from collections import OrderedDict, Counter, namedtuple
 import checkers
 from pattern_wrapper import BasePattern
 
+from decorators import dummy_method
+
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -177,13 +179,16 @@ class SpamPattern(BasePattern):
             else:
                 features = ['get_'+key+'_'+name for name in features_map[key]]
                 checker_obj = checkers.__getattribute__(key.title()+'Checker')
+                print('create checker class from checkers')
                 checker_obj = checker_obj(self)
 
 
             # ??? probably less memory consuming for each iteration (create one checker instance, compute all features, ),
             # thought : what if features keeps all pattern's features
-
+            print('create func map')
             functions_map = [(name.lstrip('get_'), checker_obj.__getattribute__(name)) for name in features]
+            #functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
+            print('call functions')
             [self.__setattr__(name, f()) for name,f in functions_map]
 
         logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
@@ -193,12 +198,17 @@ class SpamPattern(BasePattern):
 
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-    '''
+
+    '''''
     def __getattr__(self, name):
-        print('Can\'t find '+name)
+        print('Can\'t find here '+name)
         self.__dict__[name] = self.INIT_SCORE
-        return self.name
-    '''
+        if callable(getattr(self, name)):
+            self.__dict__[name] = (lambda x: INIT_SCORE)
+
+        return getattr(self, name)
+    '''''
+
 
     def get_rcvd_score(self):
 

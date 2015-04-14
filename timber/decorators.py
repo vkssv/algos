@@ -23,47 +23,60 @@ class HamDecorator(object):
 def dummy_method(*args,**kwargs):
     return INIT_SCORE
 
-class DummyChecker(object):
-    def __getattribute__(self, attr_name):
-        return object.__getattribute__(self, dummy_method)
 
+class Wrapper(object):
+    '''
+    Wrap up classes from checkers.py :
 
-class Validator(object):
+    1. if exception happens on Checker-initialisation stage
+    - returns self instead of wrapped Checker's class ;
+
+    2. if exception happens, when Checker's method-attribute/attribute
+    is called - returns INIT_SCORE instead of attribute and dummy_method
+    instead of attribute-method ;
+
+    3. doesn't handle AttributeError if Checkers class was successfully
+    initialised, cause this is serious lack of implementation ;
+    '''
 
     def __init__(self, checker_obj):
 
         self.checker = checker_obj
 
-    def __call__(self, checker_obj):
+    def __call__(self, *args):
 
         try:
             print('try to init checker')
-            self.checker_inst = self.checker(*args, **kwargs)
+            self.checker_inst = self.checker(*args)
 
         except Exception as err:
             logger.warn('Can\'t initialize '+self.checker.__name__+' class for processing msg!')
-            logger.warn(err)
-            self.checker_inst = DummyChecker()
+            logger.warn('>>>'+str(err))
+            self.checker_inst = self
+            print(self.checker.__name__)
+            print(str(self.checker_inst.__module__))
+            #print(str(self.checker_inst.__class__))
 
         return self.checker_inst
+'''''
 
     def __getattr__(self, attr_name):
+
         print('>>> in Validator get_attr')
+        self.checker_inst.__dict__[attr_name] = INIT_SCORE
+        if callable(getattr(self.checker_inst, attr_name)):
+            self.checker_inst.__dict__[attr_name] = (lambda x: INIT_SCORE)
 
-        try:
-            return getattr(self.checker_inst, attr_name)
+        return getattr(self.checker_inst, attr_name)
 
-        except Exception, err:
-            print('in Validator exception')
-            self.checker_inst.__dict__[attr_name] = INIT_SCORE
-            if callable(getattr(self.checker_inst, attr_name)):
-                self.checker_inst.__dict__[attr_name] = dummy_method
+        
 
-            return getattr(self.checker_inst, attr_name)
+        print(str(self.checker.__name__))
+        print(str(self.checker_inst.__module__))
+
+        return getattr(self.checker_inst, attr_name, INIT_SCORE)
 
 
-
-'''''
 def validator(cls):
 
     class Wrapper(object):
@@ -99,27 +112,6 @@ def validator(cls):
     return Wrapper
 '''''
 
-
-'''''
-class A(object):
-    def __init__(self, m, *args):
-        self.m = m
-
-
-class B(A):
-    def __init__(self, *args):
-        super(B, self).__init__(*args)
-        self.map = {}
-
-    @validator
-    def meth(self):
-        x = self.m.get('kjkj')
-        print(x)
-        print(type(x))
-        return x
-
-
-'''''
 
 
 

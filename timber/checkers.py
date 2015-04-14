@@ -13,7 +13,7 @@ from nltk.stem import SnowballStemmer
 from nltk.probability import FreqDist, ConditionalFreqDist
 
 from pattern_wrapper import BasePattern
-from decorators import Validator
+from decorators import Wrapper
 
 
 INIT_SCORE = BasePattern.INIT_SCORE
@@ -32,7 +32,7 @@ except ImportError:
     print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 
-#@Validator
+@Wrapper
 class SubjectChecker(object):
     '''
 
@@ -132,7 +132,7 @@ class SubjectChecker(object):
         return len(self.subj_tokens)
 
 
-#@validator
+@Wrapper
 class EMarketHeadsChecker(object):
 
     '''
@@ -180,7 +180,7 @@ class EMarketHeadsChecker(object):
         return emarket_flag
 
 
-#@validator
+@Wrapper
 class UrlChecker(object):
     '''
     returned features values are depended from presense or absence of
@@ -346,7 +346,7 @@ class UrlChecker(object):
         pass
 
     '''''
-#@validator
+@Wrapper
 class AttachChecker(object):
 
     '''
@@ -401,7 +401,7 @@ class AttachChecker(object):
 
         return score
 
-@Validator
+@Wrapper
 class ListChecker(object):
     '''
 
@@ -410,6 +410,7 @@ class ListChecker(object):
         print('LIST CHECKER INSTANCE CREATE ----------> FILL INSTANCE TABLE')
 
         self.obj = pxattern_obj
+        #self.obj = pattern_obj
         self.score = pattern_obj._penalty_score
 
         print(pattern_obj.__class__)
@@ -504,7 +505,7 @@ class ListChecker(object):
 
         return list_score
 
-#@Validator
+@Wrapper
 class OriginatorChecker(object):
     '''
     Class keeps trigger-methods for describing
@@ -566,7 +567,7 @@ class OriginatorChecker(object):
         logger.debug('forged_sender '.upper()+str(forged_sender))
         return forged_sender
 
-
+@Wrapper
 class ContentChecker(object):
     '''
     Class keeps trigger-methods for describing
