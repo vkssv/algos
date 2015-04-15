@@ -158,17 +158,6 @@ class BasePattern(BeautifulBody):
         logger.debug('rcvd_checksum :'+str(rcvd_checksum))
         return rcvd_checksum
 
-    '''''
-    def get_dkim_domain(self):
-
-         if filter(lambda value: re.search(from_domain, value), [self.msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]):
-            logger.debug(from_domain)
-            logger.debug(str([self.msg.get(h) for h in ['DKIM', 'DomainKey-Signature']]))
-            self.dkim_domain = from_domain
-
-
-        return self.dkim_domain
-    '''''
     def get_dmarc_spf(self):
 
         self.dmarc_spf = self.INIT_SCORE

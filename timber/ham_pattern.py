@@ -88,100 +88,62 @@ class HamPattern(BasePattern):
 
         super(HamPattern, self).__init__(**kwds)
 
+        def __init__(self, **kwds):
+        '''
+        :param kwds:
+        # todo: initialize each <type>-pattern with it's own penalizing self.score,
+        will be useful in vector-distance calculations, for axes stretching
+
+        :return: expand msg_vector, derived from BasePattern class with
+        less-correlated metrics, which are very typical for spams,
+        '''
+        super(InfoPattern, self).__init__(**kwds)
 
 
-        # 0. initialize vector of features explicitly,
-        # for avoiding additional headaches and investigations with Python GC
-        base_features = [
-                            'rcvd_score',
-                            'forged_sender',
-                            'disp_notification',
-                            'mime_score'
-        ]
-
-        features_dict = {
-                            'subj':   ['style','checksum','encoding'],
-                            'url' :   ['upper', 'repetitions', 'punicode', 'domain_name_level',\
-                                         'avg_len', 'onMouseOver', 'hex', 'at_sign'],
+        features_map = {
+                         'subject'      : ['score','len','style'],
+                         'url'          : ['score','avg_len','absence'],
+                         'content'      : ['txt_score','html_score']
         }
 
-        total = list()
+        logger.debug('Start vectorize msg with rules from InfoPattern...')
 
-        [ total.extend([k+'_'+name for name in features_dict.get(k)]) for k in features_dict.keys() ]
-        # use SpamPattern._INIT_SCORE --> in case we want to assing for SpamPattern some particular _INIT_SCORE
-        [ self.__setattr__(f, self.INIT_SCORE) for f in (base_features + total) ]
+        for n, key in enumerate(features_map.keys(),start=1):
+            logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: '+str(self.__class__))
 
-        # 2. Subject
-        self.get_subj_features(['subj_'+name for name in features_dict.get('subj')])
 
-        # 7. URL-checks
-        self.get_url_features(['url_'+name for name in features_dict.get('url')])
+            features = ['get_'+key+'_'+name for name in features_map[key]]
+            checker_obj = checkers.__getattribute__(key.title()+'Checker')
+            checker_obj = checker_obj(self)
 
-        logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
-        #logger.debug(self.__dict__)
+            logger.debug('Instance of '+str(checker_obj.__class__)+' was initialized:')
+            logger.debug('>> '+str(checker_obj.__dict__))
+            logger.debug("================")
+
+            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
+
+            for name, f in functions_map:
+                feature_value = self.INIT_SCORE
+                print(name)
+                print(f)
+                try:
+                    feature_value = f()
+                except Exception as err:
+                    logger.error(str(f)+' : '+str(err))
+                    pass
+
+                self.__setattr__(name, feature_value)
+
+
+
+        logger.debug('\n>> info-features vector : \n'.upper())
         for (k,v) in self.__dict__.iteritems():
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
+            logger.debug('>>> '+str(k).upper()+' ==> '+str(v).upper())
+
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
-        #logger.debug(SpamPattern.__dict__)
-        for (k,v) in self.__dict__.iteritems():
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-
-        # 1. "Subject:" Header
-        logger.debug('>>> 1. SUBJECT CHECKS:')
-
-        features = ('len','style','score')
-        features_dict = OrderedDict(map(lambda x,y: ('subj_'+x,y), features, [self.INIT_SCORE]*len(features)))
-
-        if self._msg.get('Subject'):
-
-            total_score = self.INIT_SCORE
-            unicode_subj, tokens, encodings = self.get_decoded_subj(self._msg.get("Subject"))
-
-            features_dict['subj_len'] = len(unicode_subj)
-            #if self.MIN_SUBJ_LEN < len(unicode_subj) < self.MAX_SUBJ_LEN:
-            #    features_dict['subj_len'] = 1
-
-            subject_rule = [
-
-            ]
-
-            subj_score, upper_words_num, title_words_num = self.get_subjects_metrics(unicode_subj, subject_rule, self.score)
-
-            #features_dict['subj_style'] = title_words_num
-
-            features_dict['subj_score'] += subj_score
-
-        vector_dict.update(features_dict)
-        logger.debug('\t----->'+str(vector_dict))
-
-        # 2. check urls
-        logger.debug('>>> 2. URL_CHECKS:')
-
-        urls_list = self.get_url_list()
-        urls_features = ('avg_length', 'query_absence', 'url_score')
-        urls_dict = OrderedDict(map(lambda x,y: (x,y), urls_features, [self.INIT_SCORE]*len(urls_features)))
-
-        if urls_list:
-            logger.debug('URLS_LIST >>>>>'+str(urls_list))
-
-            rcvds = self.get_rcvds(self.__RCVDS_NUM)
-            rcvd_vect = tuple([r.partition('by')[0] for r in rcvds])
-
-            d, netloc_list = self.get_url_metrics(urls_list, rcvd_vect, score, domain_regs, regs)
-            urls_dict['url_score'] = d.get('url_score')
-
-            queries_count = float(len(filter(lambda line: line, [ u.query for u in urls_list ])))
-            if math.floor(queries_count/float(len(urls_list))) == 0.0:
-                urls_dict['query_absence'] = score
-
-            length_list = [ len(url) for url in [ obj.geturl() for obj in urls_list ]]
-            urls_dict['avg_length'] = math.ceil(float(sum(length_list))/float(len(urls_list)))
-
-        vector_dict.update(urls_dict)
-
-        logger.debug('>>> 3. BODY\'S TEXT PARTS CHECKS:')
+'''''
 
 
 
@@ -204,7 +166,7 @@ if __name__ == "__main__":
 		raise
 
 			
-
+'''''
 
 		
 

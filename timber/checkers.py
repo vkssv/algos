@@ -142,6 +142,20 @@ class EmarketChecker(object):
 
         return emarket_flag
 
+    def get_emarket_domains_score(self):
+
+        known_domains_score = INIT_SCORE
+
+        for domain_name in self.obj.get_dkim_domains():
+            known_domains_score += len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), self.obj.KNOWN_DOMAINS))*self.score
+
+        return known_domains_score
+
+
+
+
+
+
 
 @Wrapper
 class UrlChecker(object):
@@ -435,6 +449,15 @@ class ListChecker(object):
             reply_to_flag += self.score
 
         return reply_to_flag
+
+    def get_list_delivered_to(self):
+        # in general nets are very personal, so check Delivered-To may be a feature
+        delivered_to_flag = INIT_SCORE
+        values = [self.obj.get_addr_values(self.obj.msg.get_all(name)) for name in ['Delivered-To','To']]
+        if len(set(values)) == 1 :
+            delivered_to_flag += self.score
+
+        return delivered_to_flag
 
 @Wrapper
 class OriginatorChecker(object):

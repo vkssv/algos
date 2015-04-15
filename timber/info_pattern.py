@@ -136,7 +136,7 @@ class InfoPattern(BasePattern):
                          'score'        : ['mime'],
                          'subject'      : ['score','len','encoding','style','checksum'],
                          'emarket'      : ['score','flag'],
-                         'url'          : ['score','count','avg_len','distinct_count','sender_count','ascii','sim'],
+                         'url'          : ['score','count','avg_len','distinct_count','sender_count', 'avg_query_len','sim'],
                          'list'         : ['score', 'ext_headers_set', 'sender_flag', 'precedence', 'reply_to'], #delivered-to
                          'attaches'       : ['score','in_score','count'],
                          'originator'   : ['checksum'],  # ['checksum','eq_to_dkim']

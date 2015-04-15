@@ -114,6 +114,7 @@ class BeautifulBody(object):
 
     def get_addr_values(self, header_value):
         '''
+        :header_value - value of particular header, which can store < mailbox name > + < address >
         returnes tuple (< mail box name (utf-8)>, < address (without angle braces) >)
         '''
 
@@ -170,6 +171,17 @@ class BeautifulBody(object):
             print('ORIG_DOMAINS: '+str(orig_domain))
 
         return orig_domain
+
+    def get_dkim_domains(self):
+        '''
+        returns list of domains, which names were used in DKIM signatures
+        '''
+        # if msg has not these headers one space char will be returned, in case of escaping exceptions
+        values = [ el.split(';') for el in [self.msg.get(dkim_head,'\x20') for dkim_head in ['DKIM-Signature','DomainKey-Signature']]]
+        values = reduce(add,values)
+        values = [i.strip() for i in values if i.strip().startswith('d=')]
+        return [i.strip('d=') for i in values]
+
 
     #@lazyproperty
     def get_decoded_subj(self):
