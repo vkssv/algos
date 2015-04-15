@@ -19,8 +19,8 @@ logger.addHandler(ch)
 
 from email import parser
 parser = parser.Parser()
-#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
-with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
+with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
 
 class SpamPattern(BasePattern):
@@ -227,9 +227,6 @@ class SpamPattern(BasePattern):
     def get_mime_score(self):
 
         mime_score = self.INIT_SCORE
-        # 7. MIME-headers checks
-        logger.debug('>>> 7. MIME_CHECKS:')
-
         if not self.msg.is_multipart() and self.msg.get('MIME-Version'):
             mime_score += self._penalty_score
             logger.debug(mime_score)

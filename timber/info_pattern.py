@@ -19,8 +19,8 @@ logger.addHandler(ch)
 
 from email import parser
 parser = parser.Parser()
-#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
-with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
+with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
 
 
@@ -146,7 +146,7 @@ class InfoPattern(BasePattern):
         logger.debug('Start vectorize msg with rules from InfoPattern...')
 
         for n, key in enumerate(features_map.keys(),start=1):
-            logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: '+str(self.__class__))
+            logger.debug(str(n)+'. Add '+key.upper()+' features-attributes to msg-vector class: '+str(self.__class__))
 
             if key == 'score':
                 features = ['get_'+name+'_'+key for name in features_map[key]]
@@ -186,27 +186,25 @@ class InfoPattern(BasePattern):
 
     def get_mime_score(self):
 
-        self.mime_score = self.INIT_SCORE
-        #logger.debug('>>> 7. MIME CHECKS:')
-        #logger.debug('IS MULTI >>>>>> '+str(self.msg.is_multipart()))
+        mime_score = self.INIT_SCORE
         if not self.msg.is_multipart():
-            return self.mime_score
+            return mime_score
 
         # all infos are attractive nice multiparts...
-        self.mime_score += self._penalty_score
+        mime_score += self._penalty_score
 
         first_content_type = self.msg.get('Content-Type')
         if 'text/html' in first_content_type and re.search('utf-8', first_content_type, re.I):
-            self.mime_score += self._penalty_score
+            mime_score += self._penalty_score
 
         mime_skeleton = self.get_mime_struct()
         logger.debug('MIME STRUCT: '+str(mime_skeleton))
         if (mime_skeleton.keys()).count('text/html') and 'inline' in mime_skeleton.get('text/html'):
-            self.mime_score += self._penalty_score
+            mime_score += self._penalty_score
 
-        logger.debug('>>> MIME_SCORE: '+str(self.mime_score))
+        logger.debug('>>> MIME_SCORE: '+str(mime_score))
 
-        return self.mime_score
+        return mime_score
 
 
 '''''

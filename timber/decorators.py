@@ -22,7 +22,7 @@ class Wrapper(object):
 
     1. if exception happens on Checker-initialisation stage,
     __call__ returns self instead of wrapped Checker's class ;
-    2. overload __getattribute__ to avoid AttributeError exceptions,
+    2. overload __getattr__ to avoid AttributeError exceptions,
     when Checker's attribute methods would be called from Pattern-classes.
 
     '''
@@ -34,13 +34,14 @@ class Wrapper(object):
     def __call__(self, *args):
 
         try:
-            print('try to init checker')
             self.checker_inst = self.checker(*args)
+            logger.debug(str(self.checker_inst.__class__)+' was successfully initialized.')
 
         except Exception as err:
-            logger.warn('Can\'t initialize '+self.checker.__name__+' class for processing msg!')
-            logger.warn('>>>'+str(err))
+            logger.warn('Can\'t initialize '+self.checker.__name__+' for processing msg :')
+            logger.warn('error : '.upper()+str(err))
             self.checker_inst = self
+            logger.debug(str(self.__name__)+' will intercept it.')
 
         return self.checker_inst
 

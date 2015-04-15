@@ -5,12 +5,20 @@
 import os, sys, logging, math
 from collections import OrderedDict, Counter
 
+import checkers
 from pattern_wrapper import BasePattern
 
-#formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(filename)s %(message)s')
+ch = logging.StreamHandler(sys.stdout)
+logger.addHandler(ch)
 
+from email import parser
+parser = parser.Parser()
+with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
+    M = parser.parse(f)
 
 class HamPattern(BasePattern):
     """
@@ -33,17 +41,17 @@ class HamPattern(BasePattern):
 
     TEXT_REGEXP_LIST = [
 
-                        ur'(track(ing)?\s+No|proc(é|e)+d(er)?|interview|invit[eation]|welcom(ing)?|introduc(tion)?|your\s.*(ticket|order)\s.*(\#|№)|day|quarter|inquir[yies])',
-                        ur'(feature|questions?|support|request|contrac?ts?|drafts?|teams?|priorit[yies]|details?|attach(ed)?|communic.*|train(ing)?)',
-                        ur'(propos[eal]|found\s+this|concern(ing|ant)?|remind[ers]|contrac?t|act|s(e|é)curit[yieés]|during\s+.*(the)?\s+period)',
-                        ur'(reports?|logs?|journals?|(re)?scheduled?|(specif[yied]|conference|call)\s+.*time|transfer|cancel(ed)?|payment|work|labour|mis\s+(à|a)\s+jour)',
-                        ur'(profile\s+activation|invit(aion)?|registration|forgot.*password|pre-.*|post-.*|document(ation)?|compte)',
-                        ur'((d\')?expiration|exchange|service|requisition|albeit|compl(é|e)mentaire(es)?|addition(al)?|terms?\s+and\s+conditions?)',
-                        ur'(en\s+invitant|ci-(jointe|dessous)|trans(mette|mis)|souscription|sp(é|e)siale?|procéd[eré]|(e|é)change|us(age|ing|er))',
-                        ur'(valider\s+les?|donnéés|дата|недел|тариф|уведомлен|связ|по\s+причин|магазин|поступил|отмен).*',
-                        ur'(заказ|сч(е|ё)т|предложен|контракт|отмена?|платеж|чек|данн|подтвер(ждение|ит[еть])|билет|номер|трэк|(тех)?поддерж).*',
-                        ur'(аккаунт|парол|доступ|истек[лоает]|договор|справка|интервью|встреча?|приглашен|собеседован|офис|врем|график|адрес).*',
-                        ur'(баланс|детали|выписк|прикреплен|(набор\s)?.*услуг).*'
+                            ur'(track(ing)?\s+No|proc(é|e)+d(er)?|interview|invit[eation]|welcom(ing)?|introduc(tion)?|your\s.*(ticket|order)\s.*(\#|№)|day|quarter|inquir[yies])',
+                            ur'(feature|questions?|support|request|contrac?ts?|drafts?|teams?|priorit[yies]|details?|attach(ed)?|communic.*|train(ing)?)',
+                            ur'(propos[eal]|found\s+this|concern(ing|ant)?|remind[ers]|contrac?t|act|s(e|é)curit[yieés]|during\s+.*(the)?\s+period)',
+                            ur'(reports?|logs?|journals?|(re)?scheduled?|(specif[yied]|conference|call)\s+.*time|transfer|cancel(ed)?|payment|work|labour|mis\s+(à|a)\s+jour)',
+                            ur'(profile\s+activation|invit(aion)?|registration|forgot.*password|pre-.*|post-.*|document(ation)?|compte)',
+                            ur'((d\')?expiration|exchange|service|requisition|albeit|compl(é|e)mentaire(es)?|addition(al)?|terms?\s+and\s+conditions?)',
+                            ur'(en\s+invitant|ci-(jointe|dessous)|trans(mette|mis)|souscription|sp(é|e)siale?|procéd[eré]|(e|é)change|us(age|ing|er))',
+                            ur'(valider\s+les?|donnéés|дата|недел|тариф|уведомлен|связ|по\s+причин|магазин|поступил|отмен).*',
+                            ur'(заказ|сч(е|ё)т|предложен|контракт|отмена?|платеж|чек|данн|подтвер(ждение|ит[еть])|билет|номер|трэк|(тех)?поддерж).*',
+                            ur'(аккаунт|парол|доступ|истек[лоает]|договор|справка|интервью|встреча?|приглашен|собеседован|офис|врем|график|адрес).*',
+                            ur'(баланс|детали|выписк|прикреплен|(набор\s)?.*услуг).*'
 
     ]
 
@@ -88,25 +96,13 @@ class HamPattern(BasePattern):
 
         super(HamPattern, self).__init__(**kwds)
 
-        def __init__(self, **kwds):
-        '''
-        :param kwds:
-        # todo: initialize each <type>-pattern with it's own penalizing self.score,
-        will be useful in vector-distance calculations, for axes stretching
-
-        :return: expand msg_vector, derived from BasePattern class with
-        less-correlated metrics, which are very typical for spams,
-        '''
-        super(InfoPattern, self).__init__(**kwds)
-
-
         features_map = {
                          'subject'      : ['score','len','style'],
                          'url'          : ['score','avg_len','absence'],
                          'content'      : ['txt_score','html_score']
         }
 
-        logger.debug('Start vectorize msg with rules from InfoPattern...')
+        logger.debug('Start vectorize msg with rules from '+self.__name__+'...')
 
         for n, key in enumerate(features_map.keys(),start=1):
             logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: '+str(self.__class__))
@@ -134,20 +130,15 @@ class HamPattern(BasePattern):
 
                 self.__setattr__(name, feature_value)
 
-
-
-        logger.debug('\n>> info-features vector : \n'.upper())
+        logger.debug('\n>> ham-features vector : \n'.upper())
         for (k,v) in self.__dict__.iteritems():
             logger.debug('>>> '+str(k).upper()+' ==> '+str(v).upper())
 
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
+
 '''''
-
-
-
-
 if __name__ == "__main__":
 
 	formatter = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')

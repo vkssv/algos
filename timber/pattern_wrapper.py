@@ -14,15 +14,15 @@ from nltk.probability import FreqDist, ConditionalFreqDist
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(filename)s: %(message)s')
+formatter = logging.Formatter('%(filename)s: >> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
 try:
     from bs4 import BeautifulSoup, Comment
 except ImportError:
-    print('Can\'t find bs4 module, probably, it isn\'t installed.')
-    print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
+    logger.debug('Can\'t find bs4 module, probably, it isn\'t installed.')
+    logger.debug('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 from msg_wrapper import BeautifulBody
 
@@ -51,7 +51,7 @@ class BasePattern(BeautifulBody):
         }
 
         for key in features_map.iterkeys():
-            logger.debug('Add '+key.upper()+' features set to '+str(self.__class__))
+            logger.debug('Add '+key.upper()+' features-attributes to '+str(self.__class__))
 
             if key == 'base':
                 features = ['get_'+name for name in features_map[key]]
@@ -111,25 +111,23 @@ class BasePattern(BeautifulBody):
     # can be called from each particular pattern with particular excluded_list
     '''''
     def get_all_heads_checksum(self):
-        #, excluded_list=None):
+
         '''
         :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
-        :return: <CRC32 from headers names>
+        :return: < CRC32 from headers names >
         '''
         logger.debug(self.msg.items())
 
         heads_vector = tuple(map(itemgetter(0), self.msg.items()))
         heads_dict = dict(self.msg.items())
+        logger.debug('excluded heads list from '+str(self.__class__)+' : ')
         logger.debug(self.EXCLUDED_HEADS)
 
-        #if cls.excluded_list:
         for ex_head in self.EXCLUDED_HEADS:
-            # can use match - no new lines in r_name
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
         self.all_heads_checksum = binascii.crc32(''.join(heads_vector))
         logger.debug('all_heads_checksum ==> '.upper()+str(self.all_heads_checksum))
-
         return self.all_heads_checksum
 
     # can be called from each particular pattern with particular rcvds_num
@@ -140,14 +138,14 @@ class BasePattern(BeautifulBody):
                  parser is interested only in servers IPs-literals, domains, etc
         '''
 
-        logger.debug('self.RCVDS_NUM: '+str(self.RCVDS_NUM))
+        logger.debug('rcvds num from '+str(self.__class__)+' : '+str(self.RCVDS_NUM))
         rcvds_vect = self.get_rcvds(self.RCVDS_NUM)
-        logger.debug('rcvds_vect:'+str(rcvds_vect))
+        logger.debug('rcvds_vect :'+str(rcvds_vect))
         rcvd_checksum = {}
 
         for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
             self.__dict__['rcvd_'+str(n)] = self.INIT_SCORE
-            logger.debug(rcvd_line)
+            logger.debug('rcvd_line : '+rcvd_line)
             trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
             trace = trace.strip().lower()
             trace = binascii.crc32(trace)
@@ -155,7 +153,7 @@ class BasePattern(BeautifulBody):
             self.__dict__['rcvd_'+str(n)] = trace
             rcvd_checksum['rcvd_'+str(n)] = trace
 
-        logger.debug('rcvd_checksum :'+str(rcvd_checksum))
+        logger.debug('rcvd_checksum ==> '.upper()+str(rcvd_checksum))
         return rcvd_checksum
 
     def get_dmarc_spf(self):
@@ -165,6 +163,7 @@ class BasePattern(BeautifulBody):
         if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
             self.dmarc_spf += self._penalty_score
 
+        logger.debug('dmarc_spf ==> '.upper()+str(self.dmarc_spf))
         return self.dmarc_spf
 
     def get_dmarc_score(self):
@@ -178,16 +177,14 @@ class BasePattern(BeautifulBody):
         # RFC 7001, this header has always to be included
         if not (self.msg.keys()).count('Authentication-Results'):
             self.dmarc_score += self._penalty_score
-        #    return (self.dmarc_spf, self.dmarc_score)
 
         dmark_heads = [ 'Received-SPF', 'DKIM-Signature', 'DomainKey-Signature']
         found = [ head for head in self.msg.keys() if head in dmark_heads ]
-        logger.debug('TOTAL:'+str(found))
+        logger.debug('found_dmarc_headers : '+str(found))
 
         self.dmarc_score += (len(dmark_heads) - len(found))*self._penalty_score
 
-        # simple checks for Received-SPF and DKIM/DomainKey-Signature
-
+        logger.debug('dmarc_score ==> '.upper()+str(found))
         return self.dmarc_score
 
     def get_rcpt_score(self):
@@ -200,28 +197,28 @@ class BasePattern(BeautifulBody):
 
         name_addr_tuples = self.get_addr_values(self.msg.get_all('To'))
         only_addr_list = map(itemgetter(1), name_addr_tuples)
-        logger.debug(only_addr_list)
+        logger.debug('only_addr_list : '+str(only_addr_list))
 
         parsed_rcvds = [ rcvd.partition(';')[0] for rcvd in self.get_rcvds() ]
-        print('parsed_rcvds >>'+str(parsed_rcvds))
+        logger.debug('parsed_rcvds : '+str(parsed_rcvds))
         smtp_to_list = [ x for x in ( r.partition('for')[2].strip() for r in parsed_rcvds ) if x ]
         smtp_to_addr = re.findall(r'<(.*@.*)?>', ''.join(smtp_to_list))
 
         if not (smtp_to_list or only_addr_list):
             # can't check without data => leave zeros
             #return self.rcpt_smtp_to, self.rcpt_body_to
+            logger.debug('rcpt_score ==> '.upper()+str(self.INIT_SCORE))
             return self.INIT_SCORE
 
         self.rcpt_score = len([value for value in smtp_to_list + only_addr_list if re.search(r'undisclosed-recipients', value, re.I)])*self._penalty_score
 
         if len(only_addr_list) == 1 and ''.join(smtp_to_addr) != ''.join(only_addr_list):
             self.rcpt_score += self._penalty_score
-            logger.debug('\t----->'+str(self.rcpt_score))
 
         elif len(only_addr_list) > 2 and smtp_to_addr != '<multiple recipients>':
             self.rcpt_score += self._penalty_score
-            logger.debug('\t----->'+str(self.rcpt_score))
 
+        logger.debug('rcpt_score ==> '.upper()+str(self.INIT_SCORE))
         return self.rcpt_score
 
     def get_mime_nest_level(self):
@@ -240,18 +237,17 @@ class BasePattern(BeautifulBody):
         '''
 
         self.mime_checksum = self.INIT_SCORE
-
-        logger.debug('EXL:'+str(self.EX_MIME_ATTRS_LIST))
+        logger.debug('excluded mime-header\'s attributes list from : '+str(self.__class__))
+        logger.debug(self.EX_MIME_ATTRS_LIST)
 
         for prefix in self.EX_MIME_ATTRS_LIST:
             items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in self.get_mime_struct().items()]
-
             if items:
                 items = reduce(add, items)
 
             self.mime_checksum = binascii.crc32(''.join([''.join(i) for i in items]))
 
-        logger.debug('mime_checksum: '.upper()+str(self.mime_nest_level))
+        logger.debug('mime_checksum ==> '.upper()+str(self.mime_nest_level))
         return self.mime_checksum
 
 

@@ -26,15 +26,15 @@ from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(filename)s: %(message)s')
+formatter = logging.Formatter('%(filename)s: >>> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
 try:
     from bs4 import BeautifulSoup, UnicodeDammit
 except ImportError:
-    print('Can\'t find bs4 module, probably, it isn\'t installed.')
-    print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
+    logger.debug('Can\'t find bs4 module, probably, it isn\'t installed.')
+    logger.debug('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 
 class BeautifulBody(object):
@@ -76,9 +76,9 @@ class BeautifulBody(object):
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None):
-        print('in get_unicoded_value')
-        print(raw_line)
-        print(encoding)
+        logger.debug('in get_unicoded_value')
+        logger.debug(raw_line)
+        logger.debug(encoding)
         dammit_obj = UnicodeDammit(raw_line, [encoding], is_html=False)
         logger.debug(dammit_obj.unicode_markup.strip())
 
@@ -107,9 +107,9 @@ class BeautifulBody(object):
         :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
         :return: left parts of Received header's values, everything before ';'
         '''
-        # parse all RCVD headers by default if rcvds_num wasn't defined
+        # parse all Received: headers by default if rcvds_num wasn't defined
         parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received'))[ -1*rcvds_num : ]
-
+        logger.debug('parsed_rcvds : '+str(parsed_rcvds))
         return parsed_rcvds
 
     def get_addr_values(self, header_value):
@@ -118,7 +118,7 @@ class BeautifulBody(object):
         returnes tuple (< mail box name (utf-8)>, < address (without angle braces) >)
         '''
 
-        logger.debug('+++++>'+str(header_value))
+        logger.debug('value for crunching addresses : '+str(header_value))
 
         addr_value = namedtuple('addr_value', 'realname address')
         name_addr_tuples = (addr_value(*pair) for pair in utils.getaddresses(header_value))
@@ -132,16 +132,16 @@ class BeautifulBody(object):
             parts = tuple(header.decode_header(p) for p in realname.split())
             temp.append((parts, address.lower()))
 
-        print(temp)
+        logger.debug(temp)
         pairs = list()
         for t in temp:
             realname_parts, addr = t
-            print(realname_parts)
-            print(addr)
+            logger.debug(realname_parts)
+            logger.debug(addr)
             
             value = u''
             for part in realname_parts:
-                print(part)
+                logger.debug(part)
                 if len(part)==0:
                     continue
                 value += self._get_unicoded_value(*(reduce(add,part)))
@@ -149,8 +149,7 @@ class BeautifulBody(object):
             pairs.append((value, addr))
 
         pairs = tuple((p.realname, re.sub(r'<|>','',p.address)) for p in tuple(addr_value(*pair) for pair in pairs))
-
-        print("pairs >>"+str(pairs))
+        logger.debug("results : "+str(pairs))
         return pairs
 
     #@lazyproperty
@@ -163,12 +162,12 @@ class BeautifulBody(object):
         logger.debug(l) # check that regexp matched exactly first
         if l:
             orig_domain = reduce(add,l)
-            print('+++++++++++++++++++++++++++++++++++++++')
-            print((orig_domain,))
+            logger.debug('+++++++++++++++++++++++++++++++++++++++')
+            logger.debug((orig_domain,))
             orig_domain = (regexp.search(orig_domain)).group(0)
             orig_domain = orig_domain.strip('.').strip('@').strip('=').strip()
-            print(type(orig_domain))
-            print('ORIG_DOMAINS: '+str(orig_domain))
+            logger.debug(type(orig_domain))
+            logger.debug('ORIG_DOMAINS: '+str(orig_domain))
 
         return orig_domain
 
@@ -236,8 +235,8 @@ class BeautifulBody(object):
 
 
             mime_part_heads = tuple(k.lower() for k in part.keys())
-            print('>>>'+str(mime_part_heads))
-            print(tuple(head_name for head_name in needed_heads if mime_part_heads.count(head_name)))
+            logger.debug('>>>'+str(mime_part_heads))
+            logger.debug(tuple(head_name for head_name in needed_heads if mime_part_heads.count(head_name)))
             for head in tuple(head_name for head_name in needed_heads if mime_part_heads.count(head_name)):
             #for head in filter(lambda n: part.keys().count(n), mime_heads):
 
@@ -357,7 +356,10 @@ class BeautifulBody(object):
 
 
         for raw_line, mime_type, lang in tuple(self.get_text_mime_part()):
-            print(raw_line, mime_type, lang)
+            logger.debug('raw_line :'+raw_line)
+            logger.debug('mime_type :'+mime_type)
+            logger.debug('lang :'+lang)
+
             if 'html' in mime_type:
                 soup = BeautifulSoup(raw_line)
                 if not soup.body:
@@ -366,8 +368,8 @@ class BeautifulBody(object):
                 lines = tuple(soup.body.strings)
                 raw_line = ''.join(lines)
                 logger.debug(u'raw_line_from_html >>'+raw_line)
-            #print(raw_line)
-            #print(tokenizer.tokenize(raw_line))
+            #logger.debug(raw_line)
+            #logger.debug(tokenizer.tokenize(raw_line))
             try:
                 sents = tuple(tokenizer.tokenize(raw_line))
             except Exception as err:

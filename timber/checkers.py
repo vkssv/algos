@@ -28,8 +28,8 @@ logger.setLevel(logging.DEBUG)
 try:
     from bs4 import BeautifulSoup, Comment
 except ImportError:
-    print('Can\'t find bs4 module, probably, it isn\'t installed.')
-    print('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
+    logger.debug('Can\'t find bs4 module, probably, it isn\'t installed.')
+    logger.debug('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
 
 @Wrapper
@@ -51,14 +51,12 @@ class SubjectChecker(object):
 
     def get_subject_score(self):
 
-        logger.debug('3. >>> SUBJ_CHECKS')
-
-        print('compiled_regs: '+str(self.subj_rules))
+        logger.debug('compiled_regs : '+str(self.subj_rules))
         # check by regexp rules
         matched = filter(lambda r: r.search(self.subj_line, re.I), self.subj_rules)
-        print(matched)
+        logger.debug(matched)
         subj_score = self.score*len(matched)
-        print('subj_score: '+str(subj_score))
+        logger.debug('subj_score : '+str(subj_score))
 
         prefix_heads_map = {
                                 'RE' : ['In-Reply-To', 'Thread(-.*)?', 'References'],
@@ -74,11 +72,15 @@ class SubjectChecker(object):
                     found_heads = filter(lambda reg: re.match(reg, h_name, re.I), h_name)
                     subj_score += (len(prefix_heads_map.get(k)) - len(found_heads))*self.score
 
+        logger.debug('subj_score ==> '.upper()+str(subj_score))
         return subj_score
 
     def get_subject_encoding(self):
 
-        return len(set(self.encodings_list))
+        encoding = len(set(self.encodings_list))
+        logger.debug('subj_encoding ==> '.upper()+str(encoding))
+        return encoding
+
 
     def get_subject_style(self):
 
@@ -89,6 +91,7 @@ class SubjectChecker(object):
         if upper_count or (len(self.subj_tokens) - title_count) < self.titles_threshold:
             subj_style = self.score
 
+        logger.debug('subj_style ==> '.upper()+str(encoding))
         return subj_style
 
     def get_subject_checksum(self):
@@ -100,13 +103,16 @@ class SubjectChecker(object):
             tokens = tuple([el for el in self.subj_tokens if self.f(el, self.subj_tokens)])
 
         subj_trace = ''.join(tuple([w.encode('utf-8') for w in tokens]))
-        print(subj_trace)
-        print(binascii.crc32(subj_trace))
+        logger.debug('subj_trace : '+str(subj_trace))
 
+        logger.debug('subj_checksum ==> '.upper()+str(binascii.crc32(subj_trace)))
         return binascii.crc32(subj_trace)
 
     def get_subject_len(self):
-        return len(self.subj_tokens)
+        l = len(self.subj_tokens)
+
+        logger.debug('subj_len ==> '.upper()+str(l))
+        return l
 
 @Wrapper
 class EmarketChecker(object):
@@ -126,8 +132,7 @@ class EmarketChecker(object):
         self.f = lambda x,y: re.match(x, y, re.I)
 
     def get_emarket_score(self):
-        # 4. Presense of X-EMID && X-EMMAIL, etc
-        logger.debug('>>> 4. Specific E-market-headers checks:')
+
         emarket_heads_list = set([header for header in self.obj.keys() if self.f(self.obj.EMARKET_HEADS, header)])
         return len(emarket_heads_list)*self.score
 
@@ -150,11 +155,6 @@ class EmarketChecker(object):
             known_domains_score += len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), self.obj.KNOWN_DOMAINS))*self.score
 
         return known_domains_score
-
-
-
-
-
 
 
 @Wrapper
@@ -535,14 +535,14 @@ class ContentChecker(object):
         regs_list = get_regexp(self.obj.TEXT_REGEXP_LIST, re.M)
 
         sents_generator = self.obj.get_sentences()
-        print("sent_lists >>"+str(self.obj.get_sentences()))
+        logger.debug("sent_lists >>"+str(self.obj.get_sentences()))
 
         txt_score = INIT_SCORE
         while(True):
             try:
                 for reg_obj in regs_list:
                     txt_score += len(filter(lambda s: reg_obj.search(s,re.I), next(sents_generator)))*self.score
-                    print("text_score: "+str(txt_score))
+                    logger.debug("text_score: "+str(txt_score))
             except StopIteration as err:
                 break
 
@@ -562,7 +562,7 @@ class ContentChecker(object):
         html_score = INIT_SCORE
         attr_value_pair = namedtuple('attr_value_pair', 'name value')
 
-        print("tags_map: "+str(self.obj.HTML_TAGS_MAP))
+        logger.debug("tags_map: "+str(self.obj.HTML_TAGS_MAP))
 
         soups_list = self.obj.get_html_parts()
 
@@ -577,21 +577,21 @@ class ContentChecker(object):
 
                 # analyze tags and their attributes
                 soup_attrs_list = filter(lambda y: y, [ x.attrs.items() for x in soup.body.table.findAll(tag) ])
-                print(soup_attrs_list)
+                logger.debug(soup_attrs_list)
                 logger.debug('soup_attrs_list '+str(soup_attrs_list))
                 if not soup_attrs_list:
                     continue
 
                 soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
-                print(soup_attrs_list)
-                print('type of parsing line in reg_obj: '+str(type(self.obj.HTML_TAGS_MAP[tag])))
+                logger.debug(soup_attrs_list)
+                logger.debug('type of parsing line in reg_obj: '+str(type(self.obj.HTML_TAGS_MAP[tag])))
                 compiled_regexp_list = get_regexp(self.obj.HTML_TAGS_MAP.get[tag], re.U)
 
                 pairs = list()
                 for key_attr in compiled_regexp_list: # expected_attrs_dict:
-                    print(key_attr)
+                    logger.debug(key_attr)
                     pairs = filter(lambda pair: key_attr.match(pair.name, re.I), soup_attrs_list)
-                    print(pairs)
+                    logger.debug(pairs)
 
                     check_values = list()
                     if pairs:
@@ -630,11 +630,11 @@ class ContentChecker(object):
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
-            print('P >>> '+str(probs))
+            logger.debug('P >>> '+str(probs))
             txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
 
         txt_avg_ent = txt_avg_ent/n
-        logger.debug('avg_ent'.upper()+': '+str(txt_avg_ent))
+        logger.debug('avg_ent'.upper()+' : '+str(txt_avg_ent))
 
         return txt_avg_ent
 
@@ -650,7 +650,7 @@ class ContentChecker(object):
             logger.debug('>>>> '+str(x))
         if all_text_parts:
             all_text = ''.join(reduce(add, all_text_parts))
-            print(type(all_text))
+            logger.debug(type(all_text))
             txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.obj.DEFAULT_CHARSET))))/len(all_text)
 
         return txt_compressed_ratio
