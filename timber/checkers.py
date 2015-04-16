@@ -40,7 +40,7 @@ class SubjectChecker(object):
 
     def __init__(self, pattern_obj):
 
-        self.score = pattern_obj._penalty_score
+        self.score = pattern_obj.PENALTY_SCORE
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
         self.subj_rules = BasePattern.get_regexp(pattern_obj.SUBJ_RULES)
         self.f = pattern_obj.SUBJ_FUNCTION
@@ -115,6 +115,54 @@ class SubjectChecker(object):
         return l
 
 @Wrapper
+class DmarcChecker(object):
+    '''
+
+    '''
+    def __init__(self, pattern_obj):
+
+        self.score = pattern_obj.PENALTY_SCORE
+        self.msg = pattern_obj.msg
+
+    def get_dmarc_spf(self):
+
+        dmarc_spf = self.INIT_SCORE
+
+        if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
+            dmarc_spf += self.score
+
+        logger.debug('dmarc_spf ==> '.upper()+str(dmarc_spf))
+        return dmarc_spf
+
+    def get_dmarc_score(self):
+
+        #:param score:
+        #:param dmarc_heads: list of headers, described in RFC 6376, RFC 7208
+        #:return: <DMARC metrics dict>
+
+        dmarc_score = self.INIT_SCORE
+
+        # RFC 7001, this header has always to be included
+        if not (self.msg.keys()).count('Authentication-Results'):
+            dmarc_score += self.score
+
+        dmark_heads = [ 'Received-SPF', 'DKIM-Signature', 'DomainKey-Signature']
+        found = [ head for head in self.msg.keys() if head in dmark_heads ]
+        logger.debug('found_dmarc_headers : '+str(found))
+
+        dmarc_score += (len(dmark_heads) - len(found))*self.score
+
+        logger.debug('dmarc_score ==> '.upper()+str(found))
+        return dmarc_score
+
+
+    def get_dmarc_x_score(self):
+
+        dmarc_x_score = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self.msg.keys()))
+        logger.debug('dmarc_x_score ==> '.upper()+str(dmarc_x_score))
+        return dmarc_x_score
+
+@Wrapper
 class EmarketChecker(object):
 
     '''
@@ -128,7 +176,7 @@ class EmarketChecker(object):
     def __init__(self, pattern_obj):
 
         self.obj=pattern_obj
-        self.score = pattern_obj._penalty_score
+        self.score = pattern_obj.PENALTY_SCORE
         self.f = lambda x,y: re.match(x, y, re.I)
 
     def get_emarket_score(self):
@@ -171,7 +219,7 @@ class UrlChecker(object):
         self.obj = pattern_obj
         self.urls = pattern_obj.get_url_obj_list()
         self.urls_domains = pattern_obj.get_net_location_list()
-        self.score = pattern_obj._penalty_score
+        self.score = pattern_obj.PENALTY_SCORE
 
     def get_url_score(self):
 
@@ -331,7 +379,7 @@ class AttachesChecker(object):
         self.attach_rules = BasePattern.get_regexp(pattern_obj.ATTACHES_RULES)
         self.mime_struct = reduce(add, pattern_obj.get_mime_struct())
         self.attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), self.mime_struct)
-        self.score = pattern_obj._penalty_score
+        self.score = pattern_obj.PENALTY_SCORE
 
     def get_attaches_count(self):
 
@@ -365,7 +413,7 @@ class ListChecker(object):
     def __init__(self, pattern_obj):
 
         self.obj = pattern_obj
-        self.score = pattern_obj._penalty_score
+        self.score = pattern_obj.PENALTY_SCORE
 
     def __get_orig_addrs(self, heads_names):
 
@@ -471,7 +519,7 @@ class OriginatorChecker(object):
     def __init__(self, pattern_obj):
 
         self.obj = pattern_obj
-        self.score = pattern_obj._penalty_score
+        self.score = pattern_obj.PENALTY_SCORE
 
     def get_originator_checksum(self):
         '''
@@ -513,6 +561,45 @@ class OriginatorChecker(object):
         logger.debug('forged_sender '.upper()+str(forged_sender))
         return forged_sender
 
+
+@Wrapper
+class MimeChecker(object):
+    '''
+
+    '''
+    def __init__(self, pattern_obj):
+
+        self.obj = pattern_obj
+
+    def get_mime_nest_level(self):
+
+        mime_parts = self.obj.get_mime_struct()
+        mime_nest_level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
+
+        logger.debug('mime_nest_level: '.upper()+str(mime_nest_level))
+        return mime_nest_level
+
+    def get_mime_checksum(self):
+
+        '''
+        self.EX_MIME_ATTRS_LIST: values of uninteresting mime-attrs
+        :return: 42
+        '''
+
+        mime_checksum = self.INIT_SCORE
+        logger.debug('excluded mime-header\'s attributes list from : '+str(self.__class__))
+        logger.debug(self.EX_MIME_ATTRS_LIST)
+
+        for prefix in self.EX_MIME_ATTRS_LIST:
+            items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in self.obj.get_mime_struct().items()]
+            if items:
+                items = reduce(add, items)
+
+            mime_checksum = binascii.crc32(''.join([''.join(i) for i in items]))
+
+        logger.debug('mime_checksum ==> '.upper()+str(mime_checksum))
+        return mime_checksum
+
 @Wrapper
 class ContentChecker(object):
     '''
@@ -525,7 +612,7 @@ class ContentChecker(object):
     def __init__(self, pattern_obj):
 
         self.obj = pattern_obj
-        self.score = pattern_obj._penalty_score
+        self.score = pattern_obj.PENALTY_SCORE
 
     def get_content_txt_score(self):
 

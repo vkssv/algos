@@ -113,7 +113,7 @@ class NetsPattern(BasePattern):
                         ur'(eml-skills_endorsements-btn-0-new_teaser_add|grp_email_subscribe_new_posts)'
     ]
 
-    def __init__(self, **kwds):
+    def __init__(self, score, **kwds):
         '''
         :param kwds:
         # todo: initialize each <type>-pattern with it's own penalizing self.score,
@@ -122,11 +122,13 @@ class NetsPattern(BasePattern):
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
         '''
+        self.PENALTY_SCORE = score
         super(NetsPattern, self).__init__(**kwds)
 
         features_map = {
                          'score'        : ['mime'],
                          'subject'      : ['score','encoding','style','checksum'],
+                         'dmarc'        : ['spf','score'],
                          'emarket'      : ['score','flag','domains_score'],
                          'url'          : ['score','count','avg_len','distinct_count','sender_count','sim', 'avg_query_len'],
                          'list'         : ['score','delivered_to'],

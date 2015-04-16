@@ -35,34 +35,32 @@ class BasePattern(BeautifulBody):
     '''
 
     INIT_SCORE = 0 # can redifine for particular set of instanses, => use cls./self._INIT_SCORE in code
-    EX_MIME_ATTRS_LIST=['boundary=','charset=']
+    PENALTY_SCORE = 1.0
 
-    def __init__(self, score, **kwds):
+    EX_MIME_ATTRS_LIST = ['boundary=','charset=']
+    BASE_FEATURES = ['all_heads_checksum','rcpt_score']
 
-        self._penalty_score = score
+    def __init__(self, **kwds):
 
         super(BasePattern, self).__init__(**kwds)
+        print('PENALTY_SCORE'+str(self.PENALTY_SCORE))
 
-        features_map = {
-                            'base'  : ['all_heads_checksum','rcpt_score'],
-                            'dmarc' : ['spf','score'],
-                            'mime'  : ['nest_level','checksum']
+        for n, feature in enumerate(self.BASE_FEATURES, start=1):
+            logger.debug('Add '+feature.upper()+' attribute to '+str(self.__class__))
+            methods_names = ['get_'+name for name in self.BASE_FEATURES]
+            methods = [ (name.lstrip('get_'),getattr(self, name, lambda : INIT_SCORE)) for name in methods_names ]
+            logger.debug('methods dict for '+str(self.__class__)+' instance : '+str(methods))
 
-        }
+        for name, f in methods:
+            value = self.INIT_SCORE
+            logger.debug('called method : '+str(f))
+            try:
+                value = f()
+            except Exception as err:
+                logger.error(str(f)+' : '+str(err))
+                pass
 
-        for key in features_map.iterkeys():
-            logger.debug('Add '+key.upper()+' features-attributes to '+str(self.__class__))
-
-            if key == 'base':
-                features = ['get_'+name for name in features_map[key]]
-            else:
-                features = ['get_'+key+'_'+name for name in features_map[key]]
-
-            functions = [getattr(self, name, lambda : INIT_SCORE) for name in features]
-            logger.debug(functions)
-
-            [f() for f in functions]
-        
+            self.__setattr__(name, value)
 
         self.rcvd_num = self.msg.keys().count('Received')
         self.get_rcvd_checksum()
@@ -126,9 +124,9 @@ class BasePattern(BeautifulBody):
         for ex_head in self.EXCLUDED_HEADS:
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
 
-        self.all_heads_checksum = binascii.crc32(''.join(heads_vector))
+        all_heads_checksum = binascii.crc32(''.join(heads_vector))
         logger.debug('all_heads_checksum ==> '.upper()+str(self.all_heads_checksum))
-        return self.all_heads_checksum
+        return all_heads_checksum
 
     # can be called from each particular pattern with particular rcvds_num
     def get_rcvd_checksum(self):
@@ -156,37 +154,6 @@ class BasePattern(BeautifulBody):
         logger.debug('rcvd_checksum ==> '.upper()+str(rcvd_checksum))
         return rcvd_checksum
 
-    def get_dmarc_spf(self):
-
-        self.dmarc_spf = self.INIT_SCORE
-
-        if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
-            self.dmarc_spf += self._penalty_score
-
-        logger.debug('dmarc_spf ==> '.upper()+str(self.dmarc_spf))
-        return self.dmarc_spf
-
-    def get_dmarc_score(self):
-
-        #:param score:
-        #:param dmarc_heads: list of headers, described in RFC 6376, RFC 7208
-        #:return: <DMARC metrics dict>
-
-        self.dmarc_score = self.INIT_SCORE
-
-        # RFC 7001, this header has always to be included
-        if not (self.msg.keys()).count('Authentication-Results'):
-            self.dmarc_score += self._penalty_score
-
-        dmark_heads = [ 'Received-SPF', 'DKIM-Signature', 'DomainKey-Signature']
-        found = [ head for head in self.msg.keys() if head in dmark_heads ]
-        logger.debug('found_dmarc_headers : '+str(found))
-
-        self.dmarc_score += (len(dmark_heads) - len(found))*self._penalty_score
-
-        logger.debug('dmarc_score ==> '.upper()+str(found))
-        return self.dmarc_score
-
     def get_rcpt_score(self):
 
         #:param score:
@@ -210,46 +177,16 @@ class BasePattern(BeautifulBody):
             logger.debug('rcpt_score ==> '.upper()+str(self.INIT_SCORE))
             return self.INIT_SCORE
 
-        self.rcpt_score = len([value for value in smtp_to_list + only_addr_list if re.search(r'undisclosed-recipients', value, re.I)])*self._penalty_score
+        rcpt_score = len([value for value in smtp_to_list + only_addr_list if re.search(r'undisclosed-recipients', value, re.I)])*self.PENALTY_SCORE
 
         if len(only_addr_list) == 1 and ''.join(smtp_to_addr) != ''.join(only_addr_list):
-            self.rcpt_score += self._penalty_score
+            rcpt_score += self.PENALTY_SCORE
 
         elif len(only_addr_list) > 2 and smtp_to_addr != '<multiple recipients>':
-            self.rcpt_score += self._penalty_score
+            rcpt_score += self.PENALTY_SCORE
 
         logger.debug('rcpt_score ==> '.upper()+str(self.INIT_SCORE))
-        return self.rcpt_score
-
-    def get_mime_nest_level(self):
-
-        mime_parts = self.get_mime_struct()
-        self.mime_nest_level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
-
-        logger.debug('mime_nest_level: '.upper()+str(self.mime_nest_level))
-        return self.mime_nest_level
-
-    def get_mime_checksum(self):
-
-        '''
-        self.EX_MIME_ATTRS_LIST: values of uninteresting mime-attrs
-        :return: 42
-        '''
-
-        self.mime_checksum = self.INIT_SCORE
-        logger.debug('excluded mime-header\'s attributes list from : '+str(self.__class__))
-        logger.debug(self.EX_MIME_ATTRS_LIST)
-
-        for prefix in self.EX_MIME_ATTRS_LIST:
-            items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in self.get_mime_struct().items()]
-            if items:
-                items = reduce(add, items)
-
-            self.mime_checksum = binascii.crc32(''.join([''.join(i) for i in items]))
-
-        logger.debug('mime_checksum ==> '.upper()+str(self.mime_nest_level))
-        return self.mime_checksum
-
+        return rcpt_score
 
 if __name__ == "__main__":
     import doctest

@@ -20,7 +20,7 @@ with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb
 #with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
 
-class HamPattern(BasePattern):
+class HamPattern(BeautifulBody):
     """
     Pattern class for build vectors, based on features
     suitable for transactional emails : msgs from banks,
@@ -28,8 +28,6 @@ class HamPattern(BasePattern):
     -- if email looks like ham, it's vector will contain
         values, mostly don't equal to zeros ;
     """
-
-    RCVDS_NUM = 3
 
     # try greedy regexes, maybe will precise them in future
     SUBJ_RULES = [
@@ -84,7 +82,7 @@ class HamPattern(BasePattern):
                             ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
     ]
 
-    def __init__(self, **kwds):
+    def __init__(self, score, **kwds):
         '''
         :param kwds:
         # todo: initialize each <type>-pattern with it's own penalizing self.score,
@@ -93,16 +91,18 @@ class HamPattern(BasePattern):
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
         '''
+        self.PENALTY_SCORE = score
 
         super(HamPattern, self).__init__(**kwds)
 
         features_map = {
                          'subject'      : ['score','len','style'],
+                         'dmarc'        : ['spf'],
                          'url'          : ['score','avg_len','absence'],
                          'content'      : ['txt_score','html_score']
         }
 
-        logger.debug('Start vectorize msg with rules from '+self.__name__+'...')
+        logger.debug('Start vectorize msg with rules from '+str(self.__class__)+'...')
 
         for n, key in enumerate(features_map.keys(),start=1):
             logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: '+str(self.__class__))

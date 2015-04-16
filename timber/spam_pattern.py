@@ -141,7 +141,7 @@ class SpamPattern(BasePattern):
 
     print('SPAMPATTERN ----------> FISNISH CLASS ATTRIBUTE TABLE')
 
-    def __init__(self, **kwds):
+    def __init__(self, score, **kwds):
         '''
         :param kwds:
         # todo: initialize each <type>-pattern with it's own penalizing self.score,
@@ -151,14 +151,17 @@ class SpamPattern(BasePattern):
         less-correlated metrics, which are very typical for spams,
 
         '''
-        print('IN SPAMPATTERN CONSTRUCTOR, DELEGATE INSTANCE CREATION')
+        self.PENALTY_SCORE = score
 
         super(SpamPattern, self).__init__(**kwds)
+
+
 
 
         features_map = {
                          'score'        : ['rcvd', 'mime', 'disp_notification'],
                          'subject'      : ['score','encoding','style','checksum'],
+                         'dmarc'        : ['spf','score'],
                          'url'          : ['score','avg_len','distinct_count','sender_count',\
                                         'uppercase','punicode','fqdn','ascii','repetitions'],
                          'list'         : ['score'],

@@ -120,7 +120,7 @@ class InfoPattern(BasePattern):
 
     ]
 
-    def __init__(self, **kwds):
+    def __init__(self, score, **kwds):
         '''
         :param kwds:
         # todo: initialize each <type>-pattern with it's own penalizing self.score,
@@ -129,12 +129,15 @@ class InfoPattern(BasePattern):
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
         '''
+        self.PENALTY_SCORE = score
+
         super(InfoPattern, self).__init__(**kwds)
 
 
         features_map = {
                          'score'        : ['mime'],
                          'subject'      : ['score','len','encoding','style','checksum'],
+                         'dmarc'        : ['spf','score','x_score'],
                          'emarket'      : ['score','flag'],
                          'url'          : ['score','count','avg_len','distinct_count','sender_count', 'avg_query_len','sim'],
                          'list'         : ['score', 'ext_headers_set', 'sender_flag', 'precedence', 'reply_to'], #delivered-to
@@ -174,7 +177,7 @@ class InfoPattern(BasePattern):
 
                 self.__setattr__(name, feature_value)
 
-            self.dmarc_x_score = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self.msg.keys()))
+
 
         logger.debug('\n>> info-features vector : \n'.upper())
         for (k,v) in self.__dict__.iteritems():

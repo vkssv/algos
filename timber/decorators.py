@@ -12,10 +12,6 @@ logger.setLevel(logging.DEBUG)
 #logger.addHandler(ch)
 
 
-class HamDecorator(object):
-    pass
-
-
 class Wrapper(object):
     '''
     Wrap up classes from checkers.py :
