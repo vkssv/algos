@@ -63,7 +63,7 @@ class SpamPattern(BasePattern):
     SUBJ_FUNCTION = lambda z,x,y: y.index(x)%2
 
     SUBJ_TITLES_THRESHOLD = 3
-    ATTACH_RULES = [
+    ATTACHES_RULES = [
                             r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
                             r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
     ]
@@ -165,7 +165,7 @@ class SpamPattern(BasePattern):
                          'url'          : ['score','avg_len','distinct_count','sender_count',\
                                         'uppercase','punicode','fqdn','ascii','repetitions'],
                          'list'         : ['score'],
-                         'attach'       : ['score','in_score','count'],
+                         'attaches'     : ['score','in_score','count'],
                          'originator'   : ['checksum'],
                          'content'      : ['compress_ratio','avg_entropy','txt_score','html_score']
                          # would it be usefull compress_ratio for spams (search consequences here)
@@ -182,6 +182,7 @@ class SpamPattern(BasePattern):
                 features = ['get_'+key+'_'+name for name in features_map[key]]
                 # initialize  checker_obj with decorated particular Checker class,
                 # see Wrapper class-decorator from decorators.py module
+
                 checker_obj = checkers.__getattribute__(key.title()+'Checker')
                 # if fails in checker_obj.__init__() --> checker_obj will be
                 # intercepted by Wrapper decorated class itself from decorators.py module

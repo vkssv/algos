@@ -43,21 +43,23 @@ class BasePattern(BeautifulBody):
     def __init__(self, **kwds):
 
         super(BasePattern, self).__init__(**kwds)
-        print('PENALTY_SCORE'+str(self.PENALTY_SCORE))
+        logger.debug('PENALTY_SCORE ==> '+str(self.PENALTY_SCORE))
 
-        for n, feature in enumerate(self.BASE_FEATURES, start=1):
-            logger.debug('Add '+feature.upper()+' attribute to '+str(self.__class__))
-            methods_names = ['get_'+name for name in self.BASE_FEATURES]
-            methods = [ (name.lstrip('get_'),getattr(self, name, lambda : INIT_SCORE)) for name in methods_names ]
-            logger.debug('methods dict for '+str(self.__class__)+' instance : '+str(methods))
+        #for n, feature in enumerate(self.BASE_FEATURES, start=1):
+            #logger.debug(str(n)+'. Add '+feature.upper()+' attribute to '+str(self.__class__))
+        methods_names = ['get_'+name for name in self.BASE_FEATURES]
+        methods = [ (name.lstrip('get_'), getattr(self, name, lambda : INIT_SCORE)) for name in methods_names ]
+        logger.debug('methods dict for '+str(self.__class__)+' instance : '+str(methods))
 
-        for name, f in methods:
+        for n, pair in enumerate(methods, start=1):
+            name, f = pair
+            logger.debug(str(n)+'. Add '+name.upper()+' attribute to '+str(self.__class__))
             value = self.INIT_SCORE
             logger.debug('called method : '+str(f))
             try:
                 value = f()
             except Exception as err:
-                logger.error(str(f)+' : '+str(err))
+                logger.error(str(f)+' : '+str(err).upper())
                 pass
 
             self.__setattr__(name, value)
@@ -117,13 +119,14 @@ class BasePattern(BeautifulBody):
         logger.debug(self.msg.items())
 
         heads_vector = tuple(map(itemgetter(0), self.msg.items()))
+        print(heads_vector)
         heads_dict = dict(self.msg.items())
         logger.debug('excluded heads list from '+str(self.__class__)+' : ')
         logger.debug(self.EXCLUDED_HEADS)
 
         for ex_head in self.EXCLUDED_HEADS:
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
-
+        print(heads_vector)
         all_heads_checksum = binascii.crc32(''.join(heads_vector))
         logger.debug('all_heads_checksum ==> '.upper()+str(self.all_heads_checksum))
         return all_heads_checksum
