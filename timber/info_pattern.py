@@ -44,6 +44,14 @@ class InfoPattern(BasePattern):
 
     KNOWN_MAILERS   = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver' ]
 
+    KNOWN_DOMAINS = [   r'.*\.smartfares\.com',\
+                        r'.*\.anywayanyday.*\.com',\
+                        r'.*\.airbnb\.com',\
+                        r'.*\.booking\.com',\
+                        r'.*\.twitter\.com',\
+                        r'.*\.look-at-media\.com'
+    ]
+
     # take crc32 from the second half (first can vary cause of personalisation, etc)
     SUBJ_FUNCTION = lambda z,y: y[len(y)/2:]
     SUBJ_TITLES_THRESHOLD = 3
@@ -51,9 +59,8 @@ class InfoPattern(BasePattern):
     # try greedy regexes, maybe will precise them in future
     SUBJ_RULES = [
 
-                            ur'([\u25a0-\u29ff]|)', # dingbats
-                            ur'([\u0370-\u03ff]|[\u2010-\u337b]|)', # separators, math, currency signs, etc
-                            ur'^(Hi|Hello|Good\s+(day|(morn|even)ing)|Dear\s+){0,1}\s{0,}[\w-]{2,10}(\s+[\w-]{2,10}){0,3},.*$',
+                            ur'([\u25a0-\u27ff]|[\u2900-\u299f])', # dingbats
+                            ur'([\u0370-\u03ff]|[\u2010-\u337b]|[\u0460-\u0482]|[\u0488-\u056f])', # separators, math, currency signs, etc
                             ur'^\s*(what\s+(are|is)|why|how\s+(do)?|when|since|could|may|is|in).*[\?!:;\s-]{0,}.',
                             ur'(SALE|FREE|News?|Do\s+not\s+|Don\'t\s+|miss\s+|They.*back|is\s+here|now\s+with)+',
                             ur'(interesting|announcing|hurry|big(gest)?|great|only|deal|groupon|tour|travel|hot|inside)+',
@@ -120,7 +127,7 @@ class InfoPattern(BasePattern):
 
     ]
 
-    def __init__(self, score, **kwds):
+    def __init__(self, **kwds):
         '''
         :param kwds:
         # todo: initialize each <type>-pattern with it's own penalizing self.score,
@@ -129,16 +136,15 @@ class InfoPattern(BasePattern):
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
         '''
-        self.PENALTY_SCORE = score
 
         super(InfoPattern, self).__init__(**kwds)
 
 
         features_map = {
-                         'score'        : ['mime'],
-                         'subject'      : ['score','len','encoding','style','checksum'],
+                         'pattern_score': ['mime'],
+                         'subject'      : ['score','len','encoding','upper','titled','checksum'],
                          'dmarc'        : ['spf','score','x_score'],
-                         'emarket'      : ['score','flag'],
+                         'emarket'      : ['score','flag','domains_score'],
                          'url'          : ['score','count','avg_len','distinct_count','sender_count', 'avg_query_len','sim'],
                          'list'         : ['score', 'ext_headers_set', 'sender_flag', 'precedence', 'reply_to'], #delivered-to
                          'attaches'       : ['score','in_score','count'],
@@ -151,7 +157,7 @@ class InfoPattern(BasePattern):
         for n, key in enumerate(features_map.keys(),start=1):
             logger.debug(str(n)+'. Add '+key.upper()+' features-attributes to msg-vector class: '+str(self.__class__))
 
-            if key == 'score':
+            if key == 'pattern_score':
                 features = ['get_'+name+'_'+key for name in features_map[key]]
                 checker_obj = self
             else:
@@ -163,7 +169,7 @@ class InfoPattern(BasePattern):
             logger.debug('>> '+str(checker_obj.__dict__))
             logger.debug("================")
 
-            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
+            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name, lambda : self.INIT_SCORE)) for name in features]
 
             for name, f in functions_map:
                 feature_value = self.INIT_SCORE
@@ -180,32 +186,34 @@ class InfoPattern(BasePattern):
 
 
         logger.debug('\n>> info-features vector : \n'.upper())
-        for (k,v) in self.__dict__.iteritems():
-            logger.debug('>>> '+str(k).upper()+' ==> '+str(v).upper())
-
+        for (k,v) in sorted(self.__dict__.items()):
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
+        logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
+        non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
+        logger.debug("non_zero features count : "+str(len(non_zero)))
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
-    def get_mime_score(self):
+    def get_mime_pattern_score(self):
 
         mime_score = self.INIT_SCORE
         if not self.msg.is_multipart():
             return mime_score
 
         # all infos are attractive nice multiparts...
-        mime_score += self._penalty_score
+        mime_score += self.PENALTY_SCORE
 
         first_content_type = self.msg.get('Content-Type')
         if 'text/html' in first_content_type and re.search('utf-8', first_content_type, re.I):
-            mime_score += self._penalty_score
+            mime_score += self.PENALTY_SCORE
 
         mime_skeleton = self.get_mime_struct()
         logger.debug('MIME STRUCT: '+str(mime_skeleton))
         if (mime_skeleton.keys()).count('text/html') and 'inline' in mime_skeleton.get('text/html'):
-            mime_score += self._penalty_score
+            mime_score += self.PENALTY_SCORE
 
-        logger.debug('>>> MIME_SCORE: '+str(mime_score))
+
 
         return mime_score
 

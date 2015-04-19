@@ -7,13 +7,12 @@ import os, sys, logging, re, binascii, math
 from operator import add, itemgetter
 from collections import OrderedDict, Counter, namedtuple
 
-import checkers
 from pattern_wrapper import BasePattern
-
+import checkers
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s %(message)s')
+formatter = logging.Formatter('%(filename)s >>> %(message)s')
 ch = logging.StreamHandler(sys.stdout)
 logger.addHandler(ch)
 
@@ -29,14 +28,15 @@ class SpamPattern(BasePattern):
     -- if email looks like unconditional spam, it's vector will contain
         values, which are mostly don't equal to zeros ;
     """
-    print('SPAMPATTERN ----------> FILL CLASS ATTRIBUTE TABLE')
+
     RCVDS_NUM = 2
     RCVD_RULES = [
-                            r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account)+',
+                            r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|unknown|trap)+',
                             r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
                             r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
     ]
     EXCLUDED_HEADS = [
+
                             'Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID', 'Cc','Bcc','Return-Path',\
                             'X-Drweb-.*', 'X-Spam-.*', 'X-Maild-.*','Resent-.*'
     ]
@@ -54,6 +54,7 @@ class SpamPattern(BasePattern):
 	                        ur'(cheap([est])?.*(satisf[ied]?)*.*(U[SK])*.*(CANADIAN)*.*customer|To.*Be.*Remov([ed])?.*(Please?)*)',
 	                        ur'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
 	                        ur'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
+                            ur'^\s*(hello|hi|good\s+(morning|evening))\s+.*',
                             ur'.*(eml|spam).*',
                             ur'.*(payment|receipt|attach(ed)?|extra\s+inches)',
                             ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|ssТолько\s+для\s+(владельц.*|директор.*))',
@@ -139,9 +140,7 @@ class SpamPattern(BasePattern):
                             ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
     ]
 
-    print('SPAMPATTERN ----------> FISNISH CLASS ATTRIBUTE TABLE')
-
-    def __init__(self, score, **kwds):
+    def __init__(self, **kwds):
         '''
         :param kwds:
         # todo: initialize each <type>-pattern with it's own penalizing self.score,
@@ -151,31 +150,26 @@ class SpamPattern(BasePattern):
         less-correlated metrics, which are very typical for spams,
 
         '''
-        self.PENALTY_SCORE = score
 
         super(SpamPattern, self).__init__(**kwds)
 
-
-
-
         features_map = {
-                         'score'        : ['rcvd', 'mime', 'disp_notification'],
-                         'subject'      : ['score','encoding','style','checksum'],
-                         'dmarc'        : ['spf','score'],
-                         'url'          : ['score','avg_len','distinct_count','sender_count',\
-                                        'uppercase','punicode','fqdn','ascii','repetitions'],
-                         'list'         : ['score'],
-                         'attaches'     : ['score','in_score','count'],
-                         'originator'   : ['checksum'],
-                         'content'      : ['compress_ratio','avg_entropy','txt_score','html_score']
+                         'pattern_score'    : ['rcvd', 'mime', 'disp_notification'],
+                         'subject'          : ['score','encoding','upper','titled','checksum'],
+                         'url'              : ['score','avg_len','distinct_count','sender_count',\
+                                                'uppercase','punicode','fqdn','ascii','repetitions'],
+                         'list'             : ['score'],
+                         'attaches'         : ['score','in_score','count'],
+                         'originator'       : ['checksum'],
+                         'content'          : ['compress_ratio','avg_entropy','txt_score','html_score']
                          # would it be usefull compress_ratio for spams (search consequences here)
         }
 
         for key in features_map.iterkeys():
-            logger.debug('Add '+key+'features to '+str(self.__class__))
+            logger.debug('Add '+key.upper()+' features to SpamPattern vector :')
 
 
-            if key == 'score':
+            if key == 'pattern_score':
                 features = ['get_'+name+'_'+key for name in features_map[key]]
                 checker_obj = self
             else:
@@ -190,16 +184,11 @@ class SpamPattern(BasePattern):
 
 
             # todo: probably less memory consuming for each iteration (create one checker instance, compute all features, ),
-            # thought : what if features keeps all pattern's features
 
-            # checker_obj.__getattr__(), which is overloaded in Wrapper class, would be called for instances intercepted by Wrapper ;
-            # checker_obj.__getattr__() raises AttributeError, if attribute-method in < name > wasn't implemented in real Checker instance :
-            # cause this is interface mistake, rooted from code architecture, not from processing email's oddities.
-            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
+            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name, lambda : self.INIT_SCORE)) for name in features]
 
-            print('call functions')
             for name, f in functions_map:
-                feature_value = lambda: self.INIT_SCORE
+                feature_value = self.INIT_SCORE
                 print(name)
                 print(f)
                 try:
@@ -208,49 +197,61 @@ class SpamPattern(BasePattern):
                     logger.error(str(err).upper())
                     pass
 
+                logger.debug((name+' ==> '+str(feature_value)).upper())
                 self.__setattr__(name, feature_value)
 
+            print('===========\n'+str(self.__dict__).upper()+'\n')
+
         logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
-        logger.debug('SpamPattern instance final dict '+str(self.__dict__))
+
+        for (k,v) in sorted(self.__dict__.items()):
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
+
+
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
+        logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
+        non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
+        logger.debug("non_zero features count : "+str(len(non_zero)))
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
-    def get_rcvd_score(self):
+    def get_rcvd_pattern_score(self):
 
         # 1. "Received:" Headers
         rcvd_score = self.INIT_SCORE
-        logger.debug('>>> 1. RCVD_CHECKS:')
+        rcvds = self.get_rcvds(self.RCVDS_NUM)
+        logger.debug('get_rcvd_score : '+str(rcvds))
+
         for rule in self.RCVD_RULES:
-            if filter(lambda l: re.search(rule, l), self.get_rcvds(self.RCVDS_NUM)):
-                rcvd_score += self._penalty_score
+            if filter(lambda l: re.search(rule, l), rcvds):
+                rcvd_score += self.PENALTY_SCORE
+
+        for rcvd in [tuple(l.split()) for l in rcvds]:
+            if rcvd[0] == 'from' and rcvd[1].count('.') == 0:
+                rcvd_score += self.PENALTY_SCORE
 
         return rcvd_score
 
     # particular feature and method
-    def get_mime_score(self):
+    def get_mime_pattern_score(self):
 
         mime_score = self.INIT_SCORE
         if not self.msg.is_multipart() and self.msg.get('MIME-Version'):
-            mime_score += self._penalty_score
-            logger.debug(mime_score)
+            mime_score += self.PENALTY_SCORE
 
-        elif not self.msg.is_multipart():
-            logger.debug(mime_score)
+        if not self.msg.is_multipart():
+            mime_score += self.PENALTY_SCORE
 
         if self.msg.preamble and not re.search('This\s+is\s+a\s+(crypto.*|multi-part).*\sMIME\s.*', self.msg.preamble, re.I):
-            mime_score += self._penalty_score
-            logger.debug('\t----->'+str(mime_score))
-
-        logger.debug('mime_score: '.upper() +str(mime_score))
+            mime_score += self.PENALTY_SCORE
 
         return mime_score
 
-    def get_disp_notification_score(self):
+    def get_disp_notification_pattern_score(self):
 
         disp_notification = self.INIT_SCORE
         if self.msg.keys().count('Disposition-Notification-To'):
-            disp_notification = self._penalty_score
+            disp_notification = self.PENALTY_SCORE
 
         return disp_notification
 

@@ -59,18 +59,23 @@ class SubjectChecker(BaseChecker):
     def __init__(self, pattern_obj):
 
         BaseChecker.__init__(self, pattern_obj)
+        print(self.score)
 
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
-        self.subj_rules = get_regexp(pattern_obj.SUBJ_RULES)
+        #self.subj_rules = get_regexp(pattern_obj.SUBJ_RULES)
+        self.subj_rules = pattern_obj.SUBJ_RULES
 
     def get_subject_score(self):
 
-        logger.debug('compiled_regs : '+str(self.subj_rules))
+        #logger.debug('compiled_regs : '+str(self.subj_rules))
         # check by regexp rules
-        matched = filter(lambda r: r.search(self.subj_line, re.I), self.subj_rules)
-        logger.debug(matched)
+        print(self.subj_line)
+        print(type(self.subj_line))
+        #print(self.subj_rules)
+        matched = list()
+        matched.extend(filter(lambda r: re.search(r, self.subj_line, re.I), self.subj_rules))
+        logger.debug('matched : '+str(matched))
         subj_score = self.score*len(matched)
-        logger.debug('subj_score : '+str(subj_score))
 
         prefix_heads_map = {
                                 'RE' : ['In-Reply-To', 'Thread(-.*)?', 'References'],
@@ -80,33 +85,29 @@ class SubjectChecker(BaseChecker):
 
         for k in prefix_heads_map.iterkeys():
             if re.match(ur''+k+'\s*:', self.subj_line, re.I):
-                heads_list  = prefix_heads_map.get(k)
+                heads_list = prefix_heads_map.get(k)
 
                 for h_name in self.msg.keys():
                     found_heads = filter(lambda reg: re.match(reg, h_name, re.I), h_name)
                     subj_score += (len(prefix_heads_map.get(k)) - len(found_heads))*self.score
 
-        logger.debug('subj_score ==> '.upper()+str(subj_score))
         return subj_score
 
     def get_subject_encoding(self):
 
-        encoding = len(set(self.encodings_list))
-        logger.debug('subj_encoding ==> '.upper()+str(encoding))
-        return encoding
+        return len(set(self.encodings_list))
 
 
-    def get_subject_style(self):
+    def get_subject_upper(self):
+        print(self.subj_tokens)
 
-        subj_style = INIT_SCORE
-        upper_count = len([w for w in self.subj_tokens if w.isupper()])
-        title_count = len([w for w in self.subj_tokens if w.istitle()])
+        return len([w for w in self.subj_tokens if w.isupper()])
 
-        if upper_count or (len(self.subj_tokens) - title_count) < self.pattern.SUBJ_TITLES_THRESHOLD :
-            subj_style = self.score
+    def get_subject_titled(self):
+        print(self.subj_tokens)
 
-        logger.debug('subj_style ==> '.upper()+str(subj_style))
-        return subj_style
+        return len([w for w in self.subj_tokens if w.istitle()])
+
 
     def get_subject_checksum(self):
         # take crc32, make line only from words on even positions, not all
@@ -119,14 +120,12 @@ class SubjectChecker(BaseChecker):
         subj_trace = ''.join(tuple([w.encode('utf-8') for w in tokens]))
         logger.debug('subj_trace : '+str(subj_trace))
 
-        logger.debug('subj_checksum ==> '.upper()+str(binascii.crc32(subj_trace)))
+
         return binascii.crc32(subj_trace)
 
     def get_subject_len(self):
-        l = len(self.subj_tokens)
 
-        logger.debug('subj_len ==> '.upper()+str(l))
-        return l
+        return len(self.subj_tokens)
 
 @Wrapper
 class DmarcChecker(BaseChecker):
@@ -138,12 +137,11 @@ class DmarcChecker(BaseChecker):
 
     def get_dmarc_spf(self):
 
-        dmarc_spf = self.INIT_SCORE
+        dmarc_spf = INIT_SCORE
 
         if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
             dmarc_spf += self.score
 
-        logger.debug('dmarc_spf ==> '.upper()+str(dmarc_spf))
         return dmarc_spf
 
     def get_dmarc_score(self):
@@ -152,26 +150,24 @@ class DmarcChecker(BaseChecker):
         #:param dmarc_heads: list of headers, described in RFC 6376, RFC 7208
         #:return: <DMARC metrics dict>
 
-        dmarc_score = self.INIT_SCORE
+        dmarc_score = INIT_SCORE
 
         # RFC 7001, this header has always to be included
-        if not (self.msg.keys()).count('Authentication-Results'):
+        if self.msg.keys().count('Authentication-Results'):
             dmarc_score += self.score
 
         dmark_heads = [ 'Received-SPF', 'DKIM-Signature', 'DomainKey-Signature']
         found = [ head for head in self.msg.keys() if head in dmark_heads ]
         logger.debug('found_dmarc_headers : '+str(found))
 
-        dmarc_score += (len(dmark_heads) - len(found))*self.score
+        dmarc_score += len(found)*self.score
 
-        logger.debug('dmarc_score ==> '.upper()+str(found))
         return dmarc_score
-
 
     def get_dmarc_x_score(self):
 
         dmarc_x_score = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self.msg.keys()))
-        logger.debug('dmarc_x_score ==> '.upper()+str(dmarc_x_score))
+        #logger.debug('dmarc_x_score ==> '.upper()+str(dmarc_x_score))
         return dmarc_x_score
 
 @Wrapper
@@ -209,7 +205,7 @@ class EmarketChecker(BaseChecker):
     def get_emarket_domains_score(self):
 
         known_domains_score = INIT_SCORE
-
+        # believe onlu domains from DKIM
         for domain_name in self.pattern.get_dkim_domains():
             known_domains_score += len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), self.pattern.KNOWN_DOMAINS))*self.score
 
@@ -306,7 +302,7 @@ class UrlChecker(BaseChecker):
 
     def get_url_fqdn(self):
         # DOMAIN NAME LEVEL: very often russian spams are send from third-level domains
-
+        print(self.urls_domains)
         dots_counts = [s.count('.') for s in self.urls_domains]
         domain_name_level = len([count for count in dots_counts if count >=2 ])*self.score
 
@@ -402,7 +398,6 @@ class AttachesChecker(BaseChecker):
     def get_attaches_in_score(self):
 
         in_score = self.score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), self.mime_struct))
-
         return in_score
 
     def get_attaches_score(self):
@@ -585,7 +580,6 @@ class MimeChecker(BaseChecker):
         mime_parts = self.pattern.get_mime_struct()
         mime_nest_level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
 
-        logger.debug('mime_nest_level: '.upper()+str(mime_nest_level))
         return mime_nest_level
 
     def get_mime_checksum(self):
@@ -606,7 +600,6 @@ class MimeChecker(BaseChecker):
 
             mime_checksum = binascii.crc32(''.join([''.join(i) for i in items]))
 
-        logger.debug('mime_checksum ==> '.upper()+str(mime_checksum))
         return mime_checksum
 
 @Wrapper
@@ -640,7 +633,6 @@ class ContentChecker(BaseChecker):
             except StopIteration as err:
                 break
 
-        logger.debug('text_score: '.upper()+str(txt_score))
         return txt_score
 
     def get_content_html_score(self):
@@ -728,7 +720,6 @@ class ContentChecker(BaseChecker):
             txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
 
         txt_avg_ent = txt_avg_ent/n
-        logger.debug('avg_ent'.upper()+' : '+str(txt_avg_ent))
 
         return txt_avg_ent
 

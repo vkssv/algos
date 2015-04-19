@@ -5,8 +5,9 @@
 import os, sys, logging, math
 from collections import OrderedDict, Counter
 
-import checkers
+from msg_wrapper import BeautifulBody
 from pattern_wrapper import BasePattern
+import checkers
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -20,6 +21,8 @@ with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb
 #with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
 
+INIT_SCORE = BasePattern.INIT_SCORE
+
 class HamPattern(BeautifulBody):
     """
     Pattern class for build vectors, based on features
@@ -29,6 +32,15 @@ class HamPattern(BeautifulBody):
         values, mostly don't equal to zeros ;
     """
 
+     # search them in DKIM maybe later SPF headers
+    KNOWN_DOMAINS = [
+                        r'.*\.paypal\.com',\
+                        r'.*\.smartfares\.com',\
+                        r'.*\.anywayanyday.*\.com',\
+                        r'.*\.airbnb\.com',\
+                        r'.*\.booking\.com'
+    ]
+
     # try greedy regexes, maybe will precise them in future
     SUBJ_RULES = [
                              ur'(Re\s*:|Fw(d)?\s*:|fly|ticket|account|payment|verify\s+your\s+(email|account)|bill)',
@@ -36,6 +48,7 @@ class HamPattern(BeautifulBody):
                              ur'от\s+[\w\.-]{3,10}\s+(счет|отчет|выписка|электронный\s+(билет)?)'
 
     ]
+
 
     TEXT_REGEXP_LIST = [
 
@@ -82,6 +95,8 @@ class HamPattern(BeautifulBody):
                             ur'(support|settings|orders?|product|disclosures?|privacy|\?user_id|validate_e?mail\?)'
     ]
 
+
+
     def __init__(self, score, **kwds):
         '''
         :param kwds:
@@ -98,14 +113,15 @@ class HamPattern(BeautifulBody):
         features_map = {
                          'subject'      : ['score','len','style'],
                          'dmarc'        : ['spf'],
+                         'emarket'      : ['domains_score'],
                          'url'          : ['score','avg_len','absence'],
                          'content'      : ['txt_score','html_score']
         }
 
-        logger.debug('Start vectorize msg with rules from '+str(self.__class__)+'...')
+        logger.debug('Start vectorize msg with rules from HamPattern ')
 
         for n, key in enumerate(features_map.keys(),start=1):
-            logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: '+str(self.__class__))
+            logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: ')
 
 
             features = ['get_'+key+'_'+name for name in features_map[key]]
@@ -116,10 +132,10 @@ class HamPattern(BeautifulBody):
             logger.debug('>> '+str(checker_obj.__dict__))
             logger.debug("================")
 
-            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
+            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name, lambda : INIT_SCORE)) for name in features]
 
             for name, f in functions_map:
-                feature_value = self.INIT_SCORE
+                feature_value = INIT_SCORE
                 print(name)
                 print(f)
                 try:
@@ -131,10 +147,13 @@ class HamPattern(BeautifulBody):
                 self.__setattr__(name, feature_value)
 
         logger.debug('\n>> ham-features vector : \n'.upper())
-        for (k,v) in self.__dict__.iteritems():
-            logger.debug('>>> '+str(k).upper()+' ==> '+str(v).upper())
+        for (k,v) in sorted(self.__dict__.items()):
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
 
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
+        logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
+        non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
+        logger.debug("non_zero features count : "+str(len(non_zero)))
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
@@ -156,7 +175,7 @@ if __name__ == "__main__":
 	except Exception as details:
 		raise
 
-			
+
 '''''
 
 		

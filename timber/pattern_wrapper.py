@@ -34,27 +34,29 @@ class BasePattern(BeautifulBody):
     Keeps Frankenstein's DNAs.
     '''
 
-    INIT_SCORE = 0 # can redifine for particular set of instanses, => use cls./self._INIT_SCORE in code
+    INIT_SCORE = 0.0
     PENALTY_SCORE = 1.0
 
     EX_MIME_ATTRS_LIST = ['boundary=','charset=']
     BASE_FEATURES = ['all_heads_checksum','rcpt_score']
 
-    def __init__(self, **kwds):
+    def __init__(self, score, **kwds):
+
+        self.PENALTY_SCORE = score
 
         super(BasePattern, self).__init__(**kwds)
-        logger.debug('PENALTY_SCORE ==> '+str(self.PENALTY_SCORE))
 
-        #for n, feature in enumerate(self.BASE_FEATURES, start=1):
-            #logger.debug(str(n)+'. Add '+feature.upper()+' attribute to '+str(self.__class__))
         methods_names = ['get_'+name for name in self.BASE_FEATURES]
-        methods = [ (name.lstrip('get_'), getattr(self, name, lambda : INIT_SCORE)) for name in methods_names ]
-        logger.debug('methods dict for '+str(self.__class__)+' instance : '+str(methods))
+        methods = [ (name.lstrip('get_'), getattr(self, name, lambda x: self.INIT_SCORE)) for name in methods_names ]
+        # default "lambda x" here in getattr() just intercepts unexisted any method from self.BASE_FEATURES,
+        # to avoid AttributeError exception
 
         for n, pair in enumerate(methods, start=1):
             name, f = pair
             logger.debug(str(n)+'. Add '+name.upper()+' attribute to '+str(self.__class__))
             value = self.INIT_SCORE
+            # if attribute-method was found in BasePattern, setup it's default value before call, because
+            # if later we will have an exception => anyway vector will have defined set of features
             logger.debug('called method : '+str(f))
             try:
                 value = f()
@@ -62,6 +64,7 @@ class BasePattern(BeautifulBody):
                 logger.error(str(f)+' : '+str(err).upper())
                 pass
 
+            logger.debug((name+' ==> '+str(value)).upper())
             self.__setattr__(name, value)
 
         self.rcvd_num = self.msg.keys().count('Received')
@@ -110,28 +113,30 @@ class BasePattern(BeautifulBody):
 
     # can be called from each particular pattern with particular excluded_list
     '''''
+
     def get_all_heads_checksum(self):
 
         '''
         :param excluded_list: uninteresting headers like ['Received', 'From', 'Date', 'X-.*']
         :return: < CRC32 from headers names >
         '''
-        logger.debug(self.msg.items())
+        #logger.debug(self.msg.items())
 
         heads_vector = tuple(map(itemgetter(0), self.msg.items()))
-        print(heads_vector)
+        #print(heads_vector)
         heads_dict = dict(self.msg.items())
-        logger.debug('excluded heads list from '+str(self.__class__)+' : ')
-        logger.debug(self.EXCLUDED_HEADS)
+        #logger.debug('excluded heads list from '+str(self.__class__)+' : ')
+        #logger.debug(self.EXCLUDED_HEADS)
 
         for ex_head in self.EXCLUDED_HEADS:
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
-        print(heads_vector)
+        #print(heads_vector)
         all_heads_checksum = binascii.crc32(''.join(heads_vector))
-        logger.debug('all_heads_checksum ==> '.upper()+str(self.all_heads_checksum))
+        #logger.debug('all_heads_checksum ==> '.upper()+str(self.all_heads_checksum))
         return all_heads_checksum
 
     # can be called from each particular pattern with particular rcvds_num
+
     def get_rcvd_checksum(self):
         '''
         :param rcvds_num: N curious Received headers from \CRLF\CRFL to top

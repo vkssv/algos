@@ -50,8 +50,8 @@ class Wrapper(object):
 
         return self.checker_inst
 
-    def __getattr__(self, attr_name):
-        return lambda : INIT_SCORE
+    #def __getattr__(self, attr_name):
+    #    return lambda : INIT_SCORE
 
 
 

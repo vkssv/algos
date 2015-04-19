@@ -113,7 +113,7 @@ class NetsPattern(BasePattern):
                         ur'(eml-skills_endorsements-btn-0-new_teaser_add|grp_email_subscribe_new_posts)'
     ]
 
-    def __init__(self, score, **kwds):
+    def __init__(self, **kwds):
         '''
         :param kwds:
         # todo: initialize each <type>-pattern with it's own penalizing self.score,
@@ -122,12 +122,12 @@ class NetsPattern(BasePattern):
         :return: expand msg_vector, derived from BasePattern class with
         less-correlated metrics, which are very typical for spams,
         '''
-        self.PENALTY_SCORE = score
+
         super(NetsPattern, self).__init__(**kwds)
 
         features_map = {
-                         'score'        : ['mime'],
-                         'subject'      : ['score','encoding','style','checksum'],
+                         'pattern_score': ['mime'],
+                         'subject'      : ['score','encoding','upper','titled','checksum'],
                          'dmarc'        : ['spf','score'],
                          'emarket'      : ['score','flag','domains_score'],
                          'url'          : ['score','count','avg_len','distinct_count','sender_count','sim', 'avg_query_len'],
@@ -142,7 +142,7 @@ class NetsPattern(BasePattern):
         for n, key in enumerate(features_map.keys(),start=1):
             logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: '+str(self.__class__))
 
-            if key == 'score':
+            if key == 'pattern_score':
                 features = ['get_'+name+'_'+key for name in features_map[key]]
                 checker_obj = self
             else:
@@ -154,7 +154,7 @@ class NetsPattern(BasePattern):
             logger.debug('>> '+str(checker_obj.__dict__))
             logger.debug("================")
 
-            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name)) for name in features]
+            functions_map = [(name.lstrip('get_'), getattr(checker_obj, name, lambda : self.INIT_SCORE)) for name in features]
 
             for name, f in functions_map:
                 feature_value = self.INIT_SCORE
@@ -169,14 +169,18 @@ class NetsPattern(BasePattern):
                 self.__setattr__(name, feature_value)
 
         logger.debug('\n>> nets-features vector : \n'.upper())
-        for (k,v) in self.__dict__.iteritems():
-            logger.debug('>>> '+str(k).upper()+' ==> '+str(v).upper())
 
+        for (k,v) in sorted(self.__dict__.items()):
+            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
+        logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
+        non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
+        logger.debug("non_zero features count : "+str(len(non_zero)))
         logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
-    def get_mime_score(self):
+
+    def get_mime_pattern_score(self):
 
         mime_score = self.INIT_SCORE
         if not self.msg.is_multipart():

@@ -210,9 +210,9 @@ class BeautifulBody(object):
         subj_tokens = tuple(subj_line.split())
         lang = self.get_lang(subj_tokens)
         if lang in self.SUPPORT_LANGS_LIST:
-            tokens = tuple(word for word in subj_tokens if word not in stopwords.words(lang))
-            logger.debug('before stem: '+str(tokens))
-            subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
+            subj_tokens = tuple(word for word in subj_tokens if word not in stopwords.words(lang))
+            #logger.debug('before stem: '+str(tokens))
+            #subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
 
         return (subj_line, subj_tokens, encodings_list)
 
