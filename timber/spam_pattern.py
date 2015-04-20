@@ -11,16 +11,18 @@ from pattern_wrapper import BasePattern
 import checkers
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(filename)s >>> %(message)s')
-ch = logging.StreamHandler(sys.stdout)
-logger.addHandler(ch)
+#ch = logging.StreamHandler(sys.stdout)
+#logger.addHandler(ch)
 
+'''''
 from email import parser
 parser = parser.Parser()
 with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
 #with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
+'''''
 
 class SpamPattern(BasePattern):
     """
@@ -45,7 +47,7 @@ class SpamPattern(BasePattern):
 
     SUBJ_RULES = [
 
-                            ur'((S)?SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
+                            ur'((s)?SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
                             ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
                             ur'-?[\d]{1,2}\s+%\s+.*',
                             ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',

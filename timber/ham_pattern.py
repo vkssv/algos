@@ -10,16 +10,18 @@ from pattern_wrapper import BasePattern
 import checkers
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(filename)s %(message)s')
-ch = logging.StreamHandler(sys.stdout)
-logger.addHandler(ch)
+#ch = logging.StreamHandler(sys.stdout)
+#logger.addHandler(ch)
 
+'''''
 from email import parser
 parser = parser.Parser()
 with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
 #with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
+'''''
 
 INIT_SCORE = BasePattern.INIT_SCORE
 

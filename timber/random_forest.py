@@ -35,29 +35,46 @@ logger.setLevel(logging.DEBUG)
 
 # create feature vector for email from doc_path,
 # if label is set => feature set is also predifined by pattern for this label
-def vectorize(doc_path, label, score):
+
+class EmailVectorizer(object):
+
+    def get_dataset(self, path, label, penalty):
+
+        if label not in ['spam','ham','nets','infos','test']:
+            logger.error('Pattern for category '+label+' wasn\'t implemented!')
+            sys.exit(1)
+
+        return(X_train,Y_train)
+
+
+
+
+
+def vectorize(doc_path, penalty_score):
 
     logger.debug("\n\nStart processing: " + doc_path + ' from "' + label + '" set')
-    vect_dict = OrderedDict()
 
     parser = Parser()
     with open(doc_path, 'rb') as f:
-        msg = parser.parse(f)
+        M = parser.parse(f)
 
     vect_dict['size'] = math.ceil(float((os.stat(doc_path).st_size)/1024))
     logger.debug('----->'+str(vect_dict))
 
     try:
 
-        Frankenstein = MetaFrankenstein.New(label)
+        Frankenstein_cls = MetaFrankenstein.New(label)
         logger.debug('\n\n\t CHECK_' + label.upper()+'\n')
-        vect_dict.update(Frankenstein(msg, score))
+        print('DNA: '+str(Frankenstein_cls.__dict__))
+        vector = Frankenstein_cls(msg=M, score=penalty_score)
+        vector.__setattr__('msg_size', math.ceil(float((os.stat(doc_path).st_size)/1024)))
+        print('Current Frankenstein : '+str(vector.__dict__))
 
     except Exception as details:
         logger.error(str(details))
         raise
 
-    return (vect_dict, label)
+    return vector.__dict__
 
 def __normalize(vect_dict):
     # remove feature tags ?
@@ -69,7 +86,7 @@ def __normalize(vect_dict):
         # return nltk.jaccard_distance()
 
 
-def __pathes_gen(path,st_mode):
+def __pathes_gen(path, st_mode):
 
     sample_path = path
     if st_mode == stat.S_IFREG:
@@ -98,20 +115,22 @@ if __name__ == "__main__":
 
     usage = 'usage: %prog [ samples_directory | file ] -c category -s score -v debug'
     parser = argparse.ArgumentParser(prog='helper')
-    parser.add_argument('PATH', type=str, metavar = 'PATH', help="path to samples dir or to email")
-    parser.add_argument('-c', action = "store", dest = 'category',default = 'test',
-                            help = "samples category, default=test, i.e. not defined")
+    parser.add_argument('PATH', type=str, metavar = 'PATH', help="path to dir with test collection")
+    #parser.add_argument('-c', action = "store", dest = 'category',default = 'test',
+    #                        help = "samples category, default=test, i.e. not defined")
+    parser.add_argument('-t', type=str, action = "store", dest = "train_dir", \
+                        help = "path to dir with categories collections")
     parser.add_argument('-s', type = float,  action = 'store', dest = "score", default = 1.0,
-                            help = "score penalty for matched feature, def = 1.0")
+                            help = "penalty score for matched feature, def = 1.0")
     parser.add_argument('-v', action = "store_true", dest = "debug", default = False, help = "be verbose")
-    parser.add_argument('-a', type=str, action = "store", dest = "criterion", default = 'gini', help = "the function name to measure the quality of a split")
+    parser.add_argument('-c', type=str, action = "store", dest = "criterion", default = 'gini', help = "the function name to measure the quality of a split")
 
     args = parser.parse_args()
 
     required_version = (2,7)
 
 
-    formatter = logging.Formatter(' --- %(filename)s --- \n %(message)s')
+    formatter = logging.Formatter(' --- %(filename)s ---  %(message)s')
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), args.category+'.log'), mode = 'w')
@@ -123,39 +142,43 @@ if __name__ == "__main__":
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
-    # 1. check and determine pathes
-    checks = {
-                stat.S_IFREG : lambda fd: os.stat(fd).st_size,
-                stat.S_IFDIR : lambda d: os.listdir(d)
-    }
+    # 1. check pathes
+    subdirs = ['spam','ham','net','info','test']
+    for path in [ os.path.join(args.PATH, subdir) for subdir in subdirs]:
+        if not os.listdir(path):
+            logger.error(path + '" is empty.')
+            sys.exit(1)
 
-    mode = filter(lambda key: os.stat(args.PATH).st_mode & key, checks.keys())
-    f = checks.get(*mode)
-    if not f(args.PATH):
-        raise Exception(args.PATH + '" is empty.')
+
+
+
+
+
 
     # 2. make datasets
     try:
-        X = defaultdict(list)
+        X = list()
         pathes_iterator = __pathes_gen(args.PATH, *mode)
-        #clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0, criterion=args.criterion)
+
 
         while(True):
             sample_path = next(pathes_iterator)
             logger.debug('PATH: '+sample_path)
+            vector_x = dict()
             if args.category == 'test':
                 for label in ('ham', 'spam', 'info', 'net'):
 
-                    vector_x = vectorize(sample_path, label, args.score)
+                    vector_x = vectorize(sample_path, args.score)
                     logger.debug('----->'+str(vector_x))
                     #vector_x = normilize(vector_x)
                     logger.debug('----->'+str(vector_x))
-                    X[label].append(vector_x)
+                    X.append(vector_x)
             else:
 
-                vector_x = vectorize(sample_path, args.category, args.score)
+                vector_x = vectorize(sample_path, args.score)
                 logger.debug('----->'+str(vector_x))
-                X[args.category].append(vector_x)
+                X.append(vector_x)
+
 
         logger.debug(X)
         #clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=1, random_state=0, criterion=args.criterion)

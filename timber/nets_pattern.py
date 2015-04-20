@@ -10,17 +10,19 @@ from collections import OrderedDict, Counter
 
 formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler(sys.stdout)
-logger.addHandler(ch)
+#logger.setLevel(logging.DEBUG)
+#ch = logging.StreamHandler(sys.stdout)
+#logger.addHandler(ch)
 
 import checkers
 from pattern_wrapper import BasePattern
 
+'''''
 from email import parser
 parser = parser.Parser()
 with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
     M = parser.parse(f)
+'''''
 
 class NetsPattern(BasePattern):
     """

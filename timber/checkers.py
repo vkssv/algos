@@ -62,8 +62,8 @@ class SubjectChecker(BaseChecker):
         print(self.score)
 
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
-        #self.subj_rules = get_regexp(pattern_obj.SUBJ_RULES)
-        self.subj_rules = pattern_obj.SUBJ_RULES
+        self.subj_rules = get_regexp(pattern_obj.SUBJ_RULES)
+        #self.subj_rules = pattern_obj.SUBJ_RULES
 
     def get_subject_score(self):
 
@@ -73,7 +73,7 @@ class SubjectChecker(BaseChecker):
         print(type(self.subj_line))
         #print(self.subj_rules)
         matched = list()
-        matched.extend(filter(lambda r: re.search(r, self.subj_line, re.I), self.subj_rules))
+        matched.extend(filter(lambda r: re.search(r, self.subj_line.lower()), self.subj_rules))
         logger.debug('matched : '+str(matched))
         subj_score = self.score*len(matched)
 
@@ -84,7 +84,7 @@ class SubjectChecker(BaseChecker):
         }
 
         for k in prefix_heads_map.iterkeys():
-            if re.match(ur''+k+'\s*:', self.subj_line, re.I):
+            if re.match(r''+k+'\s*:', self.subj_line.encode(), re.I):
                 heads_list = prefix_heads_map.get(k)
 
                 for h_name in self.msg.keys():
@@ -166,7 +166,7 @@ class DmarcChecker(BaseChecker):
 
     def get_dmarc_x_score(self):
 
-        dmarc_x_score = len(filter(lambda h: re.match('X-DMARC(-.*)?', h, re.I), self.msg.keys()))
+        dmarc_x_score = len(filter(lambda h: re.match(r'X-DMARC(-.*)?', h, re.I), self.msg.keys()))
         #logger.debug('dmarc_x_score ==> '.upper()+str(dmarc_x_score))
         return dmarc_x_score
 
@@ -207,7 +207,7 @@ class EmarketChecker(BaseChecker):
         known_domains_score = INIT_SCORE
         # believe onlu domains from DKIM
         for domain_name in self.pattern.get_dkim_domains():
-            known_domains_score += len(filter(lambda regexp: re.search(regexp, dkim_domain, re.I), self.pattern.KNOWN_DOMAINS))*self.score
+            known_domains_score += len(filter(lambda regexp: re.search(regexp, domain_name, re.I), self.pattern.KNOWN_DOMAINS))*self.score
 
         return known_domains_score
 
@@ -231,10 +231,10 @@ class UrlChecker(BaseChecker):
 
         url_score = INIT_SCORE
         reg = namedtuple('reg', 'fqdn txt')
-        regexes = reg(*(get_regexp(l, re.I) for l in (self.pattern.URL_FQDN_REGEXP, self.pattern.URL_TXT_REGEXP)))
+        regexes = reg(*(get_regexp(l) for l in (self.pattern.URL_FQDN_REGEXP, self.pattern.URL_TXT_REGEXP)))
 
         for reg in regexes.fqdn:
-            url_score += len([domain for domain in self.urls_domains if reg.search(domain)])*self.score
+            url_score += len([domain for domain in self.urls_domains if reg.search(domain.lower())])*self.score
 
         metainfo_list = list()
         for attr in ['path', 'query', 'fragment']:
@@ -242,7 +242,7 @@ class UrlChecker(BaseChecker):
 
         if metainfo_list:
             for reg in regexes.txt:
-                url_score += len(filter(lambda metainfo: reg.search(metainfo), metainfo_list))*self.score
+                url_score += len(filter(lambda metainfo: reg.search(metainfo.lower()), metainfo_list))*self.score
 
         return url_score
 
@@ -278,7 +278,7 @@ class UrlChecker(BaseChecker):
 
 
             pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
-            sender_count += len(filter(lambda d: re.search(pattern, d, re.I), self.urls_domains))
+            sender_count += len(filter(lambda d: re.search(pattern, d.lower()), self.urls_domains))
 
         return sender_count
 
@@ -295,8 +295,8 @@ class UrlChecker(BaseChecker):
 
     def get_url_punicode(self):
         # PUNICORNS: respectively (very often for russian spams)
-        puni_regex = ur'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
-        my_little_puni = len([domain for domain in self.urls_domains if re.search(puni_regex, domain, re.I)])*self.score
+        puni_regex = r'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
+        my_little_puni = len([domain for domain in self.urls_domains if re.search(puni_regex, domain.encode(), re.I)])*self.score
 
         return my_little_puni
 
@@ -342,7 +342,7 @@ class UrlChecker(BaseChecker):
         repet_regex = ur'(https?:\/\/|www\.)\w{1,61}(\.\w{2,10}){1,5}'
         urls = [x.geturl() for x in self.urls]
 
-        urls_with_repetitions = map(lambda url: re.findall(repet_regex, url, re.I), urls)
+        urls_with_repetitions = map(lambda url: re.findall(repet_regex, url.lower()), urls)
         repetitions = len([l for l in urls_with_repetitions if len(l)>1])*self.score
 
         return repetitions
@@ -578,7 +578,7 @@ class MimeChecker(BaseChecker):
     def get_mime_nest_level(self):
 
         mime_parts = self.pattern.get_mime_struct()
-        mime_nest_level = len(filter(lambda n: re.search(r'(multipart|message)\/',n,re.I), mime_parts.keys()))
+        mime_nest_level = len(filter(lambda n: re.search(r'(multipart|message)\/', n, re.I), mime_parts.keys()))
 
         return mime_nest_level
 
@@ -628,7 +628,7 @@ class ContentChecker(BaseChecker):
         while(True):
             try:
                 for reg_obj in regs_list:
-                    txt_score += len(filter(lambda s: reg_obj.search(s,re.I), next(sents_generator)))*self.score
+                    txt_score += len(filter(lambda s: reg_obj.search(s.lower()), next(sents_generator)))*self.score
                     logger.debug("text_score: "+str(txt_score))
             except StopIteration as err:
                 break
@@ -676,12 +676,12 @@ class ContentChecker(BaseChecker):
                 pairs = list()
                 for key_attr in compiled_regexp_list: # expected_attrs_dict:
                     logger.debug(key_attr)
-                    pairs = filter(lambda pair: key_attr.match(pair.name, re.I), soup_attrs_list)
+                    pairs = filter(lambda pair: key_attr.match(pair.name.lower()), soup_attrs_list)
                     logger.debug(pairs)
 
                     check_values = list()
                     if pairs:
-                        check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value, re.I), soup_attrs_list)
+                        check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value.lower()), soup_attrs_list)
                         html_score += self.score*len(check_values)
 
         return html_score
@@ -696,9 +696,9 @@ class ContentChecker(BaseChecker):
             comments = s.body.findAll( text=lambda text: isinstance(text, Comment) )
             [comment.extract() for comment in comments]
             # leave only closing tags struct
-            reg = re.compile(ur'<[a-z]*/[a-z]*>',re.I)
+            reg = re.compile(ur'<[a-z]*/[a-z]*>')
             # todo: investigate the order of elems within included generators
-            html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(s.body.prettify(), re.M)))
+            html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall((s.body.lower())prettify(), re.M)))
 
         html_checksum = binascii.crc32(''.join(html_skeleton))
 

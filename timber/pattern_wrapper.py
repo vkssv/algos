@@ -13,7 +13,7 @@ from nltk.stem import SnowballStemmer
 from nltk.probability import FreqDist, ConditionalFreqDist
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(filename)s: >> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
@@ -87,7 +87,9 @@ class BasePattern(BeautifulBody):
         # todo: also make it as iterator
         compiled_list = []
 
-        for exp in regexp_list:
+        for exp.lower() in regexp_list:
+            # cause mostly use unicoded lines and unicoded regexps
+            # => re doesn't support re.I flag for them
             #logger.debug(exp)
             if compilation_flag is not None:
                 exp = re.compile(exp, compilation_flag)

@@ -44,7 +44,7 @@ class BeautifulBody(object):
 
     """
 
-    __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))', re.M)
+    __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))'.lower(), re.M)
 
     DEFAULT_MAX_NEST_LEVEL = 30
     DEFAULT_LANG = 'english'
@@ -315,7 +315,7 @@ class BeautifulBody(object):
                     url_list.extend([unicode(x) for x in soup.a])
             else:
                 url_regexp= ur'(((https?|ftps?):\/\/)|www:).*'
-                url_list.extend(filter(lambda url: re.search(url_regexp, url, re.I), [l.strip() for l in line.split()]))
+                url_list.extend(filter(lambda url: re.search(url_regexp, url.lower()), [l.strip() for l in line.split()]))
 
 
         if url_list:
@@ -376,7 +376,7 @@ class BeautifulBody(object):
                 sents = tuple(raw_line)
 
             if remove_url:
-                sents = tuple(map(lambda sent: self.__URLINTEXT_PAT.sub(' ', sent, re.I), sents))
+                sents = tuple(map(lambda sent: self.__URLINTEXT_PAT.sub(' ', sent.lower()), sents))
 
             sents = (s.strip() for s in sents)
             sents = tuple(s for s in tuple(sents) if s)

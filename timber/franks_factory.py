@@ -16,7 +16,7 @@ class PatternFactory(object):
         except Exception as details:
             raise
 
-        return (current_obj())
+        return current_obj
 
 
 MetaFrankenstein = PatternFactory()

@@ -13,16 +13,17 @@ from pattern_wrapper import BasePattern
 
 formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler(sys.stdout)
-logger.addHandler(ch)
+#logger.setLevel(logging.DEBUG)
+#ch = logging.StreamHandler(sys.stdout)
+#logger.addHandler(ch)
 
+'''''
 from email import parser
 parser = parser.Parser()
 with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
 #with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
-
+'''''
 
 class InfoPattern(BasePattern):
     """
