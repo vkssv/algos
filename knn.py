@@ -262,7 +262,7 @@ if __name__ == "__main__":
                 sample_path = os.path.join(path, d)
                 vector = create_doc_vector(sample_path)
                 train_dataset.append(vector)
-                pdb.set_trace()
+
 
         # 2. create vector model for processing email
         email_coordinates = (create_doc_vector(options.new_doc))

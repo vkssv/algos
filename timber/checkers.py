@@ -222,6 +222,7 @@ class UrlChecker(BaseChecker):
     '''
 
     def __init__(self, pattern_obj):
+
         BaseChecker.__init__(self, pattern_obj)
 
         self.urls = pattern_obj.get_url_obj_list()
@@ -285,8 +286,7 @@ class UrlChecker(BaseChecker):
     def get_url_uppercase(self):
         #URL_UPPER: presense of elements in upper-case/title-case in URL
 
-        # 8. URL-checks
-        logger.debug('>>> 8. URL_CHECKS:')
+
         uppercase = INIT_SCORE
         for method in [ unicode.isupper, unicode.istitle ]:
             uppercase += len(filter(lambda s: method(s), self.urls_domains))*self.score
@@ -692,13 +692,14 @@ class ContentChecker(BaseChecker):
         soups_list = self.pattern.get_html_parts()
 
         for s in tuple(soups_list):
+            body_line = s.body.lower()
             # get table checksum
             comments = s.body.findAll( text=lambda text: isinstance(text, Comment) )
             [comment.extract() for comment in comments]
             # leave only closing tags struct
             reg = re.compile(ur'<[a-z]*/[a-z]*>')
             # todo: investigate the order of elems within included generators
-            html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall((s.body.lower())prettify(), re.M)))
+            html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(body_line.prettify(), re.M)))
 
         html_checksum = binascii.crc32(''.join(html_skeleton))
 

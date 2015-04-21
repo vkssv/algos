@@ -108,7 +108,7 @@ class BeautifulBody(object):
         :return: left parts of Received header's values, everything before ';'
         '''
         # parse all Received: headers by default if rcvds_num wasn't defined
-        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received'))[ -1*rcvds_num : ]
+        parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received',' '))[ -1*rcvds_num : ]
         logger.debug('parsed_rcvds : '+str(parsed_rcvds))
         return parsed_rcvds
 

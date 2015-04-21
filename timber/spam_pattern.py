@@ -16,13 +16,14 @@ formatter = logging.Formatter('%(filename)s >>> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
-'''''
+
 from email import parser
 parser = parser.Parser()
-with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+with open('/home/calypso/train/ham/without_rcvds.eml','rb') as f:
+#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
 #with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
     M = parser.parse(f)
-'''''
+
 
 class SpamPattern(BasePattern):
     """
@@ -214,7 +215,7 @@ class SpamPattern(BasePattern):
         logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
         logger.debug("non_zero features count : "+str(len(non_zero)))
-        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
+        #logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
     def get_rcvd_pattern_score(self):
