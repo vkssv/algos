@@ -17,6 +17,7 @@ from operator import itemgetter
 
 from franks_factory import MetaFrankenstein
 from pattern_wrapper import BasePattern
+from timber_exceptions import NaturesError
 
 from sklearn.ensemble import RandomForestClassifier
 
@@ -38,107 +39,130 @@ logger.setLevel(logging.DEBUG)
 # create feature vector for email from doc_path,
 # if label is set => feature set is also predifined by pattern for this label
 
-def __get_validated_path(path):
 
-    checks = {
-                stat.S_IFREG : lambda fd: os.stat(fd).st_size,
-                stat.S_IFDIR : lambda d: os.listdir(d)
-    }
+class Vectorizer(object):
+    '''
+    '''
 
-    mode = filter(lambda key: os.stat(path).st_mode & key, checks.keys())
-    logger.debug('mode: '+str(mode))
-    f = checks.get(*mode)
-    if not f(path):
-        raise Exception(path + '" is empty.')
+    def __init__(self, path, label, score):
 
-    msg_path = path
-    if mode[0] == stat.S_IFREG:
-        logger.debug(msg_path)
-        yield msg_path
+        checks = {
+                    stat.S_IFREG : lambda fd: os.stat(fd).st_size,
+                    stat.S_IFDIR : lambda d: os.listdir(d)
+        }
 
-    elif mode[0] == stat.S_IFDIR:
-        for p, subdir, docs in os.walk(path):
-            for d in docs:
-                msg_path = os.path.join(p,d)
-                yield msg_path
+        self.mode = filter(lambda key: os.stat(path).st_mode & key, checks.keys())
+        logger.debug('file mode: '+str(self.mode))
+        f = checks.get(*self.mode)
+        if not f(path):
+            logger.error('Collection dir : "'+path + '" is empty.')
+            sys.exit(1)
 
+        self.path = path
+        self.label = label
+        self.penalty = score
 
-def vectorize(doc_path, label, penalty_score):
+        logger.debug('Current path : '+str(self.path).upper())
+        logger.debug('Current class : '+str(self.label).upper())
+        logger.debug('Penalty score : '+str(self.penalty))
 
-    logger.debug("\n\nStart processing: " + doc_path + ' from "' + label + '" set')
+    def __get_path(self):
 
-    parser = Parser()
-    with open(doc_path, 'rb') as f:
-        M = parser.parse(f)
+        msg_path = self.path
+        if self.mode[0] == stat.S_IFREG:
+            logger.debug(msg_path)
+            yield msg_path
 
-    try:
+        elif self.mode[0] == stat.S_IFDIR:
+            for p, subdir, docs in os.walk(self.path):
+                for d in docs:
+                    msg_path = os.path.join(p,d)
+                    yield msg_path
 
-        Frankenstein_cls = MetaFrankenstein.New(label)
+    def __vectorize(self, doc_path):
+
+        logger.debug('\n\nStart vectorizing "'+doc_path+'" from '+self.label.upper()+' set...')
+
+        parser = Parser()
+        with open(doc_path, 'rb') as f:
+            M = parser.parse(f)
+
+        Frankenstein_cls = MetaFrankenstein.New(self.label)
         logger.debug('Frankenstein_cls :'+str(type(Frankenstein_cls)))
         logger.debug('Frankenstein_cls :'+str(Frankenstein_cls))
-        logger.debug('\n\n\t CHECK_' +doc_path+'\n')
+        logger.debug('\n\n\t CHECK : ' +doc_path+'\n')
         #logger.debug('DNA: '+str(Frankenstein_cls.__dict__))
-        pattern_instance = Frankenstein_cls(msg=M, score=penalty_score)
+        pattern_instance = Frankenstein_cls(msg=M, score=self.penalty)
         vector = pattern_instance.__dict__
         vector.pop('PENALTY_SCORE')
         vector['msg_size'] = math.ceil(float((os.stat(doc_path).st_size)/1024))
         vector = tuple((k.upper(),value) for k,value in sorted(vector.items()))
-        logger.debug('vect : '+str(vector))
 
         logger.debug('\n\tCurrent Frankenstein ==> '+str(vector))
         msg_vector = tuple(map(itemgetter(1),vector))
 
-    except Exception as details:
-        logger.error(str(details))
-        raise
-    logger.debug('\nVECTOR ===> '+str(msg_vector)+'\n')
-    return msg_vector
 
-def __normalize(vect_dict):
-    # remove feature tags ?
-    #
-    pass
+        logger.debug('\nVECTOR ===> '+str(msg_vector)+'\n')
+        return msg_vector
+
+    def __normalize(self,vect_dict):
+
+        pass
+
+    def get_dataset(self):
+
+        logger.debug('Open subdir : '+str(self.path))
+        pathes_gen = self.__get_path()
+
+        X = []
+        Y = []
+
+        expected_len = None
+        msg_path = ''
+        while(True):
+
+            try:
+
+                msg_path = next(pathes_gen)
+                logger.debug('PATH: '+(msg_path.upper()))
+
+                x_vector = self.__vectorize(msg_path)
+                logger.debug('\nx_vector ===> '+str(x_vector))
+                logger.debug('\nx_vector ===> '.upper()+str(x_vector))
+
+                if expected_len is None:
+                    expected_len = len(x_vector)
+
+                elif expected_len != len(x_vector):
+                    logger.error('EXP_LEN: '+str(exp_len))
+                    logger.error('VV: '+str(len(x_vector)))
+                    logger.error('PATH: '+msg_path+' - '+label)
+                    raise NaturesError('Vectors have different dimentions !')
+
+                X.append(x_vector)
+
+                y_vector = 0.0
+                if self.label == os.path.basename(self.path):
+                    y_vector = 1.0
+
+                Y.append(y_vector)
+
+            except StopIteration as err:
+                logger.error(str(err).upper())
+                break
+
+            except Exception as err:
+                logger.error('Can\'t extract features from "'+msg_path+'", so it will be skipped.')
+                logger.error(str(err))
+                raise
+                #pass
+
+        return tuple(X), tuple(Y)
 
 
 #def get_jaccard_distance():
         # return nltk.jaccard_distance()
 
-def get_validated_path(path):
-
-    checks = {
-                stat.S_IFREG : lambda fd: os.stat(fd).st_size,
-                stat.S_IFDIR : lambda d: os.listdir(d)
-    }
-
-    mode = filter(lambda key: os.stat(path).st_mode & key, checks.keys())
-    logger.debug('mode: '+str(mode))
-    f = checks.get(*mode)
-    if not f(path):
-        raise Exception(path + '" is empty.')
-
-    msg_path = path
-    if mode[0] == stat.S_IFREG:
-        logger.debug(msg_path)
-        yield msg_path
-
-    elif mode[0] == stat.S_IFDIR:
-        for p, subdir, docs in os.walk(path):
-            for d in docs:
-                msg_path = os.path.join(p,d)
-                yield msg_path
-
-
-'''''
-def dump_data_set(data_set):
-
-			f = open('data_from_'+os.path.basename(dir_path)+'.txt','w+b')
-			for features_vect, class_vect, abs_path  in zip(X, Y, Z):
-				logger.debug('-->'+str(features_vect+(class_vect,abs_path)))
-				f.writelines(str(features_vect+(class_vect,abs_path))+'\n')
-			f.close()
-
-
-'''''
 
 if __name__ == "__main__":
 
@@ -180,12 +204,47 @@ if __name__ == "__main__":
                                  n_jobs=-1, random_state=None, verbose=1)
     for label in labels :
         logger.debug('Create dataset for label '+str(label).upper())
-        X_train = []
-        Y_train = []
-        X_test = []
-        Y_test = []
+        X_train = tuple()
+        Y_train = tuple()
+        X_test = tuple()
+        Y_test = tuple()
 
         for path in [ os.path.join(args.PATH, subdir) for subdir in labels + ['test','ham']]:
+            vectorizer = Vectorizer(path, label, args.score)
+            X,Y = vectorizer.get_dataset()
+
+            if label == 'test':
+                X_test += X
+                Y_test += os.path.basename(msg_path)
+
+            else:
+                X_train += X
+                Y_train += Y
+
+        logger.debug('\nX_train :'+str(X_train))
+        logger.debug('\nY_train :'+str(Y_train))
+        logger.debug('\nX_test :'+str(X_test))
+        logger.debug('Fit classifier for : '+label.upper()+' label')
+        clf.fit(X_train, Y_train)
+
+        logger.debug('Try to make predictions...')
+        z = clf.predict_proba(X_test)
+
+        logger.debug('ZZZ'+str(z))
+        prediction = clf.predict(X_test)
+        logger.debug(prediction)
+        cristal_ball = ((y,x) for y,x in zip(Y_test, clf.predict_proba(X_test)))
+        glass_ball = ((y,x) for y,x in zip(Y_test, clf.predict(X_test)))
+
+        logger.debug(str(tuple(glass_ball)))
+        total[label] = tuple(cristal_ball)
+        logger.debug('>>>>>>>> TOTAL : '+str(total))
+
+    logger.debug('\n'+str(total))
+
+
+
+'''''
             logger.debug('Open subdir : '+str(path))
             pathes_gen = get_validated_path(path)
 
@@ -267,15 +326,6 @@ if __name__ == "__main__":
 
     logger.debug('\n'+str(total))
 
-
-
-
-
-
-
-
-
-'''
 class forest(object):
 
     DEFAULT_LABELS = ('ham', 'spam', 'info', 'net')
@@ -336,7 +386,7 @@ y = tuple([1,2,3,4]*100)
 202
 
 
-'''
+'''''
 
 
 
