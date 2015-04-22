@@ -142,7 +142,10 @@ class Vectorizer(object):
                 X.append(x_vector)
 
                 y_vector = 0.0
-                if self.label == os.path.basename(self.path):
+                if os.path.basename(self.path) == 'test':
+                    y_vector = os.path.basename(msg_path)
+
+                elif self.label == os.path.basename(self.path):
                     y_vector = 1.0
 
                 Y.append(y_vector)
@@ -213,11 +216,12 @@ if __name__ == "__main__":
             vectorizer = Vectorizer(path, label, args.score)
             X,Y = vectorizer.get_dataset()
 
-            if label == 'test':
+            if os.path.basename(path) == 'test':
                 X_test += X
-                Y_test += os.path.basename(msg_path)
+                Y_test += Y
 
             else:
+
                 X_train += X
                 Y_train += Y
 
