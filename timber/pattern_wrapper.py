@@ -5,7 +5,7 @@ import sys, os, importlib, logging, re, binascii, zlib, math
 from urlparse import urlparse
 from operator import add, itemgetter
 from collections import defaultdict, namedtuple, Counter, OrderedDict
-from itertools import ifilterfalse
+from itertools import ifilterfalse, izip_longest
 
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
@@ -153,17 +153,17 @@ class BasePattern(BeautifulBody):
         logger.debug('rcvds_vect :'+str(rcvds_vect))
         rcvd_checksum = {}
 
-        for rcvd_line, n in zip(rcvds_vect, range(len(rcvds_vect))):
+        for rcvd_line, n in izip_longest(rcvds_vect, range(self.RCVDS_NUM),fillvalue=''):
             self.__dict__['rcvd_'+str(n)] = self.INIT_SCORE
             logger.debug('rcvd_line : '+rcvd_line)
-            trace = map(lambda x: rcvd_line.replace(x,''),['from','by',' '])[2]
+            trace = map(lambda x: rcvd_line.replace(x,''),['from','by',''])[2]
             trace = trace.strip().lower()
             trace = binascii.crc32(trace)
 
             self.__dict__['rcvd_'+str(n)] = trace
             rcvd_checksum['rcvd_'+str(n)] = trace
 
-        logger.debug('rcvd_checksum ==> '.upper()+str(rcvd_checksum))
+        #logger.debug('rcvd_checksum ==> '.upper()+str(rcvd_checksum))
         return rcvd_checksum
 
     def get_rcpt_score(self):

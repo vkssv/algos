@@ -93,13 +93,13 @@ class BeautifulBody(object):
         stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in cls.SUPPORT_LANGS_LIST])
         tokens_set = set(tokens_list)
         lang_ratios = [(x, len(tokens_set.intersection(stopwords_dict.get(x)))) for x in stopwords_dict.keys()]
-        logger.debug(lang_ratios)
+        #logger.debug(lang_ratios)
         l, ratio = sorted(lang_ratios, key=itemgetter(1), reverse=True)[0]
         if ratio > 0:
             # cause we can have here: [('russian', 0), ('french', 0), ('english', 0)]
             return l
         else:
-            logger.debug('can\'t define language for this token list >> '+str(tokens_list))
+            #logger.debug('can\'t define language for this token list >> '+str(tokens_list))
             return return_value
 
     def get_rcvds(self, rcvds_num=0):
@@ -356,7 +356,7 @@ class BeautifulBody(object):
 
 
         for raw_line, mime_type, lang in tuple(self.get_text_mime_part()):
-            logger.debug('raw_line :'+raw_line)
+            #logger.debug('raw_line :'+raw_line)
             logger.debug('mime_type :'+mime_type)
             logger.debug('lang :'+lang)
 
@@ -367,7 +367,7 @@ class BeautifulBody(object):
                 # cause exactly sentences are needed, soup.body.strings returns lines+0d0a
                 lines = tuple(soup.body.strings)
                 raw_line = ''.join(lines)
-                logger.debug(u'raw_line_from_html >>'+raw_line)
+                #logger.debug(u'raw_line_from_html >>'+raw_line)
             #logger.debug(raw_line)
             #logger.debug(tokenizer.tokenize(raw_line))
             try:

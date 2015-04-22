@@ -622,14 +622,14 @@ class ContentChecker(BaseChecker):
         regs_list = get_regexp(self.pattern.TEXT_REGEXP_LIST, re.M)
 
         sents_generator = self.pattern.get_sentences()
-        logger.debug("sent_lists >>"+str(self.pattern.get_sentences()))
+        #logger.debug("sent_lists >>"+str(self.pattern.get_sentences()))
 
         txt_score = INIT_SCORE
         while(True):
             try:
                 for reg_obj in regs_list:
                     txt_score += len(filter(lambda s: reg_obj.search(s.lower()), next(sents_generator)))*self.score
-                    logger.debug("text_score: "+str(txt_score))
+                    logger.debug("text_score: ".upper()+str(txt_score))
             except StopIteration as err:
                 break
 
@@ -648,7 +648,7 @@ class ContentChecker(BaseChecker):
         html_score = INIT_SCORE
         attr_value_pair = namedtuple('attr_value_pair', 'name value')
 
-        logger.debug("tags_map: "+str(self.pattern.HTML_TAGS_MAP))
+        #logger.debug("tags_map: "+str(self.pattern.HTML_TAGS_MAP))
 
         soups_list = self.pattern.get_html_parts()
 
@@ -675,9 +675,9 @@ class ContentChecker(BaseChecker):
 
                 pairs = list()
                 for key_attr in compiled_regexp_list: # expected_attrs_dict:
-                    logger.debug(key_attr)
+                    #logger.debug(key_attr)
                     pairs = filter(lambda pair: key_attr.match(pair.name.lower()), soup_attrs_list)
-                    logger.debug(pairs)
+                    #logger.debug(pairs)
 
                     check_values = list()
                     if pairs:
@@ -717,7 +717,7 @@ class ContentChecker(BaseChecker):
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
-            logger.debug('P >>> '+str(probs))
+            #logger.debug('P >>> '+str(probs))
             txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
 
         txt_avg_ent = txt_avg_ent/n
@@ -732,11 +732,11 @@ class ContentChecker(BaseChecker):
 
         txt_compressed_ratio = INIT_SCORE
         all_text_parts = list(self.pattern.get_stemmed_tokens())
-        for x in all_text_parts:
-            logger.debug('>>>> '+str(x))
+        #for x in all_text_parts:
+            #logger.debug('>>>> '+str(x))
         if all_text_parts:
             all_text = ''.join(reduce(add, all_text_parts))
-            logger.debug(type(all_text))
+            #logger.debug(type(all_text))
             txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.pattern.DEFAULT_CHARSET))))/len(all_text)
 
         return txt_compressed_ratio

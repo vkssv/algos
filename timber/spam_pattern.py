@@ -17,12 +17,13 @@ formatter = logging.Formatter('%(filename)s >>> %(message)s')
 #logger.addHandler(ch)
 
 
-from email import parser
-parser = parser.Parser()
-with open('/home/calypso/train/ham/without_rcvds.eml','rb') as f:
+#from email import parser
+#parser = parser.Parser()
+#with open('/home/calypso/debug/spam/0000000175_1422266129_bc57f700.eml','rb') as f:
+#with open('/home/calypso/train/ham/without_rcvds.eml','rb') as f:
 #with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
 #with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
-    M = parser.parse(f)
+#    M = parser.parse(f)
 
 
 class SpamPattern(BasePattern):
