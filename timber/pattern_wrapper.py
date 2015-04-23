@@ -14,7 +14,7 @@ from nltk.probability import FreqDist, ConditionalFreqDist
 
 logger = logging.getLogger('')
 #logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s: >> %(message)s')
+#formatter = logging.Formatter('%(filename)s: >> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 

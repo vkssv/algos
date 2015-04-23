@@ -25,8 +25,8 @@ from nltk.stem import SnowballStemmer
 from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s: >>> %(message)s')
+#logger.setLevel(logging.DEBUG)
+#formatter = logging.Formatter('%(filename)s: >>> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 

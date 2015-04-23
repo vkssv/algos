@@ -22,6 +22,10 @@ from timber_exceptions import NaturesError
 
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn import svm
+#from sklearn.metrics import accuracy_score
+
+import numpy as np
+import matplotlib.pyplot as plt
 
 #PYTHON_VERSION=(2,7)
 
@@ -43,7 +47,6 @@ logger.setLevel(logging.DEBUG)
 #def get_jaccard_distance():
         # return nltk.jaccard_distance()
 
-
 if __name__ == "__main__":
 
     usage = 'usage: %prog [ samples_directory | file ] -c category -s score -v debug'
@@ -62,6 +65,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--svm', action = "store_true", dest = "svm", default = False,
                             help = "add SVM to classifiers list")
+
+    #parser.add_argument('--accuracy', type = str, action = "store", dest = "accuracy_path",
+    #                        help = "path to file with ground truth to estimate accuracy")
+
     parser.add_argument('-v', action = "store_true", dest = "info", default = False,
                             help = "be social (verbose)")
     parser.add_argument('-vv', action = "store_true", dest = "debug", default = False,
@@ -104,6 +111,7 @@ if __name__ == "__main__":
     labels = ['spam','ham']
     predicted_probs = defaultdict(list)
     predicted_classes = defaultdict(list)
+    strong_features = defaultdict(list)
 
     for label in labels :
 
@@ -147,13 +155,53 @@ if __name__ == "__main__":
                 predicted_probs[name].append((l, probability))
                 predicted_classes[name].append((l, class_flag))
 
+                logger.debug('CLASSES : '+str(obj.classes_))
+                if clf_name != 'SVM':
+                    importances = obj.feature_importances_
+                    strong_features[label+'_pattern'].append((clf_name, importances))
+
+
+                    std = np.std([tree.feature_importances_ for tree in obj.estimators_], axis=0)
+                    indixes = np.argsort(importances)[::-1]
+
+
+                    logger.debug("Feature ranking:")
+
+                    for f in range(10):
+                        print("%d. feature %d (%f)" % (f + 1, indixes[f], importances[indixes[f]]))
+
+    logger.debug('strong_features :'+str(strong_features))
+    #logger.debug('predicted_probs : '+str(predicted_probs))
+    #logger.debug('predicted_classes : '+str(predicted_classes))
+    report = dict()
+    print('\n========================================\n')
+    for key,decisions in predicted_probs.iteritems():
+        logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
+        decisions = [(label, value[0]) for label, value in decisions]
+        decisions = tuple(sorted(decisions))[:len(classifiers)]
+        decisions = [(name.partition('_')[0], score) for name, score in decisions]
+
+        print('\t'+key+' ==> '+str(decisions)+'\n')
+        final = map(itemgetter(0), decisions)
+        if len(set(final)) == 1:
+            report[key] = ((final.pop()).upper(), decisions)
+
+        elif len(set(final)) == 2:
+            report[key] = (''.join([name for name in final if final.count(name)==2]).upper(), decisions)
+
+        elif len(set(final)) == 3:
+            report[key] = (''.join(sorted(decisions)[:1]).upper(), decisions)
+
+    for k,v in report.iteritems():
+        print(k+' ==> '+str(v))
 
 
 
-    for d in [predicted_probs, predicted_classes]:
-        print('\n========================================\n')
-        for key,decisions in d.iteritems():
-            print('\t'+key+' ==> '+str(decisions)+'\n')
+
+
+
+
+
 
 
 
