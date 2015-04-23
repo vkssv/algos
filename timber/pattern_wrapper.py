@@ -101,8 +101,8 @@ class BasePattern(BeautifulBody):
 
         return compiled_list
 
-    '''''
-    def get_sender_domain(self):
+
+    def get_smtp_sender_domain(self):
 
         sender_domain = False
         while not (sender_domain):
@@ -114,8 +114,7 @@ class BasePattern(BeautifulBody):
             orig_name, orig_addr = reduce(add, originator)
             sender_domain = (orig_addr.split('@')[1]).strip()
 
-    # can be called from each particular pattern with particular excluded_list
-    '''''
+
 
     def get_all_heads_checksum(self):
 

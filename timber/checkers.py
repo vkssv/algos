@@ -35,6 +35,10 @@ except ImportError:
 
 class BaseChecker(object):
 
+    puni_regex = r'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
+
+
+
     def __init__(self, pattern_obj):
 
         self.score = pattern_obj.PENALTY_SCORE
@@ -297,8 +301,8 @@ class UrlChecker(BaseChecker):
 
     def get_url_punicode(self):
         # PUNICORNS: respectively (very often for russian spams)
-        puni_regex = r'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
-        my_little_puni = len([domain for domain in self.urls_domains if re.search(puni_regex, domain.encode(), re.I)])*self.score
+        logger.debug('Type of strs for PUNI :'+str([type(domain.encode()) for domain in self.urls_domains ]))
+        my_little_puni = len([domain for domain in self.urls_domains if re.search(self.puni_regex, domain.encode(), re.I)])*self.score
 
         return my_little_puni
 
@@ -527,6 +531,20 @@ class OriginatorChecker(BaseChecker):
 
         BaseChecker.__init__(self, pattern_obj)
 
+        self.name_addr_tuples = self.pattern.get_addr_values(self.msg.get_all('From'))
+        logger.debug('name_addr_tuples'.upper()+str(self.name_addr_tuples))
+        name_addr = namedtuple('addr_value', 'realname address')
+
+        self.name_addr_list = (name_addr(*pair) for pair in self.name_addr_tuples)
+
+        self.localnames = [pair.address.partition('@')[0] for pair in self.name_addr_list]
+        self.domains = [pair.address.partition('@')[2] for pair in self.name_addr_list]
+        self.mailboxes = [pair.realname.lower() for pair in self.name_addr_list]
+
+        logger.debug('localnames : '+str(self.localnames))
+        logger.debug('domains : '+str(self.domains))
+        logger.debug('mailboxes : '+str(self.mailboxes))
+
     def get_originator_checksum(self):
         '''
         :return: ORIG_CHECKSUM from mailbox element
@@ -537,35 +555,63 @@ class OriginatorChecker(BaseChecker):
         from_checksum = INIT_SCORE
         logger.debug('>>> 2. ORIGINATOR_FEATURES:')
         #todo: rfc6854 support of new format lists for From: values
-        name_addr_tuples = self.pattern.get_addr_values(self.msg.get_all('From'))[:1]
-        logger.debug('\tFROM:----->'+str(name_addr_tuples))
 
-        if len(name_addr_tuples) != 1:
-            logger.warning('\t----->'+str(name_addr_tuples))
+        logger.debug('\tFROM:----->'+str(self.name_addr_tuples))
 
-        if name_addr_tuples:
-            from_value, from_addr = reduce(add, name_addr_tuples)
+        if len(self.name_addr_tuples) != 1:
+            logger.warning('\t----->'+str(self.name_addr_tuples))
+
+        if self.name_addr_tuples:
+            from_value, from_addr = reduce(add, self.name_addr_tuples[:1])
             from_checksum = binascii.crc32(from_value.encode(self.pattern.DEFAULT_CHARSET))
             logger.debug('\t----->'+str(from_checksum))
 
         return from_checksum
 
-    # particular feature and method
-    def get_originator_score(self):
+    def get_originator_forged_sender(self):
         '''
-        :return: ORIG_SCORE
+        :return: set FORGET_SENDER_FLAG
         '''
-        forged_sender = INIT_SCORE
-        logger.debug('>>> 2. ORIG_CHECKS:')
+        forget_sender_flag = INIT_SCORE
+
         #todo: rfc6854 support of new format lists for From: values
         if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.pattern.msg.keys()):
             if self.msg.keys().count('Sender') and self.msg.keys().count('From'):
-                forged_sender = self.score
+                forget_sender_flag = self.score
                 # if we don't have List header, From value has to be the one (RFC 5322),
                 # MUA didn't generate Sender field with the same name, cause of redundancy
 
-        logger.debug('forged_sender '.upper()+str(forged_sender))
-        return forged_sender
+        return forged_sender_flag
+
+    def get_originator_addr_score(self):
+        '''
+        1. check with pattern regexps u'box_name', localname from address, domain from address
+        2. some spam-heuristics for domains from address
+        3. compare domain from From with smpt_domain
+
+        gain and return ADDR_SCORE
+        '''
+        addr_score = INIT_SCORE
+
+        reg_compiled_list = get_regexp(self.pattern.ORIGINATOR_LOCALNAMES_RULES)
+        for localname in self.localnames:
+            addr_score += len([regexp for regexp in reg_compiled_list if regexp.search(localname, re.I)])*self.score
+
+            if len(localname) >= self.pattern.ORIGINATOR_LOCAL_NAME_LEN and localname.count('.') == 0 \
+                and re.search(r'[\d-]',localname):
+                addr_score += self.score
+
+        box_names_regs = get_regexp(self.pattern.ORIGINATOR_MAILBOX_RULES)
+        for box_name in self.mailboxes:
+            addr_score += len([regexp for regexp in box_names_regs if regexp.search(box_name)])*self.score
+
+        addr_score += len([domain for domain in self.domains if re.search(self.puni_regex, domain, re.I)])*self.score
+
+        valid_domains = [domain for domain in self.domains if domain == self.pattern.get_smtp_originator_domain()]
+        if not valid_domains:
+            addr_score += self.score
+
+        return addr_score
 
 
 @Wrapper

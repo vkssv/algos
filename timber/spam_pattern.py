@@ -12,7 +12,7 @@ import checkers
 
 logger = logging.getLogger('')
 #logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s >>> %(message)s')
+#formatter = logging.Formatter('%(filename)s >>> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
@@ -46,9 +46,21 @@ class SpamPattern(BasePattern):
     ]
     # try greedy regexes, maybe will precise them in future
 
-    ORIGINATOR_RULES = [
-                            ur'(flyboy)'
+    ORIGINATOR_LOCALNAMES_RULES = [
+                                        r'^(\d{1,4}[\w_-]+)+$',
+                                        r'^([\w_-]+(\d{1,4})?)+$',
+                                        r'(webmaster|admin|mail|info|contact|flyboy|girl|passion|lady)'
     ]
+
+    ORIGINATOR_MAILBOX_RULES = [
+                                    ur'((top)?meds|miss\s+you|flyboy|pfizer|fellowship)\s+.*',
+                                    ur'(mail|admin|(passion|kiss(-you)?)(-info)?|lipstick|wine\s+red|face\s+to\s+face)\s+.*',
+                                    ur'(pickup|cute girl|(happy|good)letter|real-time|sweet_mail|security)\s+.*',
+                                    ur'(dark|gray|green|blue|turquoise|one-stop-log-in|cool-cool|eyes|updating)\s+.*'
+    ]
+
+    ORIGINATOR_LOCAL_NAME_LEN = 15
+
 
     SUBJ_RULES = [
 
@@ -168,7 +180,7 @@ class SpamPattern(BasePattern):
                                                 'uppercase','punicode','fqdn','ascii','repetitions'],
                          'list'             : ['score'],
                          'attaches'         : ['score','in_score','count'],
-                         'originator'       : ['checksum'],
+                         'originator'       : ['checksum','addr_score'],
                          'content'          : ['compress_ratio','avg_entropy','txt_score','html_score']
                          # would it be usefull compress_ratio for spams (search consequences here)
         }

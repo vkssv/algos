@@ -36,6 +36,14 @@ except ImportError:
     logger.debug('Can\'t find bs4 module, probably, it isn\'t installed.')
     logger.debug('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
 
+from email import parser
+parser = parser.Parser()
+with open('/home/calypso/debug/spam/0000000175_1422266129_bc57f700.eml','rb') as f:
+#with open('/home/calypso/train/ham/without_rcvds.eml','rb') as f:
+#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
+    M = parser.parse(f)
+
 
 class BeautifulBody(object):
     """
@@ -152,11 +160,10 @@ class BeautifulBody(object):
         logger.debug("results : "+str(pairs))
         return pairs
 
-    #@lazyproperty
     def get_smtp_originator_domain(self):
 
         regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
-        orig_domain = ''
+        smtp_sender_domain = ''
 
         l = filter(lambda value: regexp.search(value), self.get_rcvds())
         logger.debug(l) # check that regexp matched exactly first
@@ -165,11 +172,11 @@ class BeautifulBody(object):
             logger.debug('+++++++++++++++++++++++++++++++++++++++')
             logger.debug((orig_domain,))
             orig_domain = (regexp.search(orig_domain)).group(0)
-            orig_domain = orig_domain.strip('.').strip('@').strip('=').strip()
-            logger.debug(type(orig_domain))
-            logger.debug('ORIG_DOMAINS: '+str(orig_domain))
+            smtp_sender_domain = orig_domain.strip('.').strip('@').strip('=').strip()
 
-        return orig_domain
+            logger.debug('ORIG_DOMAINS: '+str(smtp_sender_domain))
+
+        return smtp_sender_domain
 
     def get_dkim_domains(self):
         '''
