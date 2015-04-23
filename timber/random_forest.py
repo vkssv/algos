@@ -102,7 +102,8 @@ if __name__ == "__main__":
 
     #train_subdirs = ['spam','ham','net','info']
     labels = ['spam','ham']
-    total = defaultdict(list)
+    predicted_probs = defaultdict(list)
+    predicted_classes = defaultdict(list)
     # total :  {
     #               'spam' : [(RandomForest, <predictions vector>), ('ExtraTrees, <predictions vector>'), ('SVM',  <predictions vector>')),
     #                ...
@@ -138,41 +139,23 @@ if __name__ == "__main__":
         # train classifiers instances and perform forecasting...
 
         for clf in classifiers:
-            
+
             clf_name, obj = clf
             logger.info('\n\n\t Fit '+clf_name+' classifier for '+label.upper()+' class\n')
             obj.fit(X_train, Y_train)
 
             logger.info('\n\n\t Try to make predictions...\n')
 
-            crystal_ball = tuple((y,x) for y,x in zip(Y_test, obj.predict_proba(X_test)))
-            glass_ball = tuple((y,x) for y,x in zip(Y_test, obj.predict(X_test)))
+            for name, probability, class_flag in zip(Y_test, obj.predict_proba(X_test), obj.predict(X_test)):
+                l = label+'_'+clf_name
+                predicted_probs[name].append((l, probability))
+                predicted_classes[name].append((l, class_flag))
 
-            logger.info('\n\tclasses_predictions: '+str(glass_ball))
-            logger.info('\n\tprobs_predictions: '+str(crystal_ball))
 
-            total[label].append((clf_name, crystal_ball))
-
-            logger.info('>>>>>>>> TOTAL : '+str(total))
-
-    final_table = defaultdict(list)
-    for key,value in total.iteritems():
-
-        for i in value:
-            clf, results = i
-            logger.info('Classifier : '+clf.upper())
-            logger.info('Decisions for  : '+key.upper())
-
-            decisions = defaultdict(list)
-            for pair in results:
-                email, probs = pair
-                decisions[email].append((key,probs))
-                logger.info(email+' --> '+str((key,probs)))
-
-        final_table[clf].append(decisions)
-
-    for k, values in final_table.iteritems():
-        print('\n'+k+' ==> '+str(values)+'\n')
+    for d in [predicted_probs, predicted_classes]:
+        print('\n========================================\n')
+        for key,decisions in d.iteritems():
+            print('\t'+key+' ==> '+str(decisions)+'\n')
 
 
 
