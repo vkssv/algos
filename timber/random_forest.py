@@ -104,12 +104,6 @@ if __name__ == "__main__":
     labels = ['spam','ham']
     predicted_probs = defaultdict(list)
     predicted_classes = defaultdict(list)
-    # total :  {
-    #               'spam' : [(RandomForest, <predictions vector>), ('ExtraTrees, <predictions vector>'), ('SVM',  <predictions vector>')),
-    #                ...
-    #               'ham' :  [(RandomForest, <predictions vector>), ('ExtraTrees, <predictions vector>'), ('SVM',  <predictions vector>'))
-    #
-    # }
 
     for label in labels :
 
@@ -140,9 +134,11 @@ if __name__ == "__main__":
 
         for clf in classifiers:
 
+
             clf_name, obj = clf
             logger.info('\n\n\t Fit '+clf_name+' classifier for '+label.upper()+' class\n')
             obj.fit(X_train, Y_train)
+            #logger.debug('\n'+clf_name+' was successfully trained with such classes list: '+str(obj._classes).upper()+'\n')
 
             logger.info('\n\n\t Try to make predictions...\n')
 
@@ -150,6 +146,8 @@ if __name__ == "__main__":
                 l = label+'_'+clf_name
                 predicted_probs[name].append((l, probability))
                 predicted_classes[name].append((l, class_flag))
+
+
 
 
     for d in [predicted_probs, predicted_classes]:
