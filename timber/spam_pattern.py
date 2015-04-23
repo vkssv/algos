@@ -46,23 +46,27 @@ class SpamPattern(BasePattern):
     ]
     # try greedy regexes, maybe will precise them in future
 
+    ORIGINATOR_RULES = [
+                            ur'(flyboy)'
+    ]
 
     SUBJ_RULES = [
 
-                            ur'((s)?SN|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
+                            ur'((s)?sn|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
                             ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
                             ur'-?[\d]{1,2}\s+%\s+.*',
                             ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
                             ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
                             ur'(free.*(pills?).*(every?)*.*(order)*|online.*&.*(save)*|tablet.*(split?ed?)*.*has?le)',
-	                        ur'(cheap([est])?.*(satisf[ied]?)*.*(U[SK])*.*(CANADIAN)*.*customer|To.*Be.*Remov([ed])?.*(Please?)*)',
-	                        ur'(100%\s+GUARANTE?D|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
-	                        ur'(dear.*(?:IT\W|Internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
-                            ur'^\s*(hello|hi|good\s+(morning|evening))\s+.*',
+	                        ur'(cheap([est])?.*(satisf[ied]?)*.*(u[sk])*.*(canadian)*.*customer|to.*be.*remov([ed])?.*(please?)*)',
+	                        ur'(100%\s+guarantee?d|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
+	                        ur'(dear.*(?:it\w|internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
+                            ur'^\s*(hello|hi|good\s+(morning|evening)|hey([:;\)])?)\s+.*',
+                            ur'^\s*(meet\s+now\s+(greasy|dear|darling|babe|lady)\s+)|satisf(y|ied)\s+.*((to)?night|customer)\s+.*',
                             ur'.*(eml|spam).*',
                             ur'.*(payment|receipt|attach(ed)?|extra\s+inches)',
-                            ur'(ТАКСИ|Услуги\s+.*\s+учреждениям|Реклама|Рассылк.*\s+недорого|арбитражн.*\s+суд|ssТолько\s+для\s+(владельц.*|директор.*))',
-                            ur'(Таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
+                            ur'(такси|услуги\s+.*\s+учреждениям|реклама|рассылк.*\s+недорого|арбитражн.*\s+суд|ssтолько\s+для\s+(владельц.*|директор.*))',
+                            ur'(таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
     ]
 
     SUBJ_FUNCTION = lambda z,x,y: y.index(x)%2
@@ -76,10 +80,10 @@ class SpamPattern(BasePattern):
     TEXT_REGEXP_LIST = [
                             ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
                             ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
-                            ur'(100%\s+GUARANTE?D||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
+                            ur'(100%\s+guarantee?d||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
                             ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
-                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(FDA[-\s_]?Approved|Superb?\s+Qua[l1][ity])\s+.*drugs?(\s+only)?)',
-                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|Order.*Online.*Save)',
+                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(fda[-\s_]?approved|superb?\s+qua[l1][ity])\s+.*drugs?(\s+only)?)',
+                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|order.*online.*save)',
                             ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
                             ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
                             ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
@@ -129,8 +133,8 @@ class SpamPattern(BasePattern):
 
     URL_TXT_REGEXP = [
                             ur'(click|here|link|login|update|confirm|legilize|now|buy|online|movie|s0x(room|boat)?)+',
-                            ur'(Free|Shipping|Options|Pills|Every?|Order|Best|Deal|Today|Now|Contact|Pay|go)+',
-                            ur'(Ccылк|Курс|Цен|Посмотреть|Каталог|Здесь|Сюда|Регистрация|бесплатное|участие|на\s+сайт|подробн)',
+                            ur'(free|shipping|options|pills|every?|order|best|deal|today|now|contact|pay|go)+',
+                            ur'(сcылк|курс|цен|посмотреть|каталог|здесь|сюда|регистрация|бесплатное|участие|на\s+сайт|подробн)',
                             ur'(горяч|скидк|отписаться|отказаться)',
                             ur'(message|view|can\'t\see)',
                             ur'(background-color|text-decoration|font\scolor|color|underline|font\ssize|img|style|<\/?wbr>|font\sface|<strong>|<em>)',

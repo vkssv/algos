@@ -88,8 +88,7 @@ class BasePattern(BeautifulBody):
         compiled_list = []
 
         for exp in regexp_list:
-            exp = exp.lower
-            logger.debug('get_regexp : for compiling => '+str(exp))
+            logger.debug(u'get_regexp : for compiling => '+exp)
             # cause mostly use unicoded lines and unicoded regexps
             # => re doesn't support re.I flag for them
             #logger.debug(exp)

@@ -176,7 +176,8 @@ if __name__ == "__main__":
     #                        help = "samples category, default=test, i.e. not defined")
     parser.add_argument('-s', type = float,  action = 'store', dest = "score", default = 1.0,
                             help = "penalty score for matched feature, def = 1.0")
-    parser.add_argument('-v', action = "store_true", dest = "debug", default = False, help = "be verbose")
+    parser.add_argument('-v', action = "store_true", dest = "info", default = False, help = "be social (verbose)")
+    parser.add_argument('-vv', action = "store_true", dest = "debug", default = False, help = "be annoying (very very verbose)")
     parser.add_argument('-c', type=str, action = "store", dest = "criterion", default = 'gini', help = "the function name to measure the quality of a split")
 
     args = parser.parse_args()
@@ -193,6 +194,9 @@ if __name__ == "__main__":
     logger.addHandler(ch)
     logger.addHandler(fh)
 
+    if args.info:
+        logger.setLevel(logging.INFO)
+
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
@@ -206,7 +210,7 @@ if __name__ == "__main__":
                                  max_features='auto', max_leaf_nodes=None,bootstrap=True, oob_score=False, \
                                  n_jobs=-1, random_state=None, verbose=1)
     for label in labels :
-        logger.debug('Create dataset for label '+str(label).upper())
+        logger.info('Create dataset for label '+str(label).upper())
         X_train = tuple()
         Y_train = tuple()
         X_test = tuple()
@@ -225,26 +229,26 @@ if __name__ == "__main__":
                 X_train += X
                 Y_train += Y
 
-        logger.debug('\nX_train :'+str(X_train))
-        logger.debug('\nY_train :'+str(Y_train))
-        logger.debug('\nX_test :'+str(X_test))
-        logger.debug('Fit classifier for : '+label.upper()+' label')
+        logger.info('\nX_train :'+str(X_train))
+        logger.info('\nY_train :'+str(Y_train))
+        logger.info('\nX_test :'+str(X_test))
+        logger.info('Fit classifier for : '+label.upper()+' label')
         clf.fit(X_train, Y_train)
 
-        logger.debug('Try to make predictions...')
+        logger.info('Try to make predictions...')
         z = clf.predict_proba(X_test)
 
-        logger.debug('ZZZ'+str(z))
+        logger.info('ZZZ'+str(z))
         prediction = clf.predict(X_test)
-        logger.debug(prediction)
+        logger.info(prediction)
         cristal_ball = ((y,x) for y,x in zip(Y_test, clf.predict_proba(X_test)))
         glass_ball = ((y,x) for y,x in zip(Y_test, clf.predict(X_test)))
 
-        logger.debug(str(tuple(glass_ball)))
+        logger.info(str(tuple(glass_ball)))
         total[label] = tuple(cristal_ball)
-        logger.debug('>>>>>>>> TOTAL : '+str(total))
+        logger.info('>>>>>>>> TOTAL : '+str(total))
 
-    logger.debug('\n'+str(total))
+    logger.info('\n'+str(total))
 
 
 

@@ -28,8 +28,9 @@ logger.setLevel(logging.DEBUG)
 try:
     from bs4 import BeautifulSoup, Comment
 except ImportError:
-    logger.debug('Can\'t find bs4 module, probably, it isn\'t installed.')
-    logger.debug('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
+    logger.error('Can\'t find bs4 module, probably, it isn\'t installed.')
+    logger.error('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
+    sys.exit(1)
 
 
 class BaseChecker(object):
@@ -231,10 +232,11 @@ class UrlChecker(BaseChecker):
     def get_url_score(self):
 
         url_score = INIT_SCORE
-        reg = namedtuple('reg', 'fqdn txt')
-        regexes = reg(*(get_regexp(l) for l in (self.pattern.URL_FQDN_REGEXP, self.pattern.URL_TXT_REGEXP)))
+        fqdn_reg_obj_list = get_regexp(self.pattern.URL_FQDN_REGEXP)
+        txt_reg_obj_list = get_regexp(self.pattern.URL_TXT_REGEXP)
 
-        for reg in regexes.fqdn:
+
+        for reg in fqdn_reg_obj_list:
             url_score += len([domain for domain in self.urls_domains if reg.search(domain.lower())])*self.score
 
         metainfo_list = list()
@@ -242,7 +244,7 @@ class UrlChecker(BaseChecker):
             metainfo_list.extend([i.__getattribute__(attr) for i in self.urls])
 
         if metainfo_list:
-            for reg in regexes.txt:
+            for reg in txt_reg_obj_list:
                 url_score += len(filter(lambda metainfo: reg.search(metainfo.lower()), metainfo_list))*self.score
 
         return url_score
