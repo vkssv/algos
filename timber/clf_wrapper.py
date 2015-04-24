@@ -50,24 +50,24 @@ class ClfWrapper(object):
         self.classes = self.obj.classes_
         return self.crystal_ball, self.glass_ball, self.probs, self.classes
 
-    def get_recipe(self):
+    def get_recipe(self, featues_dict):
 
         importances = list()
 
         if self.clf_name == 'SVM':
-            self.importances = self.obj.coef_
+            importances = self.obj.coef_
         else:
-            self.importances = self.obj.feature_importances_
+            importances = self.obj.feature_importances_
 
-        indixes = np.argsort(self.importances)[::-1]
-        logger.debug("Feature ranking:")
+        features_indexes = np.argsort(importances)[::-1]
+        logger.warn(('\n'+self.clf_name+' : '+self.label+' pattern : '+'ranged features list\n').upper())
 
-        #for f in range(10):
-        #    logger.debug("%d. feature %d (%f)" % (f + 1, indixes[f], importances[indixes[f]]))
+        self.ranged_features = list()
+        for index in features_indexes:
+            logger.warn(featues_dict[index]+' ==> '+str(round(importances[index],3)))
+            self.ranged_features.append((featues_dict[index], round(importances[index],3)))
 
-        logger.debug('IMPOTANCES '+str(self.importances))
-
-        return self.importances
+        return tuple(self.ranged_features)
 
     def get_accuracy(self, path_to_ground_truth):
 
@@ -75,7 +75,7 @@ class ClfWrapper(object):
         expected_values = dict()
         try:
             with open(path_to_ground_truth,'rb') as truth:
-
+                #lines = truth.readlines()
                 while(True):
                     l = next(truth)
                     l = l.strip()
@@ -96,9 +96,11 @@ class ClfWrapper(object):
 
         except Exception as err:
             logger.error('Can\'t parse "'+path_to_ground_truth+'" !')
+            print(err)
             return self.accuracy
 
         if not expected_values:
+            print(err)
             logger.error('Can\'t parse "'+path_to_ground_truth+'" !')
             return self.accuracy
 

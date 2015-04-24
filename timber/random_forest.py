@@ -105,7 +105,7 @@ if __name__ == "__main__":
         sys.stderr.write( '[%s] - Error: Your Python interpreter must be %d.%d\n' % (sys.argv[0], major, minor))
         sys.exit(-1)
 
-    formatter = logging.Formatter('%(levelname)s %(filename)s : %(funcName)s : %(message)s')
+    formatter = logging.Formatter('%(filename)s : %(message)s')
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
     ch.setFormatter(formatter)
@@ -144,11 +144,13 @@ if __name__ == "__main__":
 
         vectorizer = Vectorizer(args.PATH, label, args.score)
         X_train, Y_train, X_test, Y_test = vectorizer.get_dataset()
+        features_dict = vectorizer.features_dict
 
         logger.info('\n\t\tX_train :'+str(X_train))
         logger.info('\n\t\tY_train :'+str(Y_train))
         logger.info('\n\t\tX_test :'+str(X_test)+'\n')
-        logger.info('\n\t\tX_test :'+str(Y_test)+'\n')
+        logger.info('\n\t\tY_test :'+str(Y_test)+'\n')
+        logger.info('\n\t\tfeatures_dict :'+str(features_dict)+'\n')
 
         # 4. train classifiers instances and perform forecasting...
         results = dict
@@ -167,7 +169,7 @@ if __name__ == "__main__":
             [ predicted_probs[name].append((l, probability)) for name, probability in probs_vector ]
 
             # 5. obtain some classifiers objects statistics
-            classifier.get_recipe()
+            classifier.get_recipe(features_dict)
             if args.accuracy_path:
                 classifier.get_accuracy(args.accuracy_path)
 

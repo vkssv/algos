@@ -91,16 +91,20 @@ class Vectorizer(object):
         vector = pattern_instance.__dict__
         vector.pop('PENALTY_SCORE')
         vector['msg_size'] = math.ceil(float((os.stat(doc_path).st_size)/1024))
-        vector = tuple((k.upper(),value) for k,value in sorted(vector.items()))
-
+        logger.debug('\n\tunsorted X_vector ==> '+str(vector))
+        vector = tuple(sorted([(k.upper(),value) for k,value in vector.items()],key=itemgetter(0)))
         logger.debug('\n\tX_vector ==> '+str(vector))
+
+        logger.debug('TEST >>>>'+str(dict(enumerate(map(itemgetter(0),vector)))))
+        self.features_dict = dict(enumerate(tuple(map(itemgetter(0),vector))))
+        logger.debug('TEST >>>>'+str(self.features_dict))
+
         msg_vector = tuple(map(itemgetter(1),vector))
-
-
         logger.debug('\nVECTOR ===> '+str(msg_vector)+'\n')
+
         return msg_vector
 
-    def __normalize(self, vect_dict):
+    def __normalize(self):
 
         pass
 
