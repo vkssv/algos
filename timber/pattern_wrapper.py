@@ -198,6 +198,4 @@ class BasePattern(BeautifulBody):
         logger.debug('rcpt_score ==> '.upper()+str(self.INIT_SCORE))
         return rcpt_score
 
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
+

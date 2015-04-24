@@ -1,14 +1,7 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-"""
--- can be imported as submodule to build feature vectors from emails collections,
-using different presets of loaded heuristics ;
 
--- returns NxM matrix --> N samples from collection x M features +label value
-( or "test" label if not defined ) in numpy array type
-"""
-
-import sys, os, logging, re, email, argparse, stat, tempfile, math, time
+import sys, os, logging, re, email, argparse, stat, tempfile, math, time, json
 import numpy as np
 
 from email.parser import Parser
@@ -18,34 +11,60 @@ from operator import itemgetter
 from franks_factory import MetaFrankenstein
 from pattern_wrapper import BasePattern
 from vectorizer import Vectorizer
+from clf_wrapper import ClfWrapper
 from timber_exceptions import NaturesError
 
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn import svm
-#from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-#PYTHON_VERSION=(2,7)
+DEFAULT_FOREST_ARGS = dict(n_estimators=20, criterion='gini', max_depth = None, min_samples_split=2, min_samples_leaf=1,
+                            max_features='auto', max_leaf_nodes=None, oob_score=False, n_jobs=-1, random_state=None, verbose=1)
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
 
 # define some functions
 
-#def check_python_version(version):
-#    if version != (sys.version_info.major, sys.version_info.minor):
-#        major, minor = version
-#        sys.stderr.write( '[%s] - Error: Your Python interpreter must be %d.%d\n' % (sys.argv[0], major, minor))
-#        sys.exit(-1)
-#        return
+def create_report(predictions_dict, labels):
 
-# create feature vector for email from doc_path,
-# if label is set => feature set is also predifined by pattern for this label
+    report = dict()
+    for key, decisions in predictions_dict.iteritems():
+        logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
+        decisions = [(label, value) for label, value in decisions]
 
-#def get_jaccard_distance():
-        # return nltk.jaccard_distance()
+        if len(labels) == 1:
+            to_substract = set([(label, value) for label, value in decisions if value < 0.50])
+            diff = list(set(decisions) - to_substract)
+            to_add = [('NON '+label, value) for label, value in decisions if value < 0.50]
+            decisions = diff + to_add
+
+        decisions = tuple(sorted(decisions))[:len(classifiers)]
+        decisions = [(name.partition('_')[0], score) for name, score in decisions]
+
+        logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
+        final = map(itemgetter(0), decisions)
+        if len(set(final)) == 1:
+            report[key] = ((final.pop()).upper(), decisions)
+
+        elif len(set(final)) == 2:
+            report[key] = (''.join([name for name in final if final.count(name)==2]).upper(), decisions)
+
+        elif len(set(final)) == 3:
+            report[key] = (''.join(sorted(decisions)[:1]).upper(), decisions)
+
+    for k,v in report.iteritems():
+        logger.debug(k+' ==> '+str(v))
+
+    return report
+
+def get_classifiers_stat(clfs_dict, plot_flag):
+    logger.debug(str(clfs_dict))
+    logger.debug(str(plot_flag))
+
+    pass
 
 if __name__ == "__main__":
 
@@ -57,31 +76,36 @@ if __name__ == "__main__":
     parser.add_argument('-s', type = float,  action = 'store', dest = "score", default = 1.0,
                             help = "penalty score for matched feature, def = 1.0")
 
-    parser.add_argument('-n', type = int,  action = 'store', dest = "estimators", default = 10,
-                            help = "number of estimators, def = 10")
-
-    parser.add_argument('-c', type=str, action = "store", dest = "criterion", default = 'gini',
-                            help = "the function name to measure the quality of a split"),
-
     parser.add_argument('--svm', action = "store_true", dest = "svm", default = False,
                             help = "add SVM to classifiers list")
 
-    #parser.add_argument('--accuracy', type = str, action = "store", dest = "accuracy_path",
-    #                        help = "path to file with ground truth to estimate accuracy")
+    parser.add_argument('--forest-args',action = 'store', type=list, dest = "forest_args_dict", default = DEFAULT_FOREST_ARGS,
+                            help = "list of forest classifier arguments")
+
+    parser.add_argument('--accuracy', type = str, action = "store", dest = "accuracy_path", default = False,
+                            help = "path to file with ground truth to estimate accuracy")
+
+    parser.add_argument('--graph', action = "store_true", dest = "graph", default = False,
+                            help = "plot feature impotances graph")
+
+    parser.add_argument('--report', action = "store", dest = "report", default = False,
+                            help = 'path to file, where final report will be dumped')
 
     parser.add_argument('-v', action = "store_true", dest = "info", default = False,
                             help = "be social (verbose)")
     parser.add_argument('-vv', action = "store_true", dest = "debug", default = False,
                             help = "be annoying (very very verbose)")
 
-
     args = parser.parse_args()
 
-    required_version = (2,7)
-
+    # 1. preparations
+    required_vers = '2.7'
+    version = str(sys.version_info.major)+'.'+str(sys.version_info.minor)
+    if version != required_vers:
+        sys.stderr.write( '[%s] - Error: Your Python interpreter must be %d.%d\n' % (sys.argv[0], major, minor))
+        sys.exit(-1)
 
     formatter = logging.Formatter('%(levelname)s %(filename)s : %(funcName)s : %(message)s')
-    logger.setLevel(logging.WARN)
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
     ch.setFormatter(formatter)
@@ -95,105 +119,81 @@ if __name__ == "__main__":
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
-
-    parameters = dict(
-                        n_estimators=args.estimators, criterion=args.criterion, max_depth=None,\
-                        min_samples_split=2, min_samples_leaf=1, max_features='auto', max_leaf_nodes=None,\
-                        oob_score=False, n_jobs=-1, random_state=None, verbose=1
-    )
-    classifiers = [('RandomForest', RandomForestClassifier(**parameters)), ('ExtraTrees', ExtraTreesClassifier(**parameters))]
+    # 2. initialize classifiers
+    classifiers = [
+                    ('RandomForest', RandomForestClassifier(**DEFAULT_FOREST_ARGS)),
+                    ('ExtraTrees', ExtraTreesClassifier(**DEFAULT_FOREST_ARGS))
+    ]
 
     if args.svm:
         classifiers.append(('SVM', svm.SVC(C=1.0, kernel='rbf', degree=3, gamma=0.0, coef0=0.0, shrinking=True, probability=True, tol=0.001, \
                                         cache_size=200, class_weight=None, verbose=True, max_iter=-1, random_state=None)))
 
-    #train_subdirs = ['spam','ham','net','info']
-    labels = ['spam','ham']
-    predicted_probs = defaultdict(list)
-    predicted_classes = defaultdict(list)
-    strong_features = defaultdict(list)
 
+    #labels = ['spam','ham']
+    labels = ['spam']
+
+    predicted_probs = defaultdict(list)
+    clf_properties = defaultdict(list)
+
+    # 3. vectorize emails for each label in that way
+    # as we have one-class classification problem
     for label in labels :
 
         logger.info(('\n\n\t Create dataset for '+label+' class  :\n').upper())
-        X_train = tuple()
-        Y_train = tuple()
-        X_test = tuple()
-        Y_test = tuple()
 
-        for path in [ os.path.join(args.PATH, subdir) for subdir in labels + ['test','ham']]:
-            vectorizer = Vectorizer(path, label, args.score)
-            X,Y = vectorizer.get_dataset()
+        vectorizer = Vectorizer(args.PATH, label, args.score)
+        X_train, Y_train, X_test, Y_test = vectorizer.get_dataset()
 
-            if os.path.basename(path) == 'test':
-                X_test += X
-                Y_test += Y
+        logger.info('\n\t\tX_train :'+str(X_train))
+        logger.info('\n\t\tY_train :'+str(Y_train))
+        logger.info('\n\t\tX_test :'+str(X_test)+'\n')
+        logger.info('\n\t\tX_test :'+str(Y_test)+'\n')
 
-            else:
-
-                X_train += X
-                Y_train += Y
-
-        logger.info('\nX_train :'+str(X_train))
-        logger.info('\nY_train :'+str(Y_train))
-        logger.info('\nX_test :'+str(X_test))
-
-        # train classifiers instances and perform forecasting...
-
+        # 4. train classifiers instances and perform forecasting...
+        results = dict
         for clf in classifiers:
+            clf_name, clf_obj = clf
+            clf_obj.fit(X_train, Y_train)
+            classifier = ClfWrapper(clf_name, clf_obj, label)
+
+            logger.debug(str(type(X_test)))
+            logger.debug(str(type(Y_test)))
+
+            probs_vector, predics_vect, probs, classes = classifier.predict(X_test, Y_test)
+            logger.debug('+++PROBS '+str(probs))
+            logger.debug('+++CLASSES '+str(classes))
+            l = label.upper()+'_'+clf_name
+            [ predicted_probs[name].append((l, probability)) for name, probability in probs_vector ]
+
+            # 5. obtain some classifiers objects statistics
+            classifier.get_recipe()
+            if args.accuracy_path:
+                classifier.get_accuracy(args.accuracy_path)
+
+            classifier.__delattr__('obj')
+            logger.debug('classifier.__dict__'.upper()+str(classifier.__dict__))
+            clf_properties[clf_name].append(classifier.__dict__)
+
+    # 6. sum up final decisions
+    logger.debug('\n========================================\n')
+    report = create_report(predicted_probs, labels)
+
+    if args.report:
+        with open(args.report, 'wb') as f:
+            for k,v in report.iteritems():
+                f.writeline(time.strftime("%d%m%y_%H%M%S", time.gmtime())+'\n')
+                f.writeline(k+' --> '+str(v))
+
+    # 7. classifiers benchmarking
+    get_classifiers_stat(clf_properties, args.graph)
 
 
-            clf_name, obj = clf
-            logger.info('\n\n\t Fit '+clf_name+' classifier for '+label.upper()+' class\n')
-            obj.fit(X_train, Y_train)
-            #logger.debug('\n'+clf_name+' was successfully trained with such classes list: '+str(obj._classes).upper()+'\n')
-
-            logger.info('\n\n\t Try to make predictions...\n')
-
-            for name, probability, class_flag in zip(Y_test, obj.predict_proba(X_test), obj.predict(X_test)):
-                l = label+'_'+clf_name
-                predicted_probs[name].append((l, probability))
-                predicted_classes[name].append((l, class_flag))
-
-                logger.debug('CLASSES : '+str(obj.classes_))
-                if clf_name != 'SVM':
-                    importances = obj.feature_importances_
-                    strong_features[label+'_pattern'].append((clf_name, importances))
 
 
-                    std = np.std([tree.feature_importances_ for tree in obj.estimators_], axis=0)
-                    indixes = np.argsort(importances)[::-1]
 
 
-                    logger.debug("Feature ranking:")
 
-                    for f in range(10):
-                        print("%d. feature %d (%f)" % (f + 1, indixes[f], importances[indixes[f]]))
-
-    logger.debug('strong_features :'+str(strong_features))
-    #logger.debug('predicted_probs : '+str(predicted_probs))
-    #logger.debug('predicted_classes : '+str(predicted_classes))
-    report = dict()
-    print('\n========================================\n')
-    for key,decisions in predicted_probs.iteritems():
-        logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
-        decisions = [(label, value[0]) for label, value in decisions]
-        decisions = tuple(sorted(decisions))[:len(classifiers)]
-        decisions = [(name.partition('_')[0], score) for name, score in decisions]
-
-        print('\t'+key+' ==> '+str(decisions)+'\n')
-        final = map(itemgetter(0), decisions)
-        if len(set(final)) == 1:
-            report[key] = ((final.pop()).upper(), decisions)
-
-        elif len(set(final)) == 2:
-            report[key] = (''.join([name for name in final if final.count(name)==2]).upper(), decisions)
-
-        elif len(set(final)) == 3:
-            report[key] = (''.join(sorted(decisions)[:1]).upper(), decisions)
-
-    for k,v in report.iteritems():
-        print(k+' ==> '+str(v))
 
 
 

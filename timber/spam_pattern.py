@@ -90,7 +90,7 @@ class SpamPattern(BasePattern):
     ]
 
     TEXT_REGEXP_LIST = [
-                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
+                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|hey(-hey)?|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
                             ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
                             ur'(100%\s+guarantee?d||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
                             ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
@@ -209,8 +209,8 @@ class SpamPattern(BasePattern):
 
             for name, f in functions_map:
                 feature_value = self.INIT_SCORE
-                print(name)
-                print(f)
+                logger.debug(name)
+                logger.debug(f)
                 try:
                     feature_value = f()
                 except Exception as err:
@@ -220,7 +220,7 @@ class SpamPattern(BasePattern):
                 logger.debug((name+' ==> '+str(feature_value)).upper())
                 self.__setattr__(name, feature_value)
 
-            print('===========\n'+str(self.__dict__).upper()+'\n')
+            logger.debug('===========\n'+str(self.__dict__).upper()+'\n')
 
         logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
 
