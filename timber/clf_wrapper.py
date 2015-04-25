@@ -19,9 +19,11 @@ from operator import itemgetter
 from timber_exceptions import NaturesError
 from franks_factory import MetaFrankenstein
 
+from sklearn.metrics import classification_report, precision_recall_curve
+
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.WARN)
+logger.setLevel(logging.WARN)
 
 class ClfWrapper(object):
     '''
@@ -46,6 +48,7 @@ class ClfWrapper(object):
         logger.info('\n\n\t Try to make predictions...\n')
         self.probs = [(name, probability) for name, probability in zip(Y_test, self.obj.predict_proba(X_test))]
         self.crystal_ball = [(name, probability[1]) for name, probability in zip(Y_test, self.obj.predict_proba(X_test))]
+        self.crystal_ball = dict((name,round(p,5)) for name, p in self.crystal_ball)
         self.glass_ball = [(name, probability) for name, probability in zip(Y_test, self.obj.predict(X_test))]
         self.classes = self.obj.classes_
         return self.crystal_ball, self.glass_ball, self.probs, self.classes
@@ -60,52 +63,70 @@ class ClfWrapper(object):
             importances = self.obj.feature_importances_
 
         features_indexes = np.argsort(importances)[::-1]
-        logger.warn(('\n'+self.clf_name+' : '+self.label+' pattern : '+'ranged features list\n').upper())
+        features_indexes = tuple(features_indexes.tolist())
+        #logger.warn(('\n'+self.clf_name+' : '+self.label+' pattern : '+'ranged features list\n').upper())
 
-        self.ranged_features = list()
-        for index in features_indexes:
-            logger.warn(featues_dict[index]+' ==> '+str(round(importances[index],3)))
-            self.ranged_features.append((featues_dict[index], round(importances[index],3)))
+        ranged_features = list()
+        for index in features_indexes[:10]:
+            #logger.debug('{0:35} {1:3} {2:5}'.format(featues_dict[index], '==>', round(importances[index],3)))
+            ranged_features.append((featues_dict[index], round(importances[index],3)))
 
-        return tuple(self.ranged_features)
+        return tuple(ranged_features)
 
-    def get_accuracy(self, path_to_ground_truth):
+    def get_accuracy_report(self, path_to_ground_truth):
 
-        self.accuracy = 0.0
-        expected_values = dict()
+        clf_report = ''
+        expected_values = list()
+
         try:
-            with open(path_to_ground_truth,'rb') as truth:
-                #lines = truth.readlines()
-                while(True):
-                    l = next(truth)
-                    l = l.strip()
-                    if l is None:
-                        break
+            with open(path_to_ground_truth,'rb') as truth_lines:
 
-                    if l.startswith('#'):
+                while(True):
+                    l = next(truth_lines).strip()
+
+                    if l.startswith('#') or len(l)==0:
                         continue
 
-                    name, class_label = (l.split(':'))
-                    expected_values[name.strip()] = 0
-                    if class_label.strip().upper() == self.label:
-                        expected_values[name.strip()] = 1
 
+                    name, class_label = l.split(':')
 
+                    if class_label.strip().upper() == self.label.upper():
+                        expected_values.append((name.strip(),1.0))
+                        
+                    else:
+                        expected_values.append((name.strip(),0.0))
+                        
         except StopIteration as err:
             pass
 
         except Exception as err:
             logger.error('Can\'t parse "'+path_to_ground_truth+'" !')
-            print(err)
-            return self.accuracy
+            logger.debug(err)
+            return clf_report
 
         if not expected_values:
-            print(err)
+            logger.debug(err)
             logger.error('Can\'t parse "'+path_to_ground_truth+'" !')
-            return self.accuracy
+            return clf_report
+        target_map = {
+                        0.0 :   'NON '+self.label,
+                        1.0 :    self.label
+        }
 
-        truth_vector = tuple(map(itemgetter(1), tuple(sorted(expected_values, key=itemgetter(0)))))
-        predicted_vector = tuple(map(itemgetter(1), tuple(sorted(self.glass_ball, key=itemgetter(0)))))
+        target_names = tuple((target_map[key]).upper() for key in tuple(self.obj.classes_))
+        logger.debug('cls: '.upper()+str(target_names))
+        truth_vector = tuple(map(itemgetter(1), sorted(expected_values, key=itemgetter(0))))
+        logger.debug('truth_vector TUPLE ====> '.upper()+str(truth_vector))
+       
+        predicted_vector = tuple(map(itemgetter(1), sorted(self.glass_ball, key=itemgetter(0))))
+        logger.debug('PP'+str(predicted_vector))
+        
+        clf_report = classification_report(truth_vector, predicted_vector, target_names=target_names)
+        #logger.debug(self.report)
+        self.precision, self.recall, self.thresholds = precision_recall_curve(truth_vector, predicted_vector, pos_label=self.label.upper)
+        #logger.debug('PRECISION >> '+str(self.precision))
+        #logger.debug('RECALL >> '+str(self.recall))
+        #logger.debug('TRESH >> '+str(self.thresholds))
 
-        self.accuracy = accuracy_score(truth_vector, predicted_vector)
-        return self.accuracy
+
+        return clf_report

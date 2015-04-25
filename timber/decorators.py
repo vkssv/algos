@@ -6,7 +6,7 @@ from pattern_wrapper import BasePattern
 INIT_SCORE = BasePattern.INIT_SCORE
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.WARN)
+logger.setLevel(logging.DEBUG)
 #formatter = logging.Formatter('%(filename)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)

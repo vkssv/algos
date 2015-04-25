@@ -16,7 +16,7 @@ from timber_exceptions import NaturesError
 
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn import svm
-from sklearn.metrics import accuracy_score
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,6 +25,7 @@ DEFAULT_FOREST_ARGS = dict(n_estimators=20, criterion='gini', max_depth = None, 
                             max_features='auto', max_leaf_nodes=None, oob_score=False, n_jobs=-1, random_state=None, verbose=1)
 
 logger = logging.getLogger('')
+logger.setLevel(logging.WARN)
 
 # define some functions
 
@@ -60,11 +61,6 @@ def create_report(predictions_dict, labels):
 
     return report
 
-def get_classifiers_stat(clfs_dict, plot_flag):
-    logger.debug(str(clfs_dict))
-    logger.debug(str(plot_flag))
-
-    pass
 
 if __name__ == "__main__":
 
@@ -110,37 +106,42 @@ if __name__ == "__main__":
     fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
-    logger.addHandler(ch)
     logger.addHandler(fh)
 
     if args.info:
         logger.setLevel(logging.INFO)
+        logger.addHandler(ch)
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
+        logger.addHandler(ch)
 
     # 2. initialize classifiers
+    print('\n\x20 Create classifiers instances...')
     classifiers = [
-                    ('RandomForest', RandomForestClassifier(**DEFAULT_FOREST_ARGS)),
-                    ('ExtraTrees', ExtraTreesClassifier(**DEFAULT_FOREST_ARGS))
+                    ('Random\x20Forest', RandomForestClassifier(**DEFAULT_FOREST_ARGS)),
+                    ('Extra\x20Trees', ExtraTreesClassifier(**DEFAULT_FOREST_ARGS))
     ]
 
     if args.svm:
-        classifiers.append(('SVM', svm.SVC(C=1.0, kernel='rbf', degree=3, gamma=0.0, coef0=0.0, shrinking=True, probability=True, tol=0.001, \
+        classifiers.append(('SVM', svm.SVC(C=1.0, kernel='linear', degree=3, gamma=0.0, coef0=0.0, shrinking=True, probability=True, tol=0.001, \
                                         cache_size=200, class_weight=None, verbose=True, max_iter=-1, random_state=None)))
 
+    for clf, obj in classifiers:
+        print('\n\x20\x20 --> '+clf.upper()+' was constructed with params: ')
+        for k,value in obj.get_params().iteritems():
+            print('\t{0:20} {1:3} {2:5}'.format(k, '=', str(value)))
 
-    #labels = ['spam','ham']
-    labels = ['spam']
+    labels = ['spam','ham']
+    #labels = ['spam']
 
     predicted_probs = defaultdict(list)
-    clf_properties = defaultdict(list)
 
     # 3. vectorize emails for each label in that way
     # as we have one-class classification problem
     for label in labels :
 
-        logger.info(('\n\n\t Create dataset for '+label+' class  :\n').upper())
+        print('\n\x20 Try to create dataset for '+label.upper()+' class...')
 
         vectorizer = Vectorizer(args.PATH, label, args.score)
         X_train, Y_train, X_test, Y_test = vectorizer.get_dataset()
@@ -151,33 +152,54 @@ if __name__ == "__main__":
         logger.info('\n\t\tX_test :'+str(X_test)+'\n')
         logger.info('\n\t\tY_test :'+str(Y_test)+'\n')
         logger.info('\n\t\tfeatures_dict :'+str(features_dict)+'\n')
+        print('\t---> train and test datasets were successfully created.')
 
         # 4. train classifiers instances and perform forecasting...
         results = dict
         for clf in classifiers:
             clf_name, clf_obj = clf
+            print('\n\x20 Fit '+clf_name.upper()+' with '+label.upper()+' data...\n')
             clf_obj.fit(X_train, Y_train)
             classifier = ClfWrapper(clf_name, clf_obj, label)
 
             logger.debug(str(type(X_test)))
             logger.debug(str(type(Y_test)))
-
-            probs_vector, predics_vect, probs, classes = classifier.predict(X_test, Y_test)
+            print('\n\x20 Try to make predictions...\n')
+            probs_dict, predics_vect, probs, classes = classifier.predict(X_test, Y_test)
             logger.debug('+++PROBS '+str(probs))
             logger.debug('+++CLASSES '+str(classes))
             l = label.upper()+'_'+clf_name
-            [ predicted_probs[name].append((l, probability)) for name, probability in probs_vector ]
+            [ predicted_probs[name].append((l, probability)) for name, probability in probs_dict.iteritems() ]
 
-            # 5. obtain some classifiers objects statistics
-            classifier.get_recipe(features_dict)
+            # 5. print results and some classifiers objects statistics
+            recipe = classifier.get_recipe(features_dict)
+
+            print('\n\x20 '+clf_name.upper()+' results for '+label.upper()+' categorizing :\n')
+            print('\x20\x20 --> Probabilities : \n')
+            verdict = ''
+
+            for email, prediction in predics_vect:
+
+                if prediction.item() == 1.0:
+                    verdict = label.upper()
+                else:
+                    verdict = 'NON '+label.upper()
+
+                print('\t{0:10} {1:3} {2:9} {3:4} {4:4}'.format(email, '==>', verdict, probs_dict[email], prediction))
+
+            print('\n\x20\x20 --> Top 10 features : \n')
+            for f_name, importance in recipe:
+                print('\t{0:35} {1:3} {2:5}'.format(f_name, '==>', importance))
+
             if args.accuracy_path:
-                classifier.get_accuracy(args.accuracy_path)
+                print('\n\x20\x20 --> Accuracy :\n')
+                print('\x20\x20'+classifier.get_accuracy_report(args.accuracy_path))
 
-            classifier.__delattr__('obj')
-            logger.debug('classifier.__dict__'.upper()+str(classifier.__dict__))
-            clf_properties[clf_name].append(classifier.__dict__)
+            # 6. quelques photos pour bien souvenir
+            if args.graph:
+                print(42)
 
-    # 6. sum up final decisions
+    # 7. sum up final decisions
     logger.debug('\n========================================\n')
     report = create_report(predicted_probs, labels)
 
@@ -187,8 +209,8 @@ if __name__ == "__main__":
                 f.writeline(time.strftime("%d%m%y_%H%M%S", time.gmtime())+'\n')
                 f.writeline(k+' --> '+str(v))
 
-    # 7. classifiers benchmarking
-    get_classifiers_stat(clf_properties, args.graph)
+
+
 
 
 

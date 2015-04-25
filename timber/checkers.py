@@ -20,7 +20,7 @@ INIT_SCORE = BasePattern.INIT_SCORE
 get_regexp = BasePattern.get_regexp
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.WARN)
+logger.setLevel(logging.WARN)
 #formatter = logging.Formatter('%(filename)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
@@ -64,7 +64,7 @@ class SubjectChecker(BaseChecker):
     def __init__(self, pattern_obj):
 
         BaseChecker.__init__(self, pattern_obj)
-        print(self.score)
+        logger.debug(self.score)
 
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
         self.subj_rules = get_regexp(pattern_obj.SUBJ_RULES)
@@ -74,9 +74,9 @@ class SubjectChecker(BaseChecker):
 
         #logger.debug('compiled_regs : '+str(self.subj_rules))
         # check by regexp rules
-        print(self.subj_line)
-        print(type(self.subj_line))
-        #print(self.subj_rules)
+        logger.debug(self.subj_line)
+        logger.debug(type(self.subj_line))
+        #logger.debug(self.subj_rules)
         matched = list()
         matched.extend(filter(lambda r: re.search(r, self.subj_line.lower()), self.subj_rules))
         logger.debug('matched : '+str(matched))
@@ -104,12 +104,12 @@ class SubjectChecker(BaseChecker):
 
 
     def get_subject_upper(self):
-        print(self.subj_tokens)
+        logger.debug(self.subj_tokens)
 
         return len([w for w in self.subj_tokens if w.isupper()])
 
     def get_subject_titled(self):
-        print(self.subj_tokens)
+        logger.debug(self.subj_tokens)
 
         return len([w for w in self.subj_tokens if w.istitle()])
 
@@ -308,7 +308,7 @@ class UrlChecker(BaseChecker):
 
     def get_url_fqdn(self):
         # DOMAIN NAME LEVEL: very often russian spams are send from third-level domains
-        print(self.urls_domains)
+        logger.debug(self.urls_domains)
         dots_counts = [s.count('.') for s in self.urls_domains]
         domain_name_level = len([count for count in dots_counts if count >=2 ])*self.score
 
@@ -318,7 +318,7 @@ class UrlChecker(BaseChecker):
         ascii = INIT_SCORE
 
         url_lines = [ ''.join(u._asdict().values()) for u in self.urls ]
-        if list( x for x in  [line for line in url_lines] if x in string.printable ):
+        if list( x for x in  [line for line in url_lines] if x in string.logger.debugable ):
             ascii = self.score
 
         return ascii

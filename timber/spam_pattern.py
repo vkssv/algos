@@ -11,7 +11,7 @@ from pattern_wrapper import BasePattern
 import checkers
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARN)
 #formatter = logging.Formatter('%(filename)s >>> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)

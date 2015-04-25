@@ -13,7 +13,7 @@ from nltk.stem import SnowballStemmer
 from nltk.probability import FreqDist, ConditionalFreqDist
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARN)
 #formatter = logging.Formatter('%(filename)s: >> %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
@@ -125,14 +125,14 @@ class BasePattern(BeautifulBody):
         #logger.debug(self.msg.items())
 
         heads_vector = tuple(map(itemgetter(0), self.msg.items()))
-        #print(heads_vector)
+        #logger.debug(heads_vector)
         heads_dict = dict(self.msg.items())
         #logger.debug('excluded heads list from '+str(self.__class__)+' : ')
         #logger.debug(self.EXCLUDED_HEADS)
 
         for ex_head in self.EXCLUDED_HEADS:
             heads_vector = tuple(filter(lambda h_name: not re.match(ex_head, h_name, re.I), heads_vector[:]))
-        #print(heads_vector)
+        #logger.debug(heads_vector)
         all_heads_checksum = binascii.crc32(''.join(heads_vector))
         #logger.debug('all_heads_checksum ==> '.upper()+str(self.all_heads_checksum))
         return all_heads_checksum

@@ -35,11 +35,11 @@ class Vectorizer(object):
         supported patterns are : spam, ham, nets,
         infos ;
     '''
-    LABELS = ['spam','ham']
+    SUPPORTED_CLASSES = ['spam','ham']
 
     def __init__(self, train_dir, label, score):
 
-        if label in self.LABELS:
+        if label in self.SUPPORTED_CLASSES:
 
             self.train_dir = train_dir
             self.label = label
@@ -118,7 +118,7 @@ class Vectorizer(object):
         X_test = list()
         Y_test = list()
 
-        for path in [ os.path.join(self.train_dir, subdir) for subdir in self.LABELS+['test'] ]:
+        for path in [ os.path.join(self.train_dir, subdir) for subdir in self.SUPPORTED_CLASSES+['test'] ]:
             logger.debug('Open collection subdir : '+path)
             pathes_gen = self.__get_path(path)
             logger.debug(list(pathes_gen))
@@ -143,7 +143,7 @@ class Vectorizer(object):
                         logger.error('PATH: '+msg_path)
                         raise NaturesError('Vectors have different dimentions !')
 
-                    y_vector = 0.0
+                    y_vector = None
 
                     if os.path.basename(path) == 'test':
 
@@ -156,8 +156,12 @@ class Vectorizer(object):
                         X_train.append(x_vector)
                         logger.debug('+++++++label :'+str(self.label))
                         logger.debug('+++++++path :'+str(os.path.basename(msg_path)))
+
                         if self.label == os.path.basename(path):
                             y_vector = 1.0
+
+                        else:
+                            y_vector = 0.0
 
                         Y_train.append(y_vector)
 
