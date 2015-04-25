@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
-import sys, os, logging, re, email, argparse, stat, tempfile, math, time, json
+import sys, os, logging, re, argparse, stat, tempfile, math, time
 import numpy as np
 
 from email.parser import Parser
@@ -17,7 +17,6 @@ from timber_exceptions import NaturesError
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn import svm
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -25,7 +24,7 @@ DEFAULT_FOREST_ARGS = dict(n_estimators=20, criterion='gini', max_depth = None, 
                             max_features='auto', max_leaf_nodes=None, oob_score=False, n_jobs=-1, random_state=None, verbose=1)
 
 logger = logging.getLogger('')
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.DEBUG)
 
 # define some functions
 
@@ -33,31 +32,25 @@ def create_report(predictions_dict, labels):
 
     report = dict()
     for key, decisions in predictions_dict.iteritems():
-        logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
-        decisions = [(label, value) for label, value in decisions]
-
-        if len(labels) == 1:
-            to_substract = set([(label, value) for label, value in decisions if value < 0.50])
-            diff = list(set(decisions) - to_substract)
-            to_add = [('NON '+label, value) for label, value in decisions if value < 0.50]
-            decisions = diff + to_add
-
-        decisions = tuple(sorted(decisions))[:len(classifiers)]
-        decisions = [(name.partition('_')[0], score) for name, score in decisions]
-
-        logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
+        #logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
+        decisions = tuple(sorted(decisions,key= itemgetter(2)))[-len(classifiers):]
+        #logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
         final = map(itemgetter(0), decisions)
+        clf_stat = sorted([clf_name+' : '+str(prob)+' % ('+label+');' for label, clf_name, prob in decisions], key=itemgetter(1), reverse=True)
+        status = None
+        #logger.debug('final '+str(final))
         if len(set(final)) == 1:
-            report[key] = ((final.pop()).upper(), decisions)
+            status = set(final).pop()
 
         elif len(set(final)) == 2:
-            report[key] = (''.join([name for name in final if final.count(name)==2]).upper(), decisions)
+            status = [i for i in final if final.count(i)==2].pop()
 
         elif len(set(final)) == 3:
-            report[key] = (''.join(sorted(decisions)[:1]).upper(), decisions)
+            status, cls_name, prob = decisions[0]
 
-    for k,v in report.iteritems():
-        logger.debug(k+' ==> '+str(v))
+        report[key] = (status,  clf_stat )
+
+
 
     return report
 
@@ -81,16 +74,16 @@ if __name__ == "__main__":
     parser.add_argument('--accuracy', type = str, action = "store", dest = "accuracy_path", default = False,
                             help = "path to file with ground truth to estimate accuracy")
 
-    parser.add_argument('--graph', action = "store_true", dest = "graph", default = False,
-                            help = "plot feature impotances graph")
+    #parser.add_argument('--graph', action = "store_true", dest = "graph", default = False,
+    #                        help = "plot feature impotances graph")
+    parser.add_argument('--dump', action = "store_true", dest = "dump", default = False,
+                            help = "dump used datasets in dir with collections (PATH argument)")
 
-    parser.add_argument('--report', action = "store", dest = "report", default = False,
-                            help = 'path to file, where final report will be dumped')
+    #parser.add_argument('--report', action = "store", dest = "report", default = False,
+    #                        help = "dump estimated email statuses into file")
 
-    parser.add_argument('-v', action = "store_true", dest = "info", default = False,
-                            help = "be social (verbose)")
-    parser.add_argument('-vv', action = "store_true", dest = "debug", default = False,
-                            help = "be annoying (very very verbose)")
+    parser.add_argument('-v', action = "store_true", dest = "verbose", default = False,
+                            help = "be verbose")
 
     args = parser.parse_args()
 
@@ -104,17 +97,14 @@ if __name__ == "__main__":
     formatter = logging.Formatter('%(filename)s : %(message)s')
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
+    logger.setLevel(logging.INFO)
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
+    logger.addHandler(ch)
 
-    if args.info:
-        logger.setLevel(logging.INFO)
-        logger.addHandler(ch)
-
-    if args.debug:
+    if args.verbose:
         logger.setLevel(logging.DEBUG)
-        logger.addHandler(ch)
 
     # 2. initialize classifiers
     print('\n\x20 Create classifiers instances...')
@@ -144,7 +134,8 @@ if __name__ == "__main__":
         print('\n\x20 Try to create dataset for '+label.upper()+' class...')
 
         vectorizer = Vectorizer(args.PATH, label, args.score)
-        X_train, Y_train, X_test, Y_test = vectorizer.get_dataset()
+        X_train, Y_train, X_test, Y_test = vectorizer.create_dataset()
+
         features_dict = vectorizer.features_dict
 
         logger.info('\n\t\tX_train :'+str(X_train))
@@ -153,6 +144,9 @@ if __name__ == "__main__":
         logger.info('\n\t\tY_test :'+str(Y_test)+'\n')
         logger.info('\n\t\tfeatures_dict :'+str(features_dict)+'\n')
         print('\t---> train and test datasets were successfully created.')
+        if args.dump:
+            vectorizer.dump_dataset(to_file=True)
+            print('\t---> train and test datasets were successfully exported into '+args.PATH+'.')
 
         # 4. train classifiers instances and perform forecasting...
         results = dict
@@ -168,14 +162,14 @@ if __name__ == "__main__":
             probs_dict, predics_vect, probs, classes = classifier.predict(X_test, Y_test)
             logger.debug('+++PROBS '+str(probs))
             logger.debug('+++CLASSES '+str(classes))
-            l = label.upper()+'_'+clf_name
-            [ predicted_probs[name].append((l, probability)) for name, probability in probs_dict.iteritems() ]
+
+            [ predicted_probs[name].append((label.upper(), clf_name, probability)) for name, probability in probs_dict.iteritems() ]
 
             # 5. print results and some classifiers objects statistics
             recipe = classifier.get_recipe(features_dict)
 
             print('\n\x20 '+clf_name.upper()+' results for '+label.upper()+' categorizing :\n')
-            print('\x20\x20 --> Probabilities : \n')
+            print('\x20\x20 --> Probabilities for '+label.upper()+' pattern : \n')
             verdict = ''
 
             for email, prediction in predics_vect:
@@ -196,105 +190,21 @@ if __name__ == "__main__":
                 print('\x20\x20'+classifier.get_accuracy_report(args.accuracy_path))
 
             # 6. quelques photos pour bien souvenir
-            if args.graph:
-                print(42)
+            #if args.graph:
+            #    print(42)
 
     # 7. sum up final decisions
-    logger.debug('\n========================================\n')
+
     report = create_report(predicted_probs, labels)
 
-    if args.report:
-        with open(args.report, 'wb') as f:
-            for k,v in report.iteritems():
-                f.writeline(time.strftime("%d%m%y_%H%M%S", time.gmtime())+'\n')
-                f.writeline(k+' --> '+str(v))
+    print('\n\x20 statuses :\n'.upper())
+    for k,v in sorted(report.iteritems(),key=itemgetter(1),reverse=True):
+        status, clf_stat = v
+        add_info = '\x20\x20'.join(clf_stat)
+        print('\t{0:10} {1:3} {2:4} '.format(k, '==>', status)+' :\x20\x20'+add_info+'\n')
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''''
-
-class forest(object):
-
-    DEFAULT_LABELS = ('ham', 'spam', 'info', 'net')
-
-    def vectorize(doc_path, label, score)
-    def get_labeled_data_set (label)
-    def fit(label)
-    def predict(path)
-    def get_trained_forest(label)
-    def dump_data_set(label)
-
-
-and why I don't keep vectors and datasets in numpy arrays or in python arrays,
-for those who don't know :
-
-x = [1,2,3,4]*100
-y = np.array([1,2,3,4]*100)
->>> sys.getsizeof(x)
-3272
->>> sys.getsizeof(y)
-80
-
-Well,
-
->>> import cPickle
->>> x_s = cPickle.dumps(x)
->>> y_s = cPickle.dumps(y)
->>>
->>> sys.getsizeof(x_s)
-1643
->>> sys.getsizeof(y_s)
-12991
-
-The real price of magic, so I mostly use good old tuples :
-
-y = tuple([1,2,3,4]*100)
->>> y_s = cPickle.dumps(y)
->>> sys.getsizeof(y_s)
-1243
-
->>> xx
-(454079559, 0.0, 0.0, 0.0, 1.584962500721156, 1.5714285714285714, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, -1952929455, 1.0, -1215152318, 0, 1, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12.0, 1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
->>>
-
->>> ar = array.array('f',xx)
-
->>> ff = tuple(float(i) for i in xx )
-
->>>
->>> ff
-(454079559.0, 0.0, 0.0, 0.0, 1.584962500721156, 1.5714285714285714, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, -1952929455.0, 1.0, -1215152318.0, 0.0, 1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-
->>> ar_s = cPickle.dumps(ar)
->>> ff_s = cPickle.dumps(ff)
->>> sys.getsizeof(ar_s)
-261
->>> sys.getsizeof(ff_s)
-202
-
-
-'''''
 
 
 

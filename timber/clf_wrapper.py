@@ -56,20 +56,24 @@ class ClfWrapper(object):
     def get_recipe(self, featues_dict):
 
         importances = list()
-
+        f = lambda x: x
         if self.clf_name == 'SVM':
-            importances = self.obj.coef_
+            importances = (self.obj.coef_).flatten()
+
         else:
             importances = self.obj.feature_importances_
+            f = lambda x: round(x,3)
 
         features_indexes = np.argsort(importances)[::-1]
-        features_indexes = tuple(features_indexes.tolist())
+
+
         #logger.warn(('\n'+self.clf_name+' : '+self.label+' pattern : '+'ranged features list\n').upper())
 
         ranged_features = list()
+
         for index in features_indexes[:10]:
             #logger.debug('{0:35} {1:3} {2:5}'.format(featues_dict[index], '==>', round(importances[index],3)))
-            ranged_features.append((featues_dict[index], round(importances[index],3)))
+            ranged_features.append((featues_dict[index], f(importances[index])))
 
         return tuple(ranged_features)
 

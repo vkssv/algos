@@ -19,9 +19,11 @@ from operator import itemgetter
 from timber_exceptions import NaturesError
 from franks_factory import MetaFrankenstein
 
-
 logger = logging.getLogger('')
-#logger.setLevel(logging.WARN)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(filename)s >>> %(message)s')
+ch = logging.StreamHandler(sys.stdout)
+logger.addHandler(ch)
 
 class Vectorizer(object):
     '''
@@ -47,6 +49,11 @@ class Vectorizer(object):
             logger.debug('Train dir : '+str(self.train_dir).upper())
             logger.debug('Current class : '+str(self.label).upper())
             logger.debug('Penalty score : '+str(self.penalty))
+
+            self.X_train = list()
+            self.Y_train = list()
+            self.X_test = list()
+            self.Y_test = list()
 
         else:
             raise Exception('Don\'t have any module with rules for '+label.upper()+' class.')
@@ -111,12 +118,9 @@ class Vectorizer(object):
     def __cross_validation(self):
         pass
 
-    def get_dataset(self):
+    def create_dataset(self):
+
         logger.debug('in dataset')
-        X_train = list()
-        Y_train = list()
-        X_test = list()
-        Y_test = list()
 
         for path in [ os.path.join(self.train_dir, subdir) for subdir in self.SUPPORTED_CLASSES+['test'] ]:
             logger.debug('Open collection subdir : '+path)
@@ -147,13 +151,13 @@ class Vectorizer(object):
 
                     if os.path.basename(path) == 'test':
 
-                        X_test.append(x_vector)
+                        self.X_test.append(x_vector)
                         y_vector = os.path.basename(msg_path)
-                        Y_test.append(y_vector)
+                        self.Y_test.append(y_vector)
 
                     else:
 
-                        X_train.append(x_vector)
+                        self.X_train.append(x_vector)
                         logger.debug('+++++++label :'+str(self.label))
                         logger.debug('+++++++path :'+str(os.path.basename(msg_path)))
 
@@ -163,12 +167,12 @@ class Vectorizer(object):
                         else:
                             y_vector = 0.0
 
-                        Y_train.append(y_vector)
+                        self.Y_train.append(y_vector)
 
                 except StopIteration as err:
 
-                    logger.debug(str(X_train))
-                    logger.debug(str(Y_train))
+                    logger.debug(str(self.X_train))
+                    logger.debug(str(self.Y_train))
                     break
 
                 except Exception as err:
@@ -177,7 +181,24 @@ class Vectorizer(object):
                     raise
                     #pass
 
-        f = lambda x: tuple(x)
-        pack_to_tuples = (f(x) for x in (X_train, Y_train, X_test, Y_test))
+        [ self.__setattr__(name, tuple(self.__getattribute__(name))) for name in ['X_train', 'Y_train', 'X_test', 'Y_test'] ]
 
-        return tuple(pack_to_tuples)
+        return self.X_train, self.Y_train, self.X_test, self.Y_test
+
+    def dump_dataset(self, to_file=None):
+
+        names = ('X_train', 'Y_train', 'X_test', 'Y_test')
+        datasets = ( np.array(x) for x in (self.__getattribute__(name) for name in names) )
+        print(type(self.X_train))
+        if to_file is not None:
+
+            try:
+                timestamp = time.strftime("%d%m%y_%H%M%S", time.gmtime())
+                dump_path = os.path.join(self.train_dir, name+'_'+self.label+'_features_'+timestamp+'.txt')
+                [ dataset.tofile(dump_path, sep=",", format="%s") for dataset, name in zip(tuple(datasets), names) ]
+            except Exception as err:
+                logger.error('Can\'t dump datasets to '+path+' !')
+                logger.error(str(err))
+                pass
+
+        return datasets
