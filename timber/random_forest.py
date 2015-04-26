@@ -10,21 +10,16 @@ from operator import itemgetter
 
 from franks_factory import MetaFrankenstein
 from pattern_wrapper import BasePattern
-from vectorizer import Vectorizer
+from vectorizer import Vectorize
 from clf_wrapper import ClfWrapper
 from timber_exceptions import NaturesError
 
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn import svm
+from sklearn.grid_search import GridSearchCV
 
 import numpy as np
 import matplotlib.pyplot as plt
-
-DEFAULT_FOREST_ARGS = dict(n_estimators=20, criterion='gini', max_depth = None, min_samples_split=2, min_samples_leaf=1,
-                            max_features='auto', max_leaf_nodes=None, oob_score=False, n_jobs=-1, random_state=None, verbose=1)
-
-logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
 
 # define some functions
 
@@ -32,13 +27,13 @@ def create_report(predictions_dict, labels):
 
     report = dict()
     for key, decisions in predictions_dict.iteritems():
-        #logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
-        decisions = tuple(sorted(decisions,key= itemgetter(2)))[-len(classifiers):]
-        #logger.debug('\t'+key+' ==> '+str(decisions)+'\n')
+        logger.info('\t'+key+' ==> '+str(decisions)+'\n')
+        decisions = tuple(sorted(decisions,key= itemgetter(2),reverse=True))[:len(classifiers)]
+        logger.info('\t sort '+key+' ===> '+str(decisions)+'\n')
         final = map(itemgetter(0), decisions)
-        clf_stat = sorted([clf_name+' : '+str(prob)+' % ('+label+');' for label, clf_name, prob in decisions], key=itemgetter(1), reverse=True)
+        clf_stat = tuple(clf_name+' : '+str(prob)+' % ('+label+');' for label, clf_name, prob in decisions)
         status = None
-        #logger.debug('final '+str(final))
+        logger.info('final '+str(final))
         if len(set(final)) == 1:
             status = set(final).pop()
 
@@ -65,11 +60,11 @@ if __name__ == "__main__":
     parser.add_argument('-s', type = float,  action = 'store', dest = "score", default = 1.0,
                             help = "penalty score for matched feature, def = 1.0")
 
-    parser.add_argument('--svm', action = "store_true", dest = "svm", default = False,
-                            help = "add SVM to classifiers list")
+    #parser.add_argument('--forest-args',action = 'store', type=list, dest = "forest_args_dict", default = None,
+    #                        help = "list of forest classifier arguments")
 
-    parser.add_argument('--forest-args',action = 'store', type=list, dest = "forest_args_dict", default = DEFAULT_FOREST_ARGS,
-                            help = "list of forest classifier arguments")
+    parser.add_argument('--estimators',action = 'store', type=int, dest = "estimators", default = 20,
+                            help = "number of trees in forests")
 
     parser.add_argument('--accuracy', type = str, action = "store", dest = "accuracy_path", default = False,
                             help = "path to file with ground truth to estimate accuracy")
@@ -94,7 +89,8 @@ if __name__ == "__main__":
         sys.stderr.write( '[%s] - Error: Your Python interpreter must be %d.%d\n' % (sys.argv[0], major, minor))
         sys.exit(-1)
 
-    formatter = logging.Formatter('%(filename)s : %(message)s')
+    logger = logging.getLogger('')
+    formatter = logging.Formatter('%(levelname)s: %(filename)s: %(funcName)s: %(message)s')
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
     logger.setLevel(logging.INFO)
@@ -103,24 +99,31 @@ if __name__ == "__main__":
     logger.addHandler(fh)
     logger.addHandler(ch)
 
+    sk_learn_verbosity = 0
     if args.verbose:
         logger.setLevel(logging.DEBUG)
+        sk_learn_verbosity = 1
 
-    # 2. initialize classifiers
+    # 2. choose best parameters to initialize classifiers
     print('\n\x20 Create classifiers instances...')
+
+    forest_params_grid = {
+                            #'max_depth'         : [1,10,33,None],
+                            #'max_features'      : [1,10,33,'auto','sqrt','log2',None],
+                            'min_samples_split' : [1, 3, 10],
+                            'min_samples_leaf'  : [1, 3, 10],
+                            'bootstrap'         : [True, False],
+                            'criterion'         : ['gini', 'entropy']
+    }
+
+    svm_params_grid =  {'C': [1, 10, 100, 1000]}
+    add_params = list()
+
     classifiers = [
-                    ('Random\x20Forest', RandomForestClassifier(**DEFAULT_FOREST_ARGS)),
-                    ('Extra\x20Trees', ExtraTreesClassifier(**DEFAULT_FOREST_ARGS))
+                    ('Random\x20Forest', RandomForestClassifier, forest_params_grid),
+                    ('Extra\x20Trees', ExtraTreesClassifier, forest_params_grid),
+                    ('SVM', svm.SVC, svm_params_grid)
     ]
-
-    if args.svm:
-        classifiers.append(('SVM', svm.SVC(C=1.0, kernel='linear', degree=3, gamma=0.0, coef0=0.0, shrinking=True, probability=True, tol=0.001, \
-                                        cache_size=200, class_weight=None, verbose=True, max_iter=-1, random_state=None)))
-
-    for clf, obj in classifiers:
-        print('\n\x20\x20 --> '+clf.upper()+' was constructed with params: ')
-        for k,value in obj.get_params().iteritems():
-            print('\t{0:20} {1:3} {2:5}'.format(k, '=', str(value)))
 
     labels = ['spam','ham']
     #labels = ['spam']
@@ -133,8 +136,8 @@ if __name__ == "__main__":
 
         print('\n\x20 Try to create dataset for '+label.upper()+' class...')
 
-        vectorizer = Vectorizer(args.PATH, label, args.score)
-        X_train, Y_train, X_test, Y_test = vectorizer.create_dataset()
+        vectorizer = Vectorize(train_dir=args.PATH, label=label, score=args.score)
+        X_train, Y_train, X_test, Y_test = vectorizer.load_data()
 
         features_dict = vectorizer.features_dict
 
@@ -150,23 +153,56 @@ if __name__ == "__main__":
 
         # 4. train classifiers instances and perform forecasting...
         results = dict
+
         for clf in classifiers:
-            clf_name, clf_obj = clf
-            print('\n\x20 Fit '+clf_name.upper()+' with '+label.upper()+' data...\n')
-            clf_obj.fit(X_train, Y_train)
-            classifier = ClfWrapper(clf_name, clf_obj, label)
+            clf_name, class_obj, params_dict = clf
+            clf_instance = None
+
+            print('\n\x20 Try to find best parameters to initialize '+clf_name.upper()+' for '+label.upper()+' class...')
+
+            if clf_name in ['Random\x20Forest', 'Extra\x20Trees']:
+                clf_instance = class_obj(n_estimators=args.estimators)
+                add_params = [
+                                ('n_jobs',-1),\
+                                ('verbose', sk_learn_verbosity),\
+                                ('max_features',None),\
+                                ('max_depth',None),\
+                                ('max_leaf_nodes', None)
+                ]
+            else:
+                clf_instance = class_obj()
+                add_params = [('kernel', 'linear'), ('cache_size', 200), ('max_iter',-1), ('probability',True), ('verbose', sk_learn_verbosity)]
+
+            grid_search = GridSearchCV(clf_instance, param_grid=params_dict)
+            fit_output = grid_search.fit(X_train, Y_train)
+            logger.info(str(fit_output))
+
+            params = grid_search.best_params_
+            logger.info('best_params : '.upper()+str(params))
+
+            params.update(dict(add_params))
+            print('\n\t---> will use parameters set:')
+            for k,value in params.iteritems():
+                print('\t{0:20} {1:3} {2:5}'.format(k, '=', str(value)))
+
+            clf_instance = class_obj(**params)
+            print('\n\t --> '+clf_name.upper()+' was successfully constructed.')
+
+            print('\n\t Fit them with '+label.upper()+' data...\n')
+            clf_instance.fit(X_train, Y_train)
+            wrapped_clf = ClfWrapper(clf_name, clf_instance, label)
 
             logger.debug(str(type(X_test)))
             logger.debug(str(type(Y_test)))
             print('\n\x20 Try to make predictions...\n')
-            probs_dict, predics_vect, probs, classes = classifier.predict(X_test, Y_test)
+            probs_dict, predics_vect, probs, classes = wrapped_clf.predict(X_test, Y_test)
             logger.debug('+++PROBS '+str(probs))
             logger.debug('+++CLASSES '+str(classes))
 
             [ predicted_probs[name].append((label.upper(), clf_name, probability)) for name, probability in probs_dict.iteritems() ]
 
             # 5. print results and some classifiers objects statistics
-            recipe = classifier.get_recipe(features_dict)
+            recipe = wrapped_clf.get_recipe(features_dict)
 
             print('\n\x20 '+clf_name.upper()+' results for '+label.upper()+' categorizing :\n')
             print('\x20\x20 --> Probabilities for '+label.upper()+' pattern : \n')
@@ -187,7 +223,7 @@ if __name__ == "__main__":
 
             if args.accuracy_path:
                 print('\n\x20\x20 --> Accuracy :\n')
-                print('\x20\x20'+classifier.get_accuracy_report(args.accuracy_path))
+                print('\x20\x20'+wrapped_clf.get_accuracy_report(args.accuracy_path))
 
             # 6. quelques photos pour bien souvenir
             #if args.graph:

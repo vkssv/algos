@@ -11,7 +11,7 @@ import checkers
 
 logger = logging.getLogger('')
 #logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s %(message)s')
+#formatter = logging.Formatter('%(filename)s %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
@@ -148,37 +148,12 @@ class HamPattern(BeautifulBody):
 
                 self.__setattr__(name, feature_value)
 
-        logger.debug('\n>> ham-features vector : \n'.upper())
-        for (k,v) in sorted(self.__dict__.items()):
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
 
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
         logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
         logger.debug("non_zero features count : "+str(len(non_zero)))
-        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
-
-'''''
-if __name__ == "__main__":
-
-	formatter = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
-	ch = logging.StreamHandler(sys.stdout)
-	ch.setLevel(logging.DEBUG)
-	ch.setFormatter(formatter)
-	logger.addHandler(ch)
-
-	try:
-		test=HamPattern(env)
-		vector = test.run()
-		logger.debug(vector)
-
-
-	except Exception as details:
-		raise
-
-
-'''''
 
 		
 

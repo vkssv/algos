@@ -174,8 +174,8 @@ class InfoPattern(BasePattern):
 
             for name, f in functions_map:
                 feature_value = self.INIT_SCORE
-                print(name)
-                print(f)
+                logger.debug(name)
+                logger.debug(f)
                 try:
                     feature_value = f()
                 except Exception as err:

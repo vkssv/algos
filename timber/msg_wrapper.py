@@ -2,53 +2,45 @@
 # -*- coding: utf-8 -*-
 
 """
-Extracting and pre-processing for basic email's bodies parts,
-which can be checked by rules (features-triggers) from each pattern_class.
+    Extract and parse basic email's bodies parts
 """
 
-import sys, os, importlib, logging, re, binascii, unicodedata
-import pdb
-
-
+import sys, logging, re
 
 from email import iterators, header, utils
-
 from urlparse import urlparse
 from operator import add, itemgetter
-from collections import defaultdict, namedtuple, OrderedDict
-from itertools import islice
+from collections import defaultdict, namedtuple
 
-from nltk.tokenize import WordPunctTokenizer, PunktSentenceTokenizer
-from nltk.corpus import stopwords
-from nltk.stem import SnowballStemmer
+try:
+    from bs4 import BeautifulSoup, UnicodeDammit
+    from nltk.tokenize import WordPunctTokenizer, PunktSentenceTokenizer
+    from nltk.corpus import stopwords
+    from nltk.stem import SnowballStemmer
+except ImportError as err:
+    logger.error(str(err))
+    sys.exit(1)
 
 from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(filename)s: >>> %(message)s')
+#logger.setLevel(logging.DEBUG)
+#formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
+#ch.setLevel(logging.DEBUG)
+#ch.setFormatter(formatter)
 #logger.addHandler(ch)
 
-try:
-    from bs4 import BeautifulSoup, UnicodeDammit
-except ImportError:
-    logger.debug('Can\'t find bs4 module, probably, it isn\'t installed.')
-    logger.debug('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
-
-from email import parser
-parser = parser.Parser()
-with open('/home/calypso/debug/spam/0000000175_1422266129_bc57f700.eml','rb') as f:
-#with open('/home/calypso/train/ham/without_rcvds.eml','rb') as f:
-#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
-#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
-    M = parser.parse(f)
+#from email import parser
+#parser = parser.Parser()
+#with open('/home/calypso/debug/spam/0000000175_1422266129_bc57f700.eml','rb') as f:
+#    M = parser.parse(f)
 
 
 class BeautifulBody(object):
     """
     Base class for happy life with email.message objects,
-    some kind of BeautifulSoup objects from bs4.
+    some kind of great BeautifulSoup class from bs4.
 
     """
 
@@ -59,7 +51,6 @@ class BeautifulBody(object):
     DEFAULT_CHARSET = 'utf-8'
     SUPPORT_LANGS_LIST = ('english', 'french', 'russian')
 
-    # BeautifulBody inherited from object! ??
     __slots__ = ['msg']
 
     def __init__(self, msg, **kwds):
@@ -78,10 +69,6 @@ class BeautifulBody(object):
 
         self.msg = msg
 
-        #logger.debug('BeautifulBody was created'.upper()+' '+str(id(self)))
-        #logger.debug("================")
-        #logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None):
         logger.debug('in get_unicoded_value')
@@ -94,9 +81,8 @@ class BeautifulBody(object):
 
     @classmethod
     def get_lang(cls, tokens_list, return_value=None):
-        logger.debug('in get_lang')
+
         lang = cls.DEFAULT_LANG
-        logger.debug(lang)
 
         stopwords_dict = dict([(lang, set(stopwords.words(lang))) for lang in cls.SUPPORT_LANGS_LIST])
         tokens_set = set(tokens_list)
@@ -117,7 +103,7 @@ class BeautifulBody(object):
         '''
         # parse all Received: headers by default if rcvds_num wasn't defined
         parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received',' '))[ -1*rcvds_num : ]
-        logger.debug('parsed_rcvds : '+str(parsed_rcvds))
+        logger.info('parsed_rcvds : '+str(parsed_rcvds))
         return parsed_rcvds
 
     def get_addr_values(self, header_value):
@@ -125,9 +111,6 @@ class BeautifulBody(object):
         :header_value - value of particular header, which can store < mailbox name > + < address >
         returnes tuple (< mail box name (utf-8)>, < address (without angle braces) >)
         '''
-
-        logger.debug('value for crunching addresses : '+str(header_value))
-
         addr_value = namedtuple('addr_value', 'realname address')
         name_addr_tuples = (addr_value(*pair) for pair in utils.getaddresses(header_value))
         # and we can meet here tricky stuff like this:
@@ -140,16 +123,12 @@ class BeautifulBody(object):
             parts = tuple(header.decode_header(p) for p in realname.split())
             temp.append((parts, address.lower()))
 
-        logger.debug(temp)
         pairs = list()
         for t in temp:
             realname_parts, addr = t
-            logger.debug(realname_parts)
-            logger.debug(addr)
             
             value = u''
             for part in realname_parts:
-                logger.debug(part)
                 if len(part)==0:
                     continue
                 value += self._get_unicoded_value(*(reduce(add,part)))
@@ -157,7 +136,7 @@ class BeautifulBody(object):
             pairs.append((value, addr))
 
         pairs = tuple((p.realname, re.sub(r'<|>','',p.address)) for p in tuple(addr_value(*pair) for pair in pairs))
-        logger.debug("results : "+str(pairs))
+        #logger.debug(str(pairs))
         return pairs
 
     def get_smtp_originator_domain(self):
@@ -242,26 +221,21 @@ class BeautifulBody(object):
 
 
             mime_part_heads = tuple(k.lower() for k in part.keys())
-            logger.debug('>>>'+str(mime_part_heads))
-            logger.debug(tuple(head_name for head_name in needed_heads if mime_part_heads.count(head_name)))
             for head in tuple(head_name for head_name in needed_heads if mime_part_heads.count(head_name)):
-            #for head in filter(lambda n: part.keys().count(n), mime_heads):
 
                 if head == 'content-type':
 
                     part_key = part.get(head)
-                    logger.debug(part_key)
+                    #logger.debug(part_key)
                     part_key = part_key.partition(';')[0].strip()
-                    logger.debug(part_key)
                     added_value = (re.sub(part_key+';','',part.get(head).strip(),re.M)).strip()
-                    logger.debug(added_value)
                     mime_parts[part_key].append(added_value.lower())
-                    logger.debug(mime_parts)
-                    #part_dict[head] = re.sub(part_key+';','',part.get(head),re.I)
+                    #logger.debug(mime_parts)
+
 
                 else:
                     mime_parts[part_key].append(part.get(head).strip())
-                    logger.debug(mime_parts)
+                    #logger.debug(mime_parts)
                     #part_dict[head] = part.get(head).strip()
 
         mime_parts = dict((k,tuple(v)) for k,v in mime_parts.items())
@@ -328,7 +302,6 @@ class BeautifulBody(object):
         if url_list:
             url_list = [urlparse(i) for i in url_list]
 
-        # todo: make it as lazy computing value
         return url_list
 
     def get_net_location_list(self, url_list=None):
@@ -353,7 +326,7 @@ class BeautifulBody(object):
             only_str_obj  = [i.decode('utf8') for i in only_str_obj]
             netloc_list = only_str_obj + [ i for i in netlocations if type(i) is unicode ]
 
-            logger.debug("NETLOC: >>>>>"+str(netloc_list))
+            #logger.debug(str(netloc_list))
 
         return netloc_list
 
@@ -361,11 +334,9 @@ class BeautifulBody(object):
 
         tokenizer = PunktSentenceTokenizer()
 
-
         for raw_line, mime_type, lang in tuple(self.get_text_mime_part()):
-            #logger.debug('raw_line :'+raw_line)
-            logger.debug('mime_type :'+mime_type)
-            logger.debug('lang :'+lang)
+            #logger.debug('mime_type :'+mime_type)
+            #logger.debug('lang :'+lang)
 
             if 'html' in mime_type:
                 soup = BeautifulSoup(raw_line)
@@ -374,9 +345,7 @@ class BeautifulBody(object):
                 # cause exactly sentences are needed, soup.body.strings returns lines+0d0a
                 lines = tuple(soup.body.strings)
                 raw_line = ''.join(lines)
-                #logger.debug(u'raw_line_from_html >>'+raw_line)
-            #logger.debug(raw_line)
-            #logger.debug(tokenizer.tokenize(raw_line))
+
             try:
                 sents = tuple(tokenizer.tokenize(raw_line))
             except Exception as err:
@@ -397,18 +366,16 @@ class BeautifulBody(object):
         tokenizer = WordPunctTokenizer()
         #punct_extractor = RegexpTokenizer("[\w']+", gaps=True)
 
-        # todo: while true ?
         for pt in tuple(self.get_sentences()):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add, tokens)
             #logger.debug("tokens: "+str(tokens))
             lang = self.get_lang(tokens)
-            logger.debug(lang)
+            #logger.debug(lang)
 
             if lang in self.SUPPORT_LANGS_LIST:
-                #todo: create stopwords list for jis ,
+                # todo: create stopwords list for jis ,
                 tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
-                #logger.debug('before stem: '+str(tokens))
                 tokens = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
                 #logger.debug("tokens list: "+str(tokens))
 
@@ -428,10 +395,3 @@ class BeautifulBody(object):
 
                 yield soup
 
-'''''
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
-
-'''''

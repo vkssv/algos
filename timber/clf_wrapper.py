@@ -23,7 +23,7 @@ from sklearn.metrics import classification_report, precision_recall_curve
 
 
 logger = logging.getLogger('')
-logger.setLevel(logging.WARN)
+#logger.setLevel(logging.WARN)
 
 class ClfWrapper(object):
     '''

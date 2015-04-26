@@ -1,14 +1,6 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
-"""
--- can be imported as submodule to build feature vectors for e,
-
-
--- returns NxM matrix --> N samples from collection x M features +label value
-( or "test" label if not defined ) in numpy array type
-"""
-
 import sys, os, logging, re, email, argparse, stat, tempfile, math, time
 import numpy as np
 
@@ -17,46 +9,113 @@ from collections import defaultdict, OrderedDict
 from operator import itemgetter
 
 from timber_exceptions import NaturesError
-from franks_factory import MetaFrankenstein
+from patterns_factory import MetaPattern
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(filename)s >>> %(message)s')
+formatter = logging.Formatter('%(levelname)s: %(filename)s: %(funcName)s: %(message)s')
 ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.INFO)
+ch.setFormatter(formatter)
+fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
+fh.setLevel(logging.INFO)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 logger.addHandler(ch)
 
-class Vectorizer(object):
+
+class Vectorize(object):
     '''
     Build matrix MxN matrix :
-        N samples in collection dir x M features,
-        defined by amount of rules in appropriate
-        pattern ;
+        N - count of samples in collection dir ;
+        M - count of features, provided by rules
+            from appropriate pattern ;
 
-    Appropriate pattern class :
-        chosed according passed label value,
-        supported patterns are : spam, ham, nets,
-        infos ;
+    Appropriate pattern - instance of Spam/Ham/Info/NetsPattern classes :
+        passed class name (label) define pattern, => features set ;
+
+    Supported patterns are : spam, ham, nets, infos
     '''
+
     SUPPORTED_CLASSES = ['spam','ham']
+    SETS_NAMES = ['X_train', 'Y_train', 'X_test', 'Y_test']
 
     def __init__(self, train_dir, label, score):
 
-        if label in self.SUPPORTED_CLASSES:
+        if label not in self.SUPPORTED_CLASSES:
+            raise NaturesError ('Don\'t have any module with rules for '+\
+                                label.upper()+' class\nSupported classes : '+\
+                                ', '.join(SUPPORTED_CLASSES))
 
-            self.train_dir = train_dir
-            self.label = label
-            self.penalty = score
-            logger.debug('Train dir : '+str(self.train_dir).upper())
-            logger.debug('Current class : '+str(self.label).upper())
-            logger.debug('Penalty score : '+str(self.penalty))
+        self.train_dir = train_dir
+        self.label = label
+        self.penalty = score
 
-            self.X_train = list()
-            self.Y_train = list()
-            self.X_test = list()
-            self.Y_test = list()
+        [ self.__setattr__(name, list()) for name in self.SETS_NAMES ]
 
-        else:
-            raise Exception('Don\'t have any module with rules for '+label.upper()+' class.')
+        for path in [ os.path.join(self.train_dir, subdir) for subdir in self.SUPPORTED_CLASSES+['test'] ]:
+
+            logger.info('subdir : '.upper()+path)
+            pathes_gen = self.__get_path(path)
+            expected_len = None
+            msg_path = ''
+
+            while(True):
+
+                try:
+                    msg_path = next(pathes_gen)
+
+                    x_vector = self.__vectorize(msg_path)
+                    logger.info('\nx_vector ===> '.upper()+str(x_vector))
+
+                    if expected_len is None:
+                        expected_len = len(x_vector)
+
+                    elif expected_len != len(x_vector):
+                        #logger.error('expected length: '+str(expected_len))
+                        #logger.error('vector length : '+str(len(x_vector)))
+                        #logger.error('path: '+msg_path)
+                        raise NaturesError('Vectors from one collection have different dimentions !')
+
+                    y_vector = None
+
+                    if os.path.basename(path) == 'test':
+
+                        self.X_test.append(x_vector)
+                        y_vector = os.path.basename(msg_path)
+                        self.Y_test.append(y_vector)
+
+                    else:
+
+                        self.X_train.append(x_vector)
+
+                        if self.label == os.path.basename(path):
+                            y_vector = 1.0
+
+                        else:
+                            y_vector = 0.0
+
+                        self.Y_train.append(y_vector)
+
+                except StopIteration as err:
+                    break
+
+                except Exception as err:
+                    logger.error('Can\'t extract features from "'+msg_path+'", so it will be skipped !')
+                    logger.error(str(err))
+                    raise
+                    #pass
+
+        [ self.__setattr__(name, tuple(self.__getattribute__(name))) for name in self.SETS_NAMES ]
+
+        logger.info('\nSuccessfully built datasets with parameters: \n')
+        logger.info('\tPath to collections => '+str(self.train_dir).upper())
+        logger.info('\tPattern => '+str(self.label).upper())
+        logger.info('\tPenalty score => '+str(self.penalty))
+        logger.info('\tFeatures set (total '+str(len(self.features_dict.values()))+') :\n')
+
+        for feature in self.features_dict.itervalues():
+            logger.info('\t'+feature)
 
     def __get_path(self, path):
 
@@ -66,10 +125,10 @@ class Vectorizer(object):
         }
 
         mode = filter(lambda key: os.stat(path).st_mode & key, checks.keys())
-        logger.debug('file mode: '+str(mode))
+        #logger.debug('file mode: '+str(mode))
         f = checks.get(*mode)
         if not f(path):
-            logger.error('Collection dir : "'+path + '" is empty.')
+            logger.error('Collection dir : "'+path + '" is empty !')
             sys.exit(1)
 
         msg_path = path
@@ -85,29 +144,27 @@ class Vectorizer(object):
 
     def __vectorize(self, doc_path):
 
-        logger.debug('\n\nStart vectorizing "'+doc_path+'" by '+self.label.upper()+' pattern...')
-
         parser = Parser()
         with open(doc_path, 'rb') as f:
             M = parser.parse(f)
 
-        Frankenstein_cls = MetaFrankenstein.New(self.label)
-        logger.debug('\n\n\t CHECK : ' +doc_path+'\n')
+        pattern_cls = MetaPattern.New(self.label)
+        logger.info('\n\n\t email to vectorize : '.upper() +doc_path+'\n')
 
-        pattern_instance = Frankenstein_cls(msg=M, score=self.penalty)
+        pattern_instance = pattern_cls(msg=M, score=self.penalty)
         vector = pattern_instance.__dict__
-        vector.pop('PENALTY_SCORE')
+        vector.pop('penalty_score'.upper())
         vector['msg_size'] = math.ceil(float((os.stat(doc_path).st_size)/1024))
-        logger.debug('\n\tunsorted X_vector ==> '+str(vector))
-        vector = tuple(sorted([(k.upper(),value) for k,value in vector.items()],key=itemgetter(0)))
-        logger.debug('\n\tX_vector ==> '+str(vector))
 
-        logger.debug('TEST >>>>'+str(dict(enumerate(map(itemgetter(0),vector)))))
-        self.features_dict = dict(enumerate(tuple(map(itemgetter(0),vector))))
-        logger.debug('TEST >>>>'+str(self.features_dict))
+        vector = tuple(sorted([(k.upper(),value) for k,value in vector.items()],key=itemgetter(0)))
+        logger.info('\nx_vector ==> ')
+        for i in vector:
+            logger.info('\t'+str(i))
+
+        self.features_dict = dict(enumerate(map(itemgetter(0),vector)))
 
         msg_vector = tuple(map(itemgetter(1),vector))
-        logger.debug('\nVECTOR ===> '+str(msg_vector)+'\n')
+        #logger.debug('\nvector ===> '+str(msg_vector)+'\n')
 
         return msg_vector
 
@@ -118,78 +175,20 @@ class Vectorizer(object):
     def __cross_validation(self):
         pass
 
-    def create_dataset(self):
+    def load_data(self):
 
-        logger.debug('in dataset')
-
-        for path in [ os.path.join(self.train_dir, subdir) for subdir in self.SUPPORTED_CLASSES+['test'] ]:
-            logger.debug('Open collection subdir : '+path)
-            pathes_gen = self.__get_path(path)
-            logger.debug(list(pathes_gen))
-            pathes_gen = self.__get_path(path)
-            expected_len = None
-            msg_path = ''
-            while(True):
-
-                try:
-                    msg_path = next(pathes_gen)
-                    logger.debug('PATH: '+(msg_path.upper()))
-
-                    x_vector = self.__vectorize(msg_path)
-                    logger.debug('\nx_vector ===> '.upper()+str(x_vector))
-
-                    if expected_len is None:
-                        expected_len = len(x_vector)
-
-                    elif expected_len != len(x_vector):
-                        logger.error('EXP_LEN: '+str(expected_len))
-                        logger.error('VV: '+str(len(x_vector)))
-                        logger.error('PATH: '+msg_path)
-                        raise NaturesError('Vectors have different dimentions !')
-
-                    y_vector = None
-
-                    if os.path.basename(path) == 'test':
-
-                        self.X_test.append(x_vector)
-                        y_vector = os.path.basename(msg_path)
-                        self.Y_test.append(y_vector)
-
-                    else:
-
-                        self.X_train.append(x_vector)
-                        logger.debug('+++++++label :'+str(self.label))
-                        logger.debug('+++++++path :'+str(os.path.basename(msg_path)))
-
-                        if self.label == os.path.basename(path):
-                            y_vector = 1.0
-
-                        else:
-                            y_vector = 0.0
-
-                        self.Y_train.append(y_vector)
-
-                except StopIteration as err:
-
-                    logger.debug(str(self.X_train))
-                    logger.debug(str(self.Y_train))
-                    break
-
-                except Exception as err:
-                    logger.error('Can\'t extract features from "'+msg_path+'", so it will be skipped.')
-                    logger.error(str(err))
-                    raise
-                    #pass
-
-        [ self.__setattr__(name, tuple(self.__getattribute__(name))) for name in ['X_train', 'Y_train', 'X_test', 'Y_test'] ]
+        check_list = [ (name, self.__getattribute__(name)) \
+                       for name in self.SETS_NAMES if len(self.__getattribute__(name))==0 ]
+        if check_list:
+            empty = map(itemgetter(0), check_list)
+            raise NaturesError('Found empty datasets : '+', '.join(empty)+', please, check log for any ideas.')
 
         return self.X_train, self.Y_train, self.X_test, self.Y_test
 
     def dump_dataset(self, to_file=None):
 
-        names = ('X_train', 'Y_train', 'X_test', 'Y_test')
-        datasets = ( np.array(x) for x in (self.__getattribute__(name) for name in names) )
-        print(type(self.X_train))
+        datasets = ( np.array(x) for x in (self.__getattribute__(name) for name in self.SETS_NAMES) )
+        logger.debug(type(self.X_train))
         if to_file is not None:
 
             try:

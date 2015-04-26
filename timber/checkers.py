@@ -1,43 +1,37 @@
 # -*- coding: utf-8 -*-
+'''
+    Classes with rules for email headers and MIME-parts
+'''
 
-import sys, os, importlib, logging, re, binascii, zlib, math, string
+import sys, os, importlib, logging, re, binascii, zlib, math, string, urlparse
 
-from urlparse import urlparse
 from operator import add, itemgetter
-from collections import defaultdict, namedtuple, Counter, OrderedDict
+from collections import namedtuple
 from itertools import ifilterfalse
-
-from nltk.tokenize import RegexpTokenizer
-from nltk.corpus import stopwords
-from nltk.stem import SnowballStemmer
-from nltk.probability import FreqDist, ConditionalFreqDist
 
 from pattern_wrapper import BasePattern
 from decorators import Wrapper
 
+try:
+    from bs4 import Comment
+    from nltk.tokenize import RegexpTokenizer
+    from nltk.corpus import stopwords
+    from nltk.stem import SnowballStemmer
+    from nltk.probability import FreqDist, ConditionalFreqDist
+except ImportError as err:
+    logger.error(str(err))
+    sys.exit(1)
 
 INIT_SCORE = BasePattern.INIT_SCORE
 get_regexp = BasePattern.get_regexp
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(filename)s: %(message)s')
-#ch = logging.StreamHandler(sys.stdout)
-#logger.addHandler(ch)
-
-try:
-    from bs4 import BeautifulSoup, Comment
-except ImportError:
-    logger.error('Can\'t find bs4 module, probably, it isn\'t installed.')
-    logger.error('try: "easy_install beautifulsoup4" or install package "python-beautifulsoup4"')
-    sys.exit(1)
 
 
 class BaseChecker(object):
 
     puni_regex = r'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
-
-
 
     def __init__(self, pattern_obj):
 
@@ -74,12 +68,10 @@ class SubjectChecker(BaseChecker):
 
         #logger.debug('compiled_regs : '+str(self.subj_rules))
         # check by regexp rules
-        logger.debug(self.subj_line)
-        logger.debug(type(self.subj_line))
         #logger.debug(self.subj_rules)
         matched = list()
         matched.extend(filter(lambda r: re.search(r, self.subj_line.lower()), self.subj_rules))
-        logger.debug('matched : '+str(matched))
+        #logger.debug('matched : '+str(matched))
         subj_score = self.score*len(matched)
 
         prefix_heads_map = {
@@ -89,7 +81,8 @@ class SubjectChecker(BaseChecker):
         }
 
         for k in prefix_heads_map.iterkeys():
-            if re.match(r''+k+'\s*:', self.subj_line.encode(), re.I):
+            logger.info(self.subj_line.encode('utf8','replace'))
+            if re.match(r''+k+'\s*:', self.subj_line.encode('utf8','replace'), re.I):
                 heads_list = prefix_heads_map.get(k)
 
                 for h_name in self.msg.keys():
@@ -258,6 +251,13 @@ class UrlChecker(BaseChecker):
 
         # mostly thinking about shortened urls, created by tinyurl and other services,
         # but maybe this is weak feature
+        logger.info('urls_domains list : '+str(self.urls_domains))
+        logger.info('urls_domains list : '+str(len(self.urls_domains)))
+        avg_len = INIT_SCORE
+
+        if len(self.urls_domains) ==0:
+            return avg_len
+
         avg_len = math.ceil(float(sum([len(s) for s in self.urls_domains]))/len(self.urls_domains))
 
         return avg_len
@@ -305,23 +305,6 @@ class UrlChecker(BaseChecker):
         my_little_puni = len([domain for domain in self.urls_domains if re.search(self.puni_regex, domain.encode(), re.I)])*self.score
 
         return my_little_puni
-
-    def get_url_fqdn(self):
-        # DOMAIN NAME LEVEL: very often russian spams are send from third-level domains
-        logger.debug(self.urls_domains)
-        dots_counts = [s.count('.') for s in self.urls_domains]
-        domain_name_level = len([count for count in dots_counts if count >=2 ])*self.score
-
-        return domain_name_level
-
-    def get_url_ascii(self):
-        ascii = INIT_SCORE
-
-        url_lines = [ ''.join(u._asdict().values()) for u in self.urls ]
-        if list( x for x in  [line for line in url_lines] if x in string.logger.debugable ):
-            ascii = self.score
-
-        return ascii
 
     def get_url_sim(self):
         similarity = INIT_SCORE
@@ -530,9 +513,9 @@ class OriginatorChecker(BaseChecker):
     def __init__(self, pattern_obj):
 
         BaseChecker.__init__(self, pattern_obj)
-
+        logger.info('>>>>>>>>>>')
         self.name_addr_tuples = self.pattern.get_addr_values(self.msg.get_all('From'))
-        logger.debug('name_addr_tuples'.upper()+str(self.name_addr_tuples))
+        logger.info('name_addr_tuples'.upper()+str(self.name_addr_tuples))
         name_addr = namedtuple('addr_value', 'realname address')
 
         self.name_addr_list = (name_addr(*pair) for pair in self.name_addr_tuples)
@@ -541,9 +524,9 @@ class OriginatorChecker(BaseChecker):
         self.domains = [pair.address.partition('@')[2] for pair in self.name_addr_list]
         self.mailboxes = [pair.realname.lower() for pair in self.name_addr_list]
 
-        logger.debug('localnames : '+str(self.localnames))
-        logger.debug('domains : '+str(self.domains))
-        logger.debug('mailboxes : '+str(self.mailboxes))
+        logger.info('localnames : '+str(self.localnames))
+        logger.info('domains : '+str(self.domains))
+        logger.info('mailboxes : '+str(self.mailboxes))
 
     def get_originator_checksum(self):
         '''
@@ -553,8 +536,7 @@ class OriginatorChecker(BaseChecker):
         '''
 
         from_checksum = INIT_SCORE
-        logger.debug('>>> 2. ORIGINATOR_FEATURES:')
-        #todo: rfc6854 support of new format lists for From: values
+        # todo: rfc6854 support of new format lists for From: values
 
         logger.debug('\tFROM:----->'+str(self.name_addr_tuples))
 
@@ -663,21 +645,21 @@ class ContentChecker(BaseChecker):
         BaseChecker.__init__(self, pattern_obj)
 
     def get_content_txt_score(self):
+        '''
+        Maps input regexp list to each sentence one by one
+        :return: penalising score, gained by sentense
+        '''
 
-        #Maps input regexp list to each sentence one by one
-        #:return: penalising score, gained by sentense
-        # precise flag for re.compile ?
-        regs_list = get_regexp(self.pattern.TEXT_REGEXP_LIST, re.M)
-
+        regs_list = get_regexp(self.pattern.TEXT_REGEXP_LIST)
         sents_generator = self.pattern.get_sentences()
-        #logger.debug("sent_lists >>"+str(self.pattern.get_sentences()))
 
         txt_score = INIT_SCORE
         while(True):
             try:
                 for reg_obj in regs_list:
+                    #logger.info(l)
                     txt_score += len(filter(lambda s: reg_obj.search(s.lower()), next(sents_generator)))*self.score
-                    logger.debug("text_score: ".upper()+str(txt_score))
+                    #logger.debug("text_score: ".upper()+str(txt_score))
             except StopIteration as err:
                 break
 

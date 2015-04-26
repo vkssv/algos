@@ -12,10 +12,11 @@ import checkers
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(filename)s >>> %(message)s')
+#formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
+#ch.setLevel(logging.DEBUG)
+#ch.setFormatter(formatter)
 #logger.addHandler(ch)
-
 
 #from email import parser
 #parser = parser.Parser()
@@ -37,7 +38,7 @@ class SpamPattern(BasePattern):
     RCVD_RULES = [
                             r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|unknown|trap)+',
                             r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
-                            r'(yahoo|google|bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
+                            r'(bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
     ]
     EXCLUDED_HEADS = [
 
@@ -47,16 +48,15 @@ class SpamPattern(BasePattern):
     # try greedy regexes, maybe will precise them in future
 
     ORIGINATOR_LOCALNAMES_RULES = [
-                                        r'^(\d{1,4}[\w_-]+)+$',
-                                        r'^([\w_-]+(\d{1,4})?)+$',
-                                        r'(webmaster|admin|mail|info|contact|flyboy|girl|passion|lady)'
+                                       
+                                        r'(flyboy|girl|passion|lady)'
     ]
 
     ORIGINATOR_MAILBOX_RULES = [
                                     ur'((top)?meds|miss\s+you|flyboy|pfizer|fellowship)\s+.*',
-                                    ur'(mail|admin|(passion|kiss(-you)?)(-info)?|lipstick|wine\s+red|face\s+to\s+face)\s+.*',
-                                    ur'(pickup|cute girl|(happy|good)letter|real-time|sweet_mail|security)\s+.*',
-                                    ur'(dark|gray|green|blue|turquoise|one-stop-log-in|cool-cool|eyes|updating)\s+.*'
+                                    ur'((passion|kiss(-you)?)(-info)?|lipstick|wine\s+red|face\s+to\s+face)\s+.*',
+                                    ur'(pickup|cute girl|(happy|good)letter|real-time|sweet_mail)\s+.*',
+                                    ur'(dark|gray|green|blue|turquoise|one-stop-log-in|cool-cool|eyes)\s+.*'
     ]
 
     ORIGINATOR_LOCAL_NAME_LEN = 15
@@ -73,7 +73,7 @@ class SpamPattern(BasePattern):
 	                        ur'(cheap([est])?.*(satisf[ied]?)*.*(u[sk])*.*(canadian)*.*customer|to.*be.*remov([ed])?.*(please?)*)',
 	                        ur'(100%\s+guarantee?d|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
 	                        ur'(dear.*(?:it\w|internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
-                            ur'^\s*(hello|hi|good\s+(morning|evening)|hey([:;\)])?)\s+.*',
+                            ur'^\s*(hello|discreet|fast|hi|good\s+(morning|evening)|hey([:;\)])?)\s+.*',
                             ur'^\s*(meet\s+now\s+(greasy|dear|darling|babe|lady)\s+)|satisf(y|ied)\s+.*((to)?night|customer)\s+.*',
                             ur'.*(eml|spam).*',
                             ur'.*(payment|receipt|attach(ed)?|extra\s+inches)',
@@ -90,15 +90,16 @@ class SpamPattern(BasePattern):
     ]
 
     TEXT_REGEXP_LIST = [
-                            ur'(vrnospam|not\s+a?.*spam|bu[ying]\s+.*(now|hey(-hey)?|today|(on)?.*sale)|(click|go|open)[\\s\.,_-]+here)',
+                            ur'(order\s*cializ\s*viagra|0nline)*',
+                            ur'(bu[ying]\s+.*(hey(-hey)?|(on)?.*sale)|(click|go|open)[\\s\.,_-]+)',
                             ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
-                            ur'(100%\s+guarantee?d||no\s*obligation|no\s*prescription\s+required?|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
-                            ur'(candidate|sirs?|madam|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll)',
+                            ur'(100%\s+guarantee?d||no\s*obligation|no\s*prescription\s+|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
+                            ur'(candidate|sirs?|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll|pharmacy)',
                             ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(fda[-\s_]?approved|superb?\s+qua[l1][ity])\s+.*drugs?(\s+only)?)',
-                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(from|up)\s+(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|order.*online.*save)',
+                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|order.*online.*save)',
                             ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
                             ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
-                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд)',
+                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд|noprescription)',
                             ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
                             ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
                             ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
@@ -149,7 +150,7 @@ class SpamPattern(BasePattern):
                             ur'(сcылк|курс|цен|посмотреть|каталог|здесь|сюда|регистрация|бесплатное|участие|на\s+сайт|подробн)',
                             ur'(горяч|скидк|отписаться|отказаться)',
                             ur'(message|view|can\'t\see)',
-                            ur'(background-color|text-decoration|font\scolor|color|underline|font\ssize|img|style|<\/?wbr>|font\sface|<strong>|<em>)',
+                            #ur'(background-color|text-decoration|font\scolor|color|underline|font\ssize|img|style|<\/?wbr>|font\sface|<strong>|<em>)',
                             ur'\/[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{1,3}[^\u0000-\u007F]{2,}',
                             ur'[^\u0000-\u007F]{2,}(\.|\?|!|;){0,}',
                             ur'(cid:)?\w{1,40}@(\d{1,3}-){1,3}\d{1,3}(\.[A-Za-z]{1,10}){1,3}',
@@ -177,7 +178,7 @@ class SpamPattern(BasePattern):
                          'pattern_score'    : ['rcvd', 'mime', 'disp_notification'],
                          'subject'          : ['score','encoding','upper','titled','checksum'],
                          'url'              : ['score','avg_len','distinct_count','sender_count',\
-                                                'uppercase','punicode','fqdn','ascii','repetitions'],
+                                                'uppercase','punicode', 'repetitions'],
                          'list'             : ['score'],
                          'attaches'         : ['score','in_score','count'],
                          'originator'       : ['checksum','addr_score'],
@@ -202,19 +203,14 @@ class SpamPattern(BasePattern):
                 # intercepted by Wrapper decorated class itself from decorators.py module
                 checker_obj = checker_obj(self)
 
-
-            # todo: probably less memory consuming for each iteration (create one checker instance, compute all features, ),
-
             functions_map = [(name.lstrip('get_'), getattr(checker_obj, name, lambda : self.INIT_SCORE)) for name in features]
 
             for name, f in functions_map:
                 feature_value = self.INIT_SCORE
-                logger.debug(name)
-                logger.debug(f)
                 try:
                     feature_value = f()
                 except Exception as err:
-                    logger.error(str(err).upper())
+                    logger.error(f.func_name+': '+str(err))
                     pass
 
                 logger.debug((name+' ==> '+str(feature_value)).upper())
@@ -228,11 +224,11 @@ class SpamPattern(BasePattern):
             logger.debug(str(k).upper()+' ==> '+str(v).upper())
 
 
-        logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
-        logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
+        logger.info("++++++++++++++++++++++++++++++++++++++++++++++++++")
+        logger.info("total vect len : "+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
-        logger.debug("non_zero features count : "+str(len(non_zero)))
-        #logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
+        logger.info("non_zero features count : "+str(len(non_zero)))
+
 
 
     def get_rcvd_pattern_score(self):
@@ -240,19 +236,15 @@ class SpamPattern(BasePattern):
         # 1. "Received:" Headers
         rcvd_score = self.INIT_SCORE
         rcvds = self.get_rcvds(self.RCVDS_NUM)
+
         logger.debug('get_rcvd_score : '+str(rcvds))
 
         for rule in self.RCVD_RULES:
             if filter(lambda l: re.search(rule, l), rcvds):
-                rcvd_score += self.PENALTY_SCORE
-
-        for rcvd in [tuple(l.split()) for l in rcvds]:
-            if rcvd[0] == 'from' and rcvd[1].count('.') == 0:
-                rcvd_score += self.PENALTY_SCORE
+                rcvd_score += self.PENALTY_SCORE*2
 
         return rcvd_score
 
-    # particular feature and method
     def get_mime_pattern_score(self):
 
         mime_score = self.INIT_SCORE
@@ -274,5 +266,4 @@ class SpamPattern(BasePattern):
             disp_notification = self.PENALTY_SCORE
 
         return disp_notification
-
 
