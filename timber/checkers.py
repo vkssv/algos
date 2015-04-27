@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    Classes with rules for email headers and MIME-parts
+    -Classes with rules for email headers and MIME-parts ;
+    -Returned values of attribute-methods (which representing rules)
+        are depended from pattern_obj sctructure ;
+    -@Wrapper returns BasePattern.INIT_SCORE for each method-attribute call,
+        in case of exceptions ;
 '''
 
 import sys, os, importlib, logging, re, binascii, zlib, math, string, urlparse
@@ -30,8 +34,13 @@ logger.setLevel(logging.DEBUG)
 
 
 class BaseChecker(object):
-
+    '''
+    keeps and share between heirs
+    basic objects from Pattern classes
+    '''
     puni_regex = r'xn--[0-9a-z-]+(\.xn--[0-9a-z]+){1,3}'
+    def_encoding = 'utf8'
+    err_handling = 'replace'
 
     def __init__(self, pattern_obj):
 
@@ -75,14 +84,14 @@ class SubjectChecker(BaseChecker):
         subj_score = self.score*len(matched)
 
         prefix_heads_map = {
-                                'RE' : ['In-Reply-To', 'Thread(-.*)?', 'References'],
+                                'RE' : ['(In-)?Reply-To', 'Thread(-.*)?', 'References'],
                                 'FW' : ['(X-)?Forward'],
                                 'TR' : ['(X-)?Forward'] # for french MUA
         }
 
         for k in prefix_heads_map.iterkeys():
-            logger.info(self.subj_line.encode('utf8','replace'))
-            if re.match(r''+k+'\s*:', self.subj_line.encode('utf8','replace'), re.I):
+            logger.info(self.subj_line.encode(self.def_encoding, errors=self.err_handling))
+            if re.match(r''+k+'\s*:', self.subj_line.encode(self.def_encoding, errors=self.err_handling), re.I):
                 heads_list = prefix_heads_map.get(k)
 
                 for h_name in self.msg.keys():
@@ -94,7 +103,6 @@ class SubjectChecker(BaseChecker):
     def get_subject_encoding(self):
 
         return len(set(self.encodings_list))
-
 
     def get_subject_upper(self):
         logger.debug(self.subj_tokens)
@@ -108,16 +116,15 @@ class SubjectChecker(BaseChecker):
 
 
     def get_subject_checksum(self):
-        # take crc32, make line only from words on even positions, not all
 
+        # take crc32, make line only from words selected by pattern.SUBJ_FUNCTION, not all
         tokens = self.subj_tokens
         # alchemy again
         if len(tokens) > 2:
-            tokens = tuple([el for el in self.subj_tokens if self.pattern.SUBJ_FUNCTION(el, self.subj_tokens)])
+            tokens = tuple([el for el in self.subj_tokens if self.pattern.SUBJ_FUNCTION(el)])
 
-        subj_trace = ''.join(tuple([w.encode('utf-8') for w in tokens]))
+        subj_trace = ''.join(tuple([w.encode(self.def_encoding, errors=self.err_handling) for w in tokens]))
         logger.debug('subj_trace : '+str(subj_trace))
-
 
         return binascii.crc32(subj_trace)
 
@@ -128,7 +135,14 @@ class SubjectChecker(BaseChecker):
 @Wrapper
 class DmarcChecker(BaseChecker):
     '''
+    vectorize DMARC-related headers values by
+    following feature set :
 
+    DMARC_SPF      --> gained by checking 'Received-SPF' header value ;
+    DMARC_SCORE    --> gained by checking the presence of 'Authentication-Results',
+                        'DKIM-Signature', 'DomainKey-Signature' ;
+    DMARC_X_SCORE  --> gained by checking the presence of additional 'X-DMARC-*'
+                        headers ;
     '''
     def __init__(self, pattern_obj):
         BaseChecker.__init__(self, pattern_obj)
@@ -143,10 +157,6 @@ class DmarcChecker(BaseChecker):
         return dmarc_spf
 
     def get_dmarc_score(self):
-
-        #:param score:
-        #:param dmarc_heads: list of headers, described in RFC 6376, RFC 7208
-        #:return: <DMARC metrics dict>
 
         dmarc_score = INIT_SCORE
 
@@ -173,8 +183,8 @@ class EmarketChecker(BaseChecker):
 
     '''
     1. simply checks just presense or absence of emarket-headers,
-    which are typical for info/nets-email-patterns --> fills  get_emarket_score() attribute
-    (typical pattern's emarket-headers names are defined in pattern_instance.EMARKET_HEADS) ;
+        which are typical for info/nets-email-patterns --> fills  get_emarket_score() attribute
+        (typical pattern's emarket-headers names are defined in pattern_instance.EMARKET_HEADS) ;
     2. creates list of existed emarket-headers for current msg-instance ;
     3. checks values of existed emarket-headers with regexp from KNOWN_MAILERS --> fills get_emarket_flag() attribute;
     '''
@@ -182,18 +192,17 @@ class EmarketChecker(BaseChecker):
     def __init__(self, pattern_obj):
         BaseChecker.__init__(self, pattern_obj)
 
-    def __match(self) : lambda x,y: re.match(x, y, re.I)
-
     def get_emarket_score(self):
 
-        emarket_heads_list = set([header for header in self.pattern.keys() if self.__match(self.pattern.EMARKET_HEADS, header)])
+        emarket_heads_list = set([header for header in self.msg.keys() if re.search(header,self.pattern.EMARKET_HEADS)])
+        logger.warn(emarket_heads_list)
         return len(emarket_heads_list)*self.score
 
     def get_emarket_flag(self):
 
         emarket_flag = INIT_SCORE
         x_mailer_pattern = r'X-Mailer-.*'
-        mailer_names = [mailer_head for mailer_head in self.pattern.keys() if self.__match(x_mailer_pattern, mailer_head)]
+        mailer_names = [mailer_head for mailer_head in self.msg.keys() if re.search(x_mailer_pattern, mailer_head, re.I)]
 
         if [mailer_name for mailer_name in mailer_names if filter(lambda reg: re.search(reg, self.pattern.get(mailer_name), re.I), self.pattern.KNOWN_MAILERS)]:
             emarket_flag = self.score
@@ -203,7 +212,6 @@ class EmarketChecker(BaseChecker):
     def get_emarket_domains_score(self):
 
         known_domains_score = INIT_SCORE
-        # believe onlu domains from DKIM
         for domain_name in self.pattern.get_dkim_domains():
             known_domains_score += len(filter(lambda regexp: re.search(regexp, domain_name, re.I), self.pattern.KNOWN_DOMAINS))*self.score
 
@@ -281,10 +289,14 @@ class UrlChecker(BaseChecker):
                 return sender_count
 
             orig_name, orig_addr = reduce(add, originator)
+            logger.warn(orig_addr)
+            if orig_addr.count('@') == 0:
+                return sender_count
+
             sender_domain = (orig_addr.split('@')[1]).strip()
+            sender_domain = (sender_domain.decode(self.def_encoding, self.err_handling)).lower()
 
-
-            pattern = ur'\.?'+sender_domain.decode('utf-8')+u'(\.\w{2,10}){0,2}'
+            pattern = ur'\.?'+sender_domain+u'(\.\w{2,10}){0,2}'
             sender_count += len(filter(lambda d: re.search(pattern, d.lower()), self.urls_domains))
 
         return sender_count
@@ -300,18 +312,18 @@ class UrlChecker(BaseChecker):
         return uppercase
 
     def get_url_punicode(self):
-        # PUNICORNS: respectively (very often for russian spams)
-        logger.debug('Type of strs for PUNI :'+str([type(domain.encode()) for domain in self.urls_domains ]))
-        my_little_puni = len([domain for domain in self.urls_domains if re.search(self.puni_regex, domain.encode(), re.I)])*self.score
 
-        return my_little_puni
+        decoded = [domain.encode(self.def_encoding, self.err_handling) for domain in self.urls_domains]
+
+        return len([domain for domain in decoded if re.search(self.puni_regex, domain, re.I)])*self.score
+
 
     def get_url_sim(self):
         similarity = INIT_SCORE
 
         for attr in ['path','query']:
             obj_list = [ url.__getattribute__(attr) for url in self.urls ]
-            if math.ceil(float(len(set(obj_list)))/float(len(urls_list))) < self.score:
+            if math.ceil(float(len(set(obj_list)))/float(len(self.urls))) < self.score:
                 similarity += self.score
 
         return similarity
@@ -341,7 +353,7 @@ class UrlChecker(BaseChecker):
         query_absence = INIT_SCORE
         q_list = [u.query for u in self.urls]
         queries_count = float(len(filter(lambda line: line, [ u.query for u in self.urls ])))
-        if math.floor(queries_count/float(len(self.urls_list))) == 0.0:
+        if math.floor(queries_count/float(len(self.urls))) == 0.0:
             query_absence = self.score
 
         return query_absence
@@ -360,13 +372,12 @@ class UrlChecker(BaseChecker):
 class AttachesChecker(BaseChecker):
 
     '''
-    1. checks attachements count ;
-    2. get_attach_in_score() --> how many "inline" attachements (Content-Disposition attribute value),
-    inlined mailicious attachements are very often in russian spams ;
-    3. check attachments attribute "filename/name" with pattern.ATTACH_RULES;
+    keeps trigger-methods for describing
+    attachements by following features:
 
-    returned values are depended from pattern_obj.get_mime_struct().
-    if it returns empty < mime_sctruct > dict --> @validator returns BasePattern.INIT_SCORE for each method-attribute call
+    -COUNT    --> 42 ;
+    -IN_SCORE --> count of inline attachements ;
+    -SCORE    --> gained by applying regexp list from Pattern to attachements attributes ;
     '''
 
     def __init__(self, pattern_obj):
@@ -374,23 +385,36 @@ class AttachesChecker(BaseChecker):
         BaseChecker.__init__(self, pattern_obj)
 
         self.attach_rules = get_regexp(pattern_obj.ATTACHES_RULES)
-        self.mime_struct = reduce(add, pattern_obj.get_mime_struct())
-        self.attach_attrs = filter(lambda name: re.search(r'(file)?name([\*[:word:]]{1,2})?=.*',name), self.mime_struct)
+
+        self.mime_struct = pattern_obj.get_mime_struct()
+        if len(self.mime_struct) == 0:
+            logger.warn('Probably, this email is not multipart, or can\'t parse it properly !')
+
+        attach_reg = r'(file)?name([\*[:word:]]{1,2})?=.*'
+        self.attach_attrs = filter(lambda name: re.search(attach_reg, name, re.I), reduce(add, self.mime_struct))
 
     def get_attaches_count(self):
-
+        '''
+        checks attachements count
+        '''
         logger.debug('MIME STRUCT >>>>>'+str(self.mime_struct)+'/n')
         attach_attrs = [( x.partition(';')[2]).strip('\r\n\x20') for x in self.attach_attrs ]
 
         return len(attach_attrs)
 
     def get_attaches_in_score(self):
-
+        '''
+        checks how many "inline" attachements (Content-Disposition attribute value),
+        inlined mailicious attachements are very often in russian spams ;
+        '''
         in_score = self.score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), self.mime_struct))
         return in_score
 
     def get_attaches_score(self):
-
+        '''
+        checks attachments attribute "filename/name"
+        with pattern.ATTACH_RULES;
+        '''
         score = self.score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), self.attach_attrs))
         x = list()
         for regexp_obj in self.attach_rules:
@@ -403,40 +427,45 @@ class AttachesChecker(BaseChecker):
 @Wrapper
 class ListChecker(BaseChecker):
     '''
+    keeps trigger-methods for describing
+    'List-*' headers values by following features:
 
+    LIST_SCORE          --> gained by checking values of 'List-*'
+                                headers and presence of correlated
+                                headers (see RFC for List) ;
+    EXT_LIST_SCORE      --> check presence of different headers, mentioned in RFC 2369 ;
+    PRECEDENCE_FLAG     --> check presence of 'Precedense' header ;
+    REPLY_TO_FLAG       --> check value of 'Reply-To:' header ;
+    SENDER_FLAG         --> check value of 'Sender:' header ;
+    DELIVERED_TO_FLAG   --> check value of 'Delivered-To:' header, if it is presented ;
     '''
     def __init__(self, pattern_obj):
 
         BaseChecker.__init__(self, pattern_obj)
 
+        self.decoded_values = dict()
+        for h in ['Sender','From','Reply-To']:
+            if not self.msg.get_all(h):
+                self.decoded_values[h] = ((u'',''),)
+            else:
+                self.decoded_values[h] = self.pattern.get_addr_values(self.msg.get_all(h))
 
-    def __get_orig_addrs(self, heads_names):
-
-        # msg.get_all cause email.utils.getaddresses(msg.get_all('From')) works properly only with list-type args !
-        raw_values = [ self.msg.get_all(key) for key in heads_names if self.msg.get_all(key)]
-        logger.debug(raw_values)
-        self.parsed_addr_list = [self.pattern.get_addr_values(value) for value in raw_values ]
-
-        return self.parsed_addr_list
+        logger.warn(self.decoded_values)
 
     def get_list_score(self):
+        '''
+        :return: penalizing score for List-* headers
+        '''
 
-        #:return: penalizing score for List-* headers
         list_score = INIT_SCORE
         if not filter(lambda list_field: re.search('(List|Errors)(-.*)?', list_field), self.msg.keys()):
             return list_score
 
-        # check Reply-To only with infos, cause it is very controversial,
-        # here are only pure RFC 2369 checks
-        # leave Errors-To cause all russian email-market players
-        # put exactly Errors-To in their advertising emails instead of List-Unsubscribe
         rfc_heads = ['List-Unsubscribe', 'Errors-To', 'Sender']
         presented = [ head for head in rfc_heads if self.msg.keys().count(head) ]
 
-        # alchemy, probably was written just for fun, e.g this body doesn't support RFC 2369 in a proper way ))
         list_score += (len(rfc_heads)-len(presented))*self.score
 
-        #body_from = re.compile(r'@.*[a-z0-9]{1,63}\.[a-z]{2,4}')
         sender_domain = False
         while not (sender_domain):
             sender_domain = self.pattern.get_smtp_originator_domain()
@@ -453,7 +482,7 @@ class ListChecker(BaseChecker):
                         r'mailto:.*@.*\.'+sender_domain+'.*'
         ]
 
-        for uri in [ heads_dict.get(head) for head in presented ]:
+        for uri in [ self.msg.get(head) for head in presented ]:
             if not filter(lambda reg: re.search(reg, uri, re.M), patterns):
                 list_score += self.score
 
@@ -470,8 +499,13 @@ class ListChecker(BaseChecker):
     def get_list_sender_flag(self):
         sender_flag = INIT_SCORE
         # rfc 2369, 5322, but doesn't support rfc6854
-        originators = set(map(itemgetter(1), self.__get_orig_addrs(['Sender','From'])))
+        x = [self.decoded_values[name] for name in ['From','Sender']]
+        if not x:
+            return sender_flag
+        x = reduce(add,x)
+        originators = set(map(itemgetter(1), x))
         # get_addr_values() strips '<>' on boundaries for address values
+        logger.warn(originators)
         if len(originators) > 1:
             sender_flag += self.score
 
@@ -479,15 +513,19 @@ class ListChecker(BaseChecker):
 
     def get_list_precedence(self):
         precedence_flag = INIT_SCORE
-        if self.msg.get('Precedence').strip() == 'bulk':
+        if self.msg.get('Precedence') and self.msg.get('Precedence').strip() == 'bulk':
             precedence_flag += self.score
 
         return precedence_flag
 
     def get_list_reply_to(self):
         reply_to_flag = INIT_SCORE
-        originators = map(itemgetter(1), self.__get_orig_addrs(['Sender','Reply-To']))
-        domains = set([ orig.partition('@')[2] for address in originators ])
+        x = [self.decoded_values[name] for name in ['From','Sender']]
+        if not x:
+            return sender_flag
+        x = reduce(add,x)
+        originators = set(map(itemgetter(1), x))
+        domains = set([ address.partition('@')[2] for address in originators ])
         if len(set(domains)) == 1:
             reply_to_flag += self.score
 
@@ -496,8 +534,14 @@ class ListChecker(BaseChecker):
     def get_list_delivered_to(self):
         # in general nets are very personal, so check Delivered-To may be a feature
         delivered_to_flag = INIT_SCORE
-        values = [self.pattern.get_addr_values(self.msg.get_all(name)) for name in ['Delivered-To','To']]
-        if len(set(values)) == 1 :
+        for name in ['Delivered-To','To']:
+            value = self.msg.get_all(name)
+            if not value:
+                return delivered_to_flag
+
+            pairs = self.pattern.get_addr_values(value)
+
+        if len(set(pairs)) == 1 :
             delivered_to_flag += self.score
 
         return delivered_to_flag
@@ -505,15 +549,16 @@ class ListChecker(BaseChecker):
 @Wrapper
 class OriginatorChecker(BaseChecker):
     '''
-    Class keeps trigger-methods for describing
+    keeps trigger-methods for describing
     originators values by following features:
-    ORIG_CHECKSUM:
-    ORIG_SCORE:
+
+    ORIG_CHECKSUM   -->
+    ORIG_SCORE      -->
     '''
     def __init__(self, pattern_obj):
 
         BaseChecker.__init__(self, pattern_obj)
-        logger.info('>>>>>>>>>>')
+        logger.info('>>>>>>>>>>'+str(self.msg.get_all('From')))
         self.name_addr_tuples = self.pattern.get_addr_values(self.msg.get_all('From'))
         logger.info('name_addr_tuples'.upper()+str(self.name_addr_tuples))
         name_addr = namedtuple('addr_value', 'realname address')
@@ -531,8 +576,9 @@ class OriginatorChecker(BaseChecker):
     def get_originator_checksum(self):
         '''
         :return: ORIG_CHECKSUM from mailbox element
-        of field value (From: <mail-box> <address>)
-        # this trigger is inverse to get_list_sender_flag(), and they are slightly different
+                    of field value (From: <mail-box> <address>)
+
+        this trigger is inverse to get_list_sender_flag(), and they are slightly different
         '''
 
         from_checksum = INIT_SCORE
@@ -545,7 +591,7 @@ class OriginatorChecker(BaseChecker):
 
         if self.name_addr_tuples:
             from_value, from_addr = reduce(add, self.name_addr_tuples[:1])
-            from_checksum = binascii.crc32(from_value.encode(self.pattern.DEFAULT_CHARSET))
+            from_checksum = binascii.crc32(from_value.encode(self.def_encoding, self.err_handling))
             logger.debug('\t----->'+str(from_checksum))
 
         return from_checksum
@@ -567,11 +613,10 @@ class OriginatorChecker(BaseChecker):
 
     def get_originator_addr_score(self):
         '''
-        1. check with pattern regexps u'box_name', localname from address, domain from address
-        2. some spam-heuristics for domains from address
-        3. compare domain from From with smpt_domain
+        check with pattern regexps u'box_name', localname from address, domain from address
+        compare domain from From with smpt_domain
 
-        gain and return ADDR_SCORE
+        :return ADDR_SCORE
         '''
         addr_score = INIT_SCORE
 
@@ -579,17 +624,13 @@ class OriginatorChecker(BaseChecker):
         for localname in self.localnames:
             addr_score += len([regexp for regexp in reg_compiled_list if regexp.search(localname, re.I)])*self.score
 
-            if len(localname) >= self.pattern.ORIGINATOR_LOCAL_NAME_LEN and localname.count('.') == 0 \
-                and re.search(r'[\d-]',localname):
-                addr_score += self.score
-
         box_names_regs = get_regexp(self.pattern.ORIGINATOR_MAILBOX_RULES)
         for box_name in self.mailboxes:
             addr_score += len([regexp for regexp in box_names_regs if regexp.search(box_name)])*self.score
 
         addr_score += len([domain for domain in self.domains if re.search(self.puni_regex, domain, re.I)])*self.score
 
-        valid_domains = [domain for domain in self.domains if domain == self.pattern.get_smtp_originator_domain()]
+        valid_domains = [domain for domain in self.domains if re.search(domain,self.pattern.get_smtp_originator_domain())]
         if not valid_domains:
             addr_score += self.score
 
@@ -599,7 +640,14 @@ class OriginatorChecker(BaseChecker):
 @Wrapper
 class MimeChecker(BaseChecker):
     '''
+    keeps trigger-methods for describing
+    bodies MIME-sctructures with following
+    features :
 
+    MIME_NEST_LEVEL --> 42 ;
+    MIME_CHECKSUM   --> crc32-checksum from sequence of Content-Type values
+                            for each MIME-part in multipart-body, obtain some
+                            kind of skeleton of email and keep it in checksum ;
     '''
     def __init__(self, pattern_obj):
 
@@ -614,11 +662,7 @@ class MimeChecker(BaseChecker):
 
     def get_mime_checksum(self):
 
-        '''
-        self.EX_MIME_ATTRS_LIST: values of uninteresting mime-attrs
-        :return: 42
-        '''
-
+        # EX_MIME_ATTRS_LIST: values of uninteresting mime-attrs
         mime_checksum = self.INIT_SCORE
         logger.debug('excluded mime-header\'s attributes list from : '+str(self.__class__))
         logger.debug(self.EX_MIME_ATTRS_LIST)
@@ -635,10 +679,18 @@ class MimeChecker(BaseChecker):
 @Wrapper
 class ContentChecker(BaseChecker):
     '''
-    Class keeps trigger-methods for describing
-    <mime>/text-parts content by following features:
-    ORIG_CHECKSUM:
-    TXT_SCORE: for plain/text, html/text parts
+    keeps trigger-methods for describing
+    text/<mime>-parts content by following features:
+
+        -HTML_SCORE             - score, gained by checking html-tags structures ;
+        -TXT_SCORE              - score, gained by checking tokens sequences from text/<mime> parts ;
+        -HTML_CHECKSUM          - crc32-checksum from enclosing html-table
+                                    (because html-emails mostly contain old-style make-up,
+                                    where all elements are stored in one enclosing table) ;
+        -TXT_AVG_ENTROPY        - avg entropy of mime-parts or text-part, if email isn't multipart ;
+        -TXT_COMPRESSION_RATIO  - compression ratio, if we zip all mime-parts from one email or just text
+                                    string, if email isn't multipart ;
+
     '''
     def __init__(self, pattern_obj):
 
@@ -646,8 +698,11 @@ class ContentChecker(BaseChecker):
 
     def get_content_txt_score(self):
         '''
-        Maps input regexp list to each sentence one by one
-        :return: penalising score, gained by sentense
+        maps regexp list from suitable Pattern Class
+        to each sentence one by one
+
+        :return: penalising score, gained by all
+        sentenses from body
         '''
 
         regs_list = get_regexp(self.pattern.TEXT_REGEXP_LIST)
@@ -666,15 +721,10 @@ class ContentChecker(BaseChecker):
         return txt_score
 
     def get_content_html_score(self):
+        '''
+        if HTML-body includes table - analyze tags and values inside
+        '''
 
-        #1. from the last text/html part creates HTML-body skeleton from end-tags,
-        #    takes checksum from it, cause spammer's and info's/net's HTML patterns
-        #    are mostly the same ;
-        #2. if HTML-body includes table - analyze tags and values inside, cause
-        #    info's and net's HTML-patterns mostly made up with pretty same <tables> ;
-
-        #:param tags_map: expected <tags attribute="value">, described by regexes ;
-        #:return: <penalizing score> and <checksum for body> ;
         html_score = INIT_SCORE
         attr_value_pair = namedtuple('attr_value_pair', 'name value')
 
@@ -717,61 +767,71 @@ class ContentChecker(BaseChecker):
         return html_score
 
     def get_content_html_checksum(self):
+        '''
+        from the last text/html part creates HTML-body skeleton from end-tags,
+        returns crc32-checksum from it, cause spammer's and info's/net's HTML patterns
+        are very similar ;
 
+        :return: 42
+        '''
+        html_checksum = INIT_SCORE
         html_skeleton = list()
-        soups_list = self.pattern.get_html_parts()
+        soups_list = tuple(self.pattern.get_html_parts())
 
-        for s in tuple(soups_list):
-            body_line = s.body.lower()
+        for s in soups_list:
+            body_line = s.body
             # get table checksum
-            comments = s.body.findAll( text=lambda text: isinstance(text, Comment) )
+            comments = body_line.findAll( text=lambda text: isinstance(text, Comment) )
             [comment.extract() for comment in comments]
             # leave only closing tags struct
             reg = re.compile(ur'<[a-z]*/[a-z]*>')
-            # todo: investigate the order of elems within included generators
-            html_skeleton.extend(t.encode('utf-8', errors='replace') for t in tuple(reg.findall(body_line.prettify(), re.M)))
+            body_line = (body_line.prettify()).lower()
+            t = tuple(reg.findall(body_line, re.M))
+            logger.warn(t)
+            html_skeleton.append(tuple(x.encode(self.def_encoding, errors=self.err_handling) for x in t))
+            logger.warn(html_skeleton)
 
-        html_checksum = binascii.crc32(''.join(html_skeleton))
+        if html_skeleton:
+            html_checksum = reduce(add, html_skeleton)
+            html_checksum = binascii.crc32(''.join(html_checksum))
 
         return html_checksum
 
     def get_content_avg_entropy(self):
-
-        #for fun
-        #:return:
-
+        '''
+        :return: avg entropy of text/<mime> parts for multipart bodies
+        '''
         n = 0
         txt_avg_ent = INIT_SCORE
         # todo: make n-grams
+
         for tokens in self.pattern.get_stemmed_tokens():
+            logger.warn(tokens)
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
-            #logger.debug('P >>> '+str(probs))
             txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
+            logger.info(n)
 
-        txt_avg_ent = txt_avg_ent/n
-
+        # :))
+        if n !=0:
+            txt_avg_ent = txt_avg_ent/n
+        logger.warn(txt_avg_ent)
         return txt_avg_ent
 
     def get_content_compress_ratio(self):
-
-        #maybe
-        #:return: compress ratio of stemmed text-strings from
-        #all text/mime-parts
+        '''
+        :return: compress ratio of stemmed text-strings from all text/mime-parts
+        '''
 
         txt_compressed_ratio = INIT_SCORE
         all_text_parts = list(self.pattern.get_stemmed_tokens())
-        #for x in all_text_parts:
-            #logger.debug('>>>> '+str(x))
+
         if all_text_parts:
-            all_text = ''.join(reduce(add, all_text_parts))
-            #logger.debug(type(all_text))
-            txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.pattern.DEFAULT_CHARSET))))/len(all_text)
+            x = reduce(add, all_text_parts)
+            logger.warn(str(x))
+            all_text = ''.join(x)
+            txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.def_encoding, self.err_handling))))/len(all_text)
 
         return txt_compressed_ratio
 
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)

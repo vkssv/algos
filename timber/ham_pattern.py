@@ -125,14 +125,9 @@ class HamPattern(BeautifulBody):
         for n, key in enumerate(features_map.keys(),start=1):
             logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: ')
 
-
             features = ['get_'+key+'_'+name for name in features_map[key]]
             checker_obj = checkers.__getattribute__(key.title()+'Checker')
             checker_obj = checker_obj(self)
-
-            logger.debug('Instance of '+str(checker_obj.__class__)+' was initialized:')
-            logger.debug('>> '+str(checker_obj.__dict__))
-            logger.debug("================")
 
             functions_map = [(name.lstrip('get_'), getattr(checker_obj, name, lambda : INIT_SCORE)) for name in features]
 

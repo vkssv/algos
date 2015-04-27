@@ -10,7 +10,7 @@ from collections import OrderedDict, Counter
 
 formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
 logger = logging.getLogger('')
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
@@ -139,10 +139,7 @@ class NetsPattern(BasePattern):
                          'content'      : ['compress_ratio','avg_entropy','txt_score','html_score','html_checksum']
         }
 
-        logger.debug('Start vectorize msg with rules from NetsPattern...')
-
         for n, key in enumerate(features_map.keys(),start=1):
-            logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: '+str(self.__class__))
 
             if key == 'pattern_score':
                 features = ['get_'+name+'_'+key for name in features_map[key]]
@@ -152,34 +149,22 @@ class NetsPattern(BasePattern):
                 checker_obj = checkers.__getattribute__(key.title()+'Checker')
                 checker_obj = checker_obj(self)
 
-            logger.debug('Instance of '+str(checker_obj.__class__)+' was initialized:')
-            logger.debug('>> '+str(checker_obj.__dict__))
-            logger.debug("================")
-
             functions_map = [(name.lstrip('get_'), getattr(checker_obj, name, lambda : self.INIT_SCORE)) for name in features]
 
             for name, f in functions_map:
                 feature_value = self.INIT_SCORE
-                logger.debug(name)
-                logger.debug(f)
                 try:
                     feature_value = f()
                 except Exception as err:
-                    logger.error(str(f)+' : '+str(err))
+                    logger.error(f.func_name+' : '+str(err))
                     pass
 
                 self.__setattr__(name, feature_value)
 
-        logger.debug('\n>> nets-features vector : \n'.upper())
-
-        for (k,v) in sorted(self.__dict__.items()):
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
         logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
         logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
-        non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
+        non_zero = [(k,v) for k,v in self.__dict__.iteritems() if float(v) !=0.0 ]
         logger.debug("non_zero features count : "+str(len(non_zero)))
-        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
-
 
 
     def get_mime_pattern_score(self):
@@ -189,41 +174,23 @@ class NetsPattern(BasePattern):
             return mime_score
 
         # check a presence of typical mime-parts for nets
-        frequent_struct = set('multipart/alternative', 'text/plain', 'text/html')
+        frequent_struct = set(['multipart/alternative', 'text/plain', 'text/html'])
         mime_skeleton = self.get_mime_struct()
-        current_struct = set(mime_skeleton.keys())
+        mime_keys = mime_skeleton.keys()
+
+        current_struct = set(mime_keys)
         if frequent_struct == current_struct:
-            mime_score += self._penalty_score
+            mime_score += self.PENALTY_SCORE
             for mime_type in filter(lambda k: k.startswith('text'), frequent_struct):
                 if filter(lambda item: re.match(r'(text|html)-body', item, re.I), mime_skeleton.get(mime_type)):
-                    mime_score += self._penalty_score
+                    mime_score += self.PENALTY_SCORE
 
         # weak metric probably will work only for letters from Meetup
         if filter(lambda marker_head: list(current_struct).count(marker_head), ['text/calendar', 'application/isc']):
-            mime_score += self._penalty_score
+            mime_score += self.PENALTY_SCORE
 
+        return mime_score
 
-'''''
-
-if __name__ == "__main__":
-
-	formatter = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
-	ch = logging.StreamHandler(sys.stdout)
-	ch.setLevel(logging.DEBUG)
-	ch.setFormatter(formatter)
-	logger.addHandler(ch)
-
-	try:
-		test=NetsPattern(env)
-		vector = test.run()
-		logger.debug(str(vector))
-
-
-	except Exception as details:
-		raise
-
-			
-'''''
 
 		
 

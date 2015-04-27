@@ -18,7 +18,7 @@ ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.INFO)
 ch.setFormatter(formatter)
 fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
-fh.setLevel(logging.INFO)
+fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
@@ -34,10 +34,11 @@ class Vectorize(object):
     Appropriate pattern - instance of Spam/Ham/Info/NetsPattern classes :
         passed class name (label) define pattern, => features set ;
 
-    Supported patterns are : spam, ham, nets, infos
+    Supported patterns are : spam, ham, nets, info
     '''
 
-    SUPPORTED_CLASSES = ['spam','ham']
+    SUPPORTED_CLASSES = ['spam','ham','nets','info']
+
     SETS_NAMES = ['X_train', 'Y_train', 'X_test', 'Y_test']
 
     def __init__(self, train_dir, label, score):
@@ -45,7 +46,7 @@ class Vectorize(object):
         if label not in self.SUPPORTED_CLASSES:
             raise NaturesError ('Don\'t have any module with rules for '+\
                                 label.upper()+' class\nSupported classes : '+\
-                                ', '.join(SUPPORTED_CLASSES))
+                                ', '.join(self.SUPPORTED_CLASSES))
 
         self.train_dir = train_dir
         self.label = label
@@ -170,9 +171,6 @@ class Vectorize(object):
 
     def __normalize(self):
 
-        pass
-
-    def __cross_validation(self):
         pass
 
     def load_data(self):

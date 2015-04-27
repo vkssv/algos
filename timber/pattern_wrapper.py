@@ -8,7 +8,7 @@ from itertools import izip_longest
 from msg_wrapper import BeautifulBody
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 #formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #ch.setLevel(logging.DEBUG)
@@ -17,9 +17,18 @@ logger = logging.getLogger('')
 
 class BasePattern(BeautifulBody):
     '''
-    Base parent class for created all other four pattern classes.
-    Provides some basic checks and metrics for email's headers and bodies.
-    Keeps Frankenstein's DNAs.
+    Base parent class for created pattern classes.
+    Provides some basic features for email's headers and bodies :
+
+    ALL_HEADS_CHECKSUM --> crc32-checksum from all headers,
+        except of the set of obligatory and very frequent,
+        which is defined as class-attribute in each Pattern class ;
+
+    RCVD_CHECKSUM --> crc32-checksum from N first 'Received' headers
+        values, N is defined as class-attribute in each Pattern class ;
+
+    RCPT_SCORE --> gained by comparing value from 'To' header and recepients,
+        mentioned in 'Received' headers ;
     '''
 
     INIT_SCORE = 0.0
@@ -47,7 +56,7 @@ class BasePattern(BeautifulBody):
             try:
                 value = f()
             except Exception as err:
-                logger.error(str(f)+' : '+str(err).upper())
+                logger.error(f.func_name+' : '+str(err))
                 pass
 
             #logger.debug((name+' ==> '+str(value)).upper())
@@ -141,29 +150,25 @@ class BasePattern(BeautifulBody):
         return rcvd_checksum
 
     def get_rcpt_score(self):
-
-        #:param score:
-        #:return: tuple with penalizing scores for To-header value from body,
-        #and RCPT TO value from Received headers
-
-        #for debut works only with To-header values
+        '''
+        :return: tuple with penalizing scores for To-header value from body,
+        for debut works only with To-header values
+        '''
 
         name_addr_tuples = self.get_addr_values(self.msg.get_all('To'))
-        only_addr_list = map(itemgetter(1), name_addr_tuples)
 
+        only_addr_list = map(itemgetter(1), name_addr_tuples)
         parsed_rcvds = [ rcvd.partition(';')[0] for rcvd in self.get_rcvds() ]
 
         smtp_to_list = [ x for x in ( r.partition('for')[2].strip() for r in parsed_rcvds ) if x ]
         smtp_to_addr = re.findall(r'<(.*@.*)?>', ''.join(smtp_to_list))
 
         if not (smtp_to_list or only_addr_list):
-            # can't check without data => leave zeros
-            #return self.rcpt_smtp_to, self.rcpt_body_to
-            #logger.debug('rcpt_score ==> '.upper()+str(self.INIT_SCORE))
             return self.INIT_SCORE
 
         rcpt_score = len([value for value in smtp_to_list + only_addr_list if re.search(r'undisclosed-recipients', value, re.I)])*self.PENALTY_SCORE
-
+        #logger.debug(str(type(only_addr_list)))
+        #logger.debug(str(type(smtp_to_addr)))
         if len(only_addr_list) == 1 and ''.join(smtp_to_addr) != ''.join(only_addr_list):
             rcpt_score += self.PENALTY_SCORE
 
@@ -173,10 +178,4 @@ class BasePattern(BeautifulBody):
         #logger.debug('rcpt_score ==> '.upper()+str(self.INIT_SCORE))
         return rcpt_score
 
-if __name__ == "__main__":
 
-    formatter = logging.Formatter('%(levelname)s %(filename)s: %(message)s')
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)

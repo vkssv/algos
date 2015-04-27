@@ -38,7 +38,7 @@ class SpamPattern(BasePattern):
     RCVD_RULES = [
                             r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|unknown|trap)+',
                             r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
-                            r'(bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|com|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
+                            r'(bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
     ]
     EXCLUDED_HEADS = [
 
@@ -48,14 +48,13 @@ class SpamPattern(BasePattern):
     # try greedy regexes, maybe will precise them in future
 
     ORIGINATOR_LOCALNAMES_RULES = [
-                                       
                                         r'(flyboy|girl|passion|lady)'
     ]
 
     ORIGINATOR_MAILBOX_RULES = [
                                     ur'((top)?meds|miss\s+you|flyboy|pfizer|fellowship)\s+.*',
                                     ur'((passion|kiss(-you)?)(-info)?|lipstick|wine\s+red|face\s+to\s+face)\s+.*',
-                                    ur'(pickup|cute girl|(happy|good)letter|real-time|sweet_mail)\s+.*',
+                                    ur'(pickup|cute\s+girl|(happy|good)\s+letter|real-time|sweet_mail)\s+.*',
                                     ur'(dark|gray|green|blue|turquoise|one-stop-log-in|cool-cool|eyes)\s+.*'
     ]
 
@@ -64,10 +63,10 @@ class SpamPattern(BasePattern):
 
     SUBJ_RULES = [
 
-                            ur'((s)?sn|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)+',
-                            ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*',
-                            ur'-?[\d]{1,2}\s+%\s+.*',
-                            ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+.*',
+                            ur'((s)?sn|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)',
+                            ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+',
+                            ur'-?[\d]{1,2}\s+%\s+',
+                            ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+',
                             ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
                             ur'(free.*(pills?).*(every?)*.*(order)*|online.*&.*(save)*|tablet.*(split?ed?)*.*has?le)',
 	                        ur'(cheap([est])?.*(satisf[ied]?)*.*(u[sk])*.*(canadian)*.*customer|to.*be.*remov([ed])?.*(please?)*)',
@@ -145,7 +144,7 @@ class SpamPattern(BasePattern):
     ]
 
     URL_TXT_REGEXP = [
-                            ur'(click|here|link|login|update|confirm|legilize|now|buy|online|movie|s0x(room|boat)?)+',
+                            ur'(click|here|link|login|update|confirm|legilize|now|buy|online|movie|s(0|e)x(room|boat)?)+',
                             ur'(free|shipping|options|pills|every?|order|best|deal|today|now|contact|pay|go)+',
                             ur'(сcылк|курс|цен|посмотреть|каталог|здесь|сюда|регистрация|бесплатное|участие|на\s+сайт|подробн)',
                             ur'(горяч|скидк|отписаться|отказаться)',
@@ -176,7 +175,7 @@ class SpamPattern(BasePattern):
 
         features_map = {
                          'pattern_score'    : ['rcvd', 'mime', 'disp_notification'],
-                         'subject'          : ['score','encoding','upper','titled','checksum'],
+                         'subject'          : ['score','encoding','upper','checksum'],
                          'url'              : ['score','avg_len','distinct_count','sender_count',\
                                                 'uppercase','punicode', 'repetitions'],
                          'list'             : ['score'],

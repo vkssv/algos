@@ -8,7 +8,6 @@ from email.parser import Parser
 from collections import defaultdict
 from operator import itemgetter
 
-from franks_factory import MetaFrankenstein
 from pattern_wrapper import BasePattern
 from vectorizer import Vectorize
 from clf_wrapper import ClfWrapper
@@ -37,15 +36,10 @@ def create_report(predictions_dict, labels):
         if len(set(final)) == 1:
             status = set(final).pop()
 
-        elif len(set(final)) == 2:
-            status = [i for i in final if final.count(i)==2].pop()
-
-        elif len(set(final)) == 3:
+        elif len(set(final)) > 1:
             status, cls_name, prob = decisions[0]
 
         report[key] = (status,  clf_stat )
-
-
 
     return report
 
@@ -93,16 +87,14 @@ if __name__ == "__main__":
     formatter = logging.Formatter('%(levelname)s: %(filename)s: %(funcName)s: %(message)s')
     ch = logging.StreamHandler(sys.stdout)
     fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.WARN)
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-    sk_learn_verbosity = 0
     if args.verbose:
         logger.setLevel(logging.DEBUG)
-        sk_learn_verbosity = 1
 
     # 2. choose best parameters to initialize classifiers
     print('\n\x20 Create classifiers instances...')
@@ -116,13 +108,12 @@ if __name__ == "__main__":
                             'criterion'         : ['gini', 'entropy']
     }
 
-    svm_params_grid =  {'C': [1, 10, 100, 1000]}
+    #svm_params_grid =  {'C': [1, 10]}
     add_params = list()
 
     classifiers = [
                     ('Random\x20Forest', RandomForestClassifier, forest_params_grid),
-                    ('Extra\x20Trees', ExtraTreesClassifier, forest_params_grid),
-                    ('SVM', svm.SVC, svm_params_grid)
+                    ('Extra\x20Trees', ExtraTreesClassifier, forest_params_grid)
     ]
 
     labels = ['spam','ham']
@@ -164,14 +155,13 @@ if __name__ == "__main__":
                 clf_instance = class_obj(n_estimators=args.estimators)
                 add_params = [
                                 ('n_jobs',-1),\
-                                ('verbose', sk_learn_verbosity),\
                                 ('max_features',None),\
                                 ('max_depth',None),\
                                 ('max_leaf_nodes', None)
                 ]
             else:
                 clf_instance = class_obj()
-                add_params = [('kernel', 'linear'), ('cache_size', 200), ('max_iter',-1), ('probability',True), ('verbose', sk_learn_verbosity)]
+                add_params = [('kernel', 'linear'), ('cache_size', 200), ('max_iter',-1), ('probability',True)]
 
             grid_search = GridSearchCV(clf_instance, param_grid=params_dict)
             fit_output = grid_search.fit(X_train, Y_train)

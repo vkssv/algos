@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-    Extract and parse basic email's bodies parts
+    Extract and parse email's headers and mime-parts
 """
 
 import sys, logging, re
@@ -24,7 +24,7 @@ except ImportError as err:
 from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 #formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #ch.setLevel(logging.DEBUG)
@@ -41,7 +41,6 @@ class BeautifulBody(object):
     """
     Base class for happy life with email.message objects,
     some kind of great BeautifulSoup class from bs4.
-
     """
 
     __URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))'.lower(), re.M)
@@ -71,11 +70,9 @@ class BeautifulBody(object):
 
     @classmethod
     def _get_unicoded_value(cls, raw_line, encoding=None):
-        logger.debug('in get_unicoded_value')
-        logger.debug(raw_line)
-        logger.debug(encoding)
+
         dammit_obj = UnicodeDammit(raw_line, [encoding], is_html=False)
-        logger.debug(dammit_obj.unicode_markup.strip())
+        #logger.debug(dammit_obj.unicode_markup.strip())
 
         return dammit_obj.unicode_markup.strip()
 
@@ -93,23 +90,24 @@ class BeautifulBody(object):
             # cause we can have here: [('russian', 0), ('french', 0), ('english', 0)]
             return l
         else:
-            #logger.debug('can\'t define language for this token list >> '+str(tokens_list))
+            logger.info('can\'t define language for this token list >> '+str(tokens_list))
             return return_value
 
     def get_rcvds(self, rcvds_num=0):
         '''
-        :param rcvds_num: N curious Received headers from \CRLF\CRFL to top
+        :param rcvds_num: N curious Received headers from \CRLF\CRFL to top,
+                            N defined in each Pattern ;
         :return: left parts of Received header's values, everything before ';'
         '''
         # parse all Received: headers by default if rcvds_num wasn't defined
         parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received',' '))[ -1*rcvds_num : ]
-        logger.info('parsed_rcvds : '+str(parsed_rcvds))
+        logger.debug(str(parsed_rcvds))
         return parsed_rcvds
 
     def get_addr_values(self, header_value):
         '''
         :header_value - value of particular header, which can store < mailbox name > + < address >
-        returnes tuple (< mail box name (utf-8)>, < address (without angle braces) >)
+        :return: tuple of tuples (< mail box name (utf-8)>, < address (without angle braces) >)
         '''
         addr_value = namedtuple('addr_value', 'realname address')
         name_addr_tuples = (addr_value(*pair) for pair in utils.getaddresses(header_value))
@@ -131,15 +129,20 @@ class BeautifulBody(object):
             for part in realname_parts:
                 if len(part)==0:
                     continue
+                logger.warn(part)
                 value += self._get_unicoded_value(*(reduce(add,part)))
 
             pairs.append((value, addr))
 
         pairs = tuple((p.realname, re.sub(r'<|>','',p.address)) for p in tuple(addr_value(*pair) for pair in pairs))
-        #logger.debug(str(pairs))
+        logger.debug(str(pairs))
         return pairs
 
     def get_smtp_originator_domain(self):
+        '''
+        :return: originator domain from 'Received:' headers values
+        (MAIL FROM: SMTP header)
+        '''
 
         regexp = re.compile(r'(@|(?<=helo)\s?=\s?|(?<=from)\s+)?([a-z0-9-]{1,60}\.){1,3}[a-z]{2,10}', re.M)
         smtp_sender_domain = ''
@@ -148,7 +151,7 @@ class BeautifulBody(object):
         logger.debug(l) # check that regexp matched exactly first
         if l:
             orig_domain = reduce(add,l)
-            logger.debug('+++++++++++++++++++++++++++++++++++++++')
+
             logger.debug((orig_domain,))
             orig_domain = (regexp.search(orig_domain)).group(0)
             smtp_sender_domain = orig_domain.strip('.').strip('@').strip('=').strip()
@@ -159,7 +162,7 @@ class BeautifulBody(object):
 
     def get_dkim_domains(self):
         '''
-        returns list of domains, which names were used in DKIM signatures
+        :return: list of domains, which names were used in DKIM signing
         '''
         # if msg has not these headers one space char will be returned, in case of escaping exceptions
         values = [ el.split(';') for el in [self.msg.get(dkim_head,'\x20') for dkim_head in ['DKIM-Signature','DomainKey-Signature']]]
@@ -167,9 +170,14 @@ class BeautifulBody(object):
         values = [i.strip() for i in values if i.strip().startswith('d=')]
         return [i.strip('d=') for i in values]
 
-
-    #@lazyproperty
     def get_decoded_subj(self):
+        '''
+        parses and decodes 'Subject' header value,
+        :return:
+                < raw subject line in utf8 >,
+                < tuple of subject tokens without stopwords in utf8 >,
+                < list of encodings >
+        '''
 
         parts_list = header.decode_header(self.msg.get('Subject'))
         logger.debug('subject parts >>>>>'+str(parts_list))
@@ -204,27 +212,21 @@ class BeautifulBody(object):
 
     def get_mime_struct(self):
         """
-        try to parse
+        parses and keeps into dict values of MIME-part headers
         :return: dict { mime_type  : [attribute : value] }
         """
         mime_parts = defaultdict(list)
 
         needed_heads = ['content-type', 'content-transfer-encoding', 'content-id', 'content-disposition',\
-                      'content-description','content-class']
+                            'content-description','content-class']
 
         for part in self.msg.walk():
 
             part_key = 'text/plain'
-            # default initialization, but expected that Content-Type always goes first in MIME-headers set for body's part?
-            # so I always will have non-default value in else branch for normal emails
-            # can't find any info in RFCs 2045/2046... about MIME-headers order ((
-
-
             mime_part_heads = tuple(k.lower() for k in part.keys())
             for head in tuple(head_name for head_name in needed_heads if mime_part_heads.count(head_name)):
 
                 if head == 'content-type':
-
                     part_key = part.get(head)
                     #logger.debug(part_key)
                     part_key = part_key.partition(';')[0].strip()
@@ -232,18 +234,23 @@ class BeautifulBody(object):
                     mime_parts[part_key].append(added_value.lower())
                     #logger.debug(mime_parts)
 
-
                 else:
                     mime_parts[part_key].append(part.get(head).strip())
                     #logger.debug(mime_parts)
                     #part_dict[head] = part.get(head).strip()
 
         mime_parts = dict((k,tuple(v)) for k,v in mime_parts.items())
-        logger.debug("mime_dict: "+str(mime_parts))
+        logger.debug(str(mime_parts))
 
         return mime_parts
 
     def get_text_mime_part(self):
+        '''
+        generator
+        :return: < line with text from mime-part in utf8 > ,
+                 < Content-Type value >,
+                 < lang value >
+        '''
 
         # partial support of asian encodings, just to decode in UTF without exceptions
         # and normilize with NFC form: one unicode ch per symbol
@@ -279,7 +286,6 @@ class BeautifulBody(object):
                         lang = l
                         yield(decoded_line, p.get_content_type(), lang)
 
-            # from r'(Content|Accept)-Language' headers
             l = filter(lambda lang_header: re.match(r'(Content|Accept)-Language', lang_header), map(itemgetter(0),self.msg.items()))[-1:]
             if l:
                 lang = ''.join(self.msg.get(''.join(l)).split('-')[:1])
@@ -287,6 +293,11 @@ class BeautifulBody(object):
             yield (decoded_line, p.get_content_type(), lang)
 
     def get_url_obj_list(self):
+        '''
+        parses, keeps and transforms all
+        URL-objects from bodies to urlparse objects
+        :return: list of urlparse-objects
+        '''
 
         url_list = list()
         for line, content_type, lang in list(self.get_text_mime_part()):
@@ -305,6 +316,11 @@ class BeautifulBody(object):
         return url_list
 
     def get_net_location_list(self, url_list=None):
+        '''
+
+        :param url_list --> list of urlparse objects
+        :return: list of domains from crunched URLs
+        '''
 
         netloc_list = list()
         if url_list is None:
@@ -331,12 +347,15 @@ class BeautifulBody(object):
         return netloc_list
 
     def get_sentences(self, remove_url=True):
+        '''
+        generator
+        :param remove_url --> replace URLs in sentences with one space char
+        :return: tuple of sentences from mime-part
+        '''
 
         tokenizer = PunktSentenceTokenizer()
 
         for raw_line, mime_type, lang in tuple(self.get_text_mime_part()):
-            #logger.debug('mime_type :'+mime_type)
-            #logger.debug('lang :'+lang)
 
             if 'html' in mime_type:
                 soup = BeautifulSoup(raw_line)
@@ -362,26 +381,36 @@ class BeautifulBody(object):
             yield sents
 
     def get_stemmed_tokens(self):
-
+        '''
+        generator
+        :return list of tokens, does not keep its order as in sentence
+        '''
         tokenizer = WordPunctTokenizer()
         #punct_extractor = RegexpTokenizer("[\w']+", gaps=True)
 
         for pt in tuple(self.get_sentences()):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add, tokens)
-            #logger.debug("tokens: "+str(tokens))
+            #logger.warn("tokens: "+str(type(tokens)))
             lang = self.get_lang(tokens)
             #logger.debug(lang)
 
             if lang in self.SUPPORT_LANGS_LIST:
                 # todo: create stopwords list for jis ,
-                tokens = tuple(word for word in tokens if word not in stopwords.words(lang))
-                tokens = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
-                #logger.debug("tokens list: "+str(tokens))
+                tokens = [word for word in tokens if word not in stopwords.words(lang)]
+                tokens = [SnowballStemmer(lang).stem(word) for word in tokens]
+                #logger.warn("tokens list: "+str(type(tokens)))
 
             yield tokens
 
     def get_html_parts(self, mime_parts_list=None):
+        '''
+        generator
+        wrap up all text/html parts with BeautifulSoup class
+
+        :param mime_parts_list --> list with preparced mime-parts
+        :return: BeautifulSoup instance
+        '''
 
         if mime_parts_list is None:
             mime_parts_list = self.get_text_mime_part()

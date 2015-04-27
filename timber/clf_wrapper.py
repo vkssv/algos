@@ -17,7 +17,6 @@ from collections import defaultdict, OrderedDict
 from operator import itemgetter
 
 from timber_exceptions import NaturesError
-from franks_factory import MetaFrankenstein
 
 from sklearn.metrics import classification_report, precision_recall_curve
 
