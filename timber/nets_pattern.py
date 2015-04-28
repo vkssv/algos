@@ -39,7 +39,7 @@ class NetsPattern(BasePattern):
 
     RCVDS_NUM = 3
 
-    EMARKET_HEADS = r'^X-(LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)*|CRITSEND-ID|MSFBL|(Acx)?SID|Auto-Response-Suppress)$'
+    EMARKET_HEADS = r'((X-)?LinkedIn(-.*)?|FACEBOOK(-.*)?|MEETUP(-.*)?|CRITSEND-ID|MSFBL|(Acx)?SID|Auto-Response-Suppress)'
 
     KNOWN_MAILERS = [ r'ZuckMail', r'PHPMailer', r'ONE\s+mailer', r'GreenArrow' ]
 
@@ -56,62 +56,43 @@ class NetsPattern(BasePattern):
 
     SUBJ_RULES = [
                         # dingbats
-                        ur'(Meetup|Do\+you\+know|Congrat(s|uleta)\s+([\w-]{2,10}\s+){1,3}|you\s+g[eo]t)',
-                        ur'(See\s+([\w-]{2,10}\s+){1,3}\s+new|Welcome.*to|stay\s+in\s+touch\s+with|meet\s+the\s+new)',
-                        ur'^([\w\s-]{2,10}){1,2}\s*[,:]\s*.*(please\s+add|try\s+free|join\s+these|are\s+looking\s+for)',
-                        ur'(Google+|LinkedIn|Twitter|Facebook|Viadeo|vk.com|vkontakte|odnoklassniki|create\s+community)',
-                        ur'(top\s+post|this\s+week|viewed\s+your|added\s+you|you\s+miss(ed)?|discussion\s+on|connection)',
-                        ur'(invitation|reminder|(a)?wait(ing)?\s+(for\s+)?(you|your)?\s+(response)?|suggested\s+for)',
-                        ur'(comment\s+on|check\s+out|tomorrow|(mon|thurs|wednes|tues|sun|satur|fri)day|new\s+.*\s+group)',
-                        ur'^(Invitation|Reminder)\s*:\s.*$',
-                        ur'(you\s+g[eo]t|job\s+on|endorsed|try\s+a\s+free|top\s+pages|blog|profil(e)?)',
-                        ur'(Вы\s+знаете|Вернуться\s+на|предложение|недел.*)',
-                        ur'(У\s+вас\s+.*\s+больше\s+друзей)',
-                        ur'(Say\s+happy\s+birthday|people\s+are\s+look(ing)?|top\s+suggested|you\s+missed\s+from)',
-                        ur'(Ajoutez\s+|visité\s+votre|profile\s+views\s+|last\s+week|votre\s+semaine)'
+                        ur'(meetup|do.*you.*know|congrat[suleta].*([\w-]{2,10}.*){1,3}|you.*g[eo]t)', \
+                        ur'(see.*([\w-]{2,10}.*){1,3}.*new|welcome.*to|stay.*in.*touch.*with|meet.*the.*new)', \
+                        ur'^([\w\s-]{2,10}){1,2}\s*[,:]\s*.*(please\s.*add|try.*free|join.*these|are.*looking.*for)', \
+                        ur'(google\+|linkedin|twitter|facebook|viadeo|vk.com|vkontakte|odnoklassniki|create.*community)', \
+                        ur'(top.*post|this.*week|viewed.*your|added.*you|you.*miss(ed)?|discussion.*on|connection)', \
+                        ur'(invitation|reminder|(a)?wait(ing)?.*(for)?.*your?.*(response)?|suggested.*for)', \
+                        ur'(comment.*on|check.*out|tomorrow|(mon|thurs|wednes|tues|sun|satur|friday|new.*group)', \
+                        ur'(invitation|reminder)', \
+                        ur'(you.*g[eo]t|job.*on|endorsed|top.*pages|blog|profil(e)?)', \
+                        ur'(say.*happy.*birthday|people.*are.*look(ing)?|top.*suggested|you.*missed.*from)', \
+                        ur'(ajoutez|visité.*votre|profile.*views|last.*week|votre.*semaine)'
     ]
 
-    SUBJ_FUNCTION = lambda z,y: y
     SUBJ_TITLES_THRESHOLD = 5
 
     ATTACHES_RULES = [  r'(method\s?=|format\s?=\s?flowed\s?;\s?delsp\s?=\s/yes)' ]
 
     TEXT_REGEXP_LIST = [
-                            ur'(say\s+(happy\s+birthday|congratulat[eions]|condolences?)|new\s+job|anniversary|meet)',
-                            ur'(are\s+looking|tomorrow|introduc[eing]|l?earn\s+more|work\s+fast|die\s+young|(leave|be)\s+positive.*(in\s+your\s+coffin)?)',
-                            ur'(fellow|new\s+friends|(build|create|new).*(community|group)|passion|(do\s+)?you\s+know.*(that\s+he\s+is ...)?)',
-                            ur'(add\s+me\s+to|eat\s+me|drink\s+me|kill\s+me|connections?|more\s+people)'
+                            ur'(say.*happy.*birthday|congratulat[eions]|new.*job|anniversary|meet)', \
+                            ur'(are.*looking|tomorrow|introduc[eing]?)', \
+                            ur'(fellow|new.*friends|(build|create|new).*(community|group)|passion|do.*you.*know)', \
+                            ur'(add.*me.*to.*connections|more.*people)'
     ]
-    HTML_TAGS_MAP = {
-
-                        'table' :{
-                                    'border'      : '0',
-                                    'cellpadding' : '0',
-                                    'cellspacing' : '0',
-                                    'width'       : '\d{1,2}[^%](px)?'
-                        },
-                        'img'   :{
-                                    'src'         : '(logo|notification?|photo|bu?tt?o?n|icon|person|contacts|email|profile|account|member|group|api)',
-                                    'alt'         : '(accounts?|Google\s+Plus|Blog|Facebook|LinkedIn|Twitter|YouTube|Logo.*|Meetup|L\'Internaute|''|(\w{1-10}\s*){1,3})',
-                                    'style'       : 'display:block'
-
-                        }
-
-    }
 
     URL_FQDN_REGEXP =   [
-                            ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',
-                            ur'(www\.)?(linkedin\.com|facebook\.com|linternaute\.com|blablacar\.com)',
-                            ur'(www\.)?(youtube\.com|plus\.google\.com|twitter\.com|pinterest\.com|tumblr\.com)',
-                            ur'(www\.)?(instagram\.com|flickr\.com|vine\.com|tagged\.com|ask\.fm|meetme\.com)',
+                            ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)', \
+                            ur'(www\.)?(linkedin\.com|facebook\.com|linternaute\.com|blablacar\.com)', \
+                            ur'(www\.)?(youtube\.com|plus\.google\.com|twitter\.com|pinterest\.com|tumblr\.com)', \
+                            ur'(www\.)?(instagram\.com|flickr\.com|vine\.com|tagged\.com|ask\.fm|meetme\.com)', \
                             ur'(www\.)?classmates'
 
     ]
 
     URL_TXT_REGEXP = [
-                        ur'\?(find-friends|learn-more|home\.php|submit|simpleredirect)',
-                        ur'loc=(facepile|profile_pic|cta|reminder|tracking|email|validate_e?mail\?)',
-                        ur'(formlink|jobs|events|btn|teaser|profile|logo_|userpic)',
+                        ur'\?(find-friends|learn-more|home\.php|submit|simpleredirect)', \
+                        ur'loc=(facepile|profile_pic|cta|reminder|tracking|email|validate_e?mail\?)', \
+                        ur'(formlink|jobs|events|btn|teaser|profile|logo_|userpic)', \
                         ur'(eml-skills_endorsements-btn-0-new_teaser_add|grp_email_subscribe_new_posts)'
     ]
 
@@ -136,7 +117,7 @@ class NetsPattern(BasePattern):
                          'list'         : ['score','delivered_to'],
                          'attaches'     : ['score','count'],
                          'originator'   : ['checksum'],  # ['checksum','eq_to_dkim']
-                         'content'      : ['compress_ratio','avg_entropy','txt_score','html_score','html_checksum']
+                         'content'      : ['compress_ratio','avg_entropy','txt_score','html_checksum']
         }
 
         for n, key in enumerate(features_map.keys(),start=1):
@@ -161,11 +142,12 @@ class NetsPattern(BasePattern):
 
                 self.__setattr__(name, feature_value)
 
-        logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
         logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
         non_zero = [(k,v) for k,v in self.__dict__.iteritems() if float(v) !=0.0 ]
         logger.debug("non_zero features count : "+str(len(non_zero)))
 
+    def __str__(self):
+        return('NETS')
 
     def get_mime_pattern_score(self):
 

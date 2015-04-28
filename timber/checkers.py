@@ -68,21 +68,26 @@ class SubjectChecker(BaseChecker):
     def __init__(self, pattern_obj):
 
         BaseChecker.__init__(self, pattern_obj)
-        logger.debug(self.score)
 
+        self.obj = pattern_obj
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
+        self.subj_line = self.subj_line.lower()
+        logger.debug(type(self.subj_line))
         self.subj_rules = get_regexp(pattern_obj.SUBJ_RULES)
-        #self.subj_rules = pattern_obj.SUBJ_RULES
+        logger.debug(u'subj_line.lower(): '+self.subj_line)
+        logger.debug('subj_tokens: '+str(self.subj_tokens))
+        logger.debug('subj_encodings: '+str(self.encodings_list))
 
     def get_subject_score(self):
 
-        #logger.debug('compiled_regs : '+str(self.subj_rules))
-        # check by regexp rules
-        #logger.debug(self.subj_rules)
-        matched = list()
-        matched.extend(filter(lambda r: re.search(r, self.subj_line.lower()), self.subj_rules))
-        #logger.debug('matched : '+str(matched))
-        subj_score = self.score*len(matched)
+        logger.debug(self.subj_line.lower())
+        subj_score = INIT_SCORE
+
+        for rule in self.subj_rules:
+            if rule.search(self.subj_line):
+                subj_score +=self.score
+
+        logger.debug('score:'+str(subj_score))
 
         prefix_heads_map = {
                                 'RE' : ['(In-)?Reply-To', 'Thread(-.*)?', 'References'],
@@ -91,14 +96,16 @@ class SubjectChecker(BaseChecker):
         }
 
         for k in prefix_heads_map.iterkeys():
-            logger.info(self.subj_line.encode(self.def_encoding, errors=self.err_handling))
+            logger.debug(self.subj_line.encode(self.def_encoding, errors=self.err_handling))
             if re.match(r''+k+'\s*:', self.subj_line.encode(self.def_encoding, errors=self.err_handling), re.I):
                 heads_list = prefix_heads_map.get(k)
 
                 for h_name in self.msg.keys():
                     found_heads = filter(lambda reg: re.match(reg, h_name, re.I), h_name)
                     subj_score += (len(prefix_heads_map.get(k)) - len(found_heads))*self.score
+                    logger.debug('score:'+str(subj_score))
 
+        logger.debug('score:'+str(subj_score))
         return subj_score
 
     def get_subject_encoding(self):
@@ -120,9 +127,13 @@ class SubjectChecker(BaseChecker):
 
         # take crc32, make line only from words selected by pattern.SUBJ_FUNCTION, not all
         tokens = self.subj_tokens
-        # alchemy again
         if len(tokens) > 2:
-            tokens = tuple([el for el in self.subj_tokens if self.pattern.SUBJ_FUNCTION(el)])
+
+            if self.obj.__str__() == 'SPAM':
+                tokens = tuple( el for el in tokens if tokens.index(el)%2 )
+
+            elif self.obj.__str__() == 'INFO':
+                tokens = tokens[len(tokens)/2:]
 
         subj_trace = ''.join(tuple([w.encode(self.def_encoding, errors=self.err_handling) for w in tokens]))
         logger.debug('subj_trace : '+str(subj_trace))
@@ -195,8 +206,11 @@ class EmarketChecker(BaseChecker):
 
     def get_emarket_score(self):
 
-        emarket_heads_list = set([header for header in self.msg.keys() if re.search(header,self.pattern.EMARKET_HEADS)])
+        logger.debug(self.pattern.EMARKET_HEADS)
+
+        emarket_heads_list = set( [ header for header in self.msg.keys() if re.search(self.pattern.EMARKET_HEADS, header, re.I) ] )
         logger.warn(emarket_heads_list)
+
         return len(emarket_heads_list)*self.score
 
     def get_emarket_flag(self):
@@ -205,7 +219,7 @@ class EmarketChecker(BaseChecker):
         x_mailer_pattern = r'X-Mailer-.*'
         mailer_names = [mailer_head for mailer_head in self.msg.keys() if re.search(x_mailer_pattern, mailer_head, re.I)]
 
-        if [mailer_name for mailer_name in mailer_names if filter(lambda reg: re.search(reg, self.pattern.get(mailer_name), re.I), self.pattern.KNOWN_MAILERS)]:
+        if [mailer_name for mailer_name in mailer_names if filter(lambda reg: re.search(reg, self.msg.get(mailer_name), re.I), self.pattern.KNOWN_MAILERS)]:
             emarket_flag = self.score
 
         return emarket_flag
@@ -293,6 +307,10 @@ class UrlChecker(BaseChecker):
         return len(set([d.strip() for d in self.urls_domains]))
 
     def get_url_sender_count(self):
+        '''
+        if found sender domain in url --> email slightly nets or infos
+        if not found sender domain in url --> email is closer to spam or ham
+        '''
 
         sender_domain = False
         sender_count = INIT_SCORE
@@ -302,21 +320,29 @@ class UrlChecker(BaseChecker):
 
         while not (sender_domain):
             sender_domain = self.pattern.get_smtp_originator_domain()
+            logger.debug('sender domain :'+str(sender_domain))
             originator = self.pattern.get_addr_values(self.msg.get_all('From'))
+            logger.debug('sender domain :'+str(originator))
             if not originator:
+                logger.debug('sender_count:'+str(sender_count))
                 return sender_count
 
             orig_name, orig_addr = reduce(add, originator)
-            logger.warn(orig_addr)
+            logger.debug('originator address: '+str(orig_addr))
             if orig_addr.count('@') == 0:
+                logger.debug('sender_count:'+str(sender_count))
                 return sender_count
 
             sender_domain = (orig_addr.split('@')[1]).strip()
             sender_domain = (sender_domain.decode(self.def_encoding, self.err_handling)).lower()
-
+            logger.debug('sender_domain:'+str(sender_domain))
             pattern = ur'\.?'+sender_domain+u'(\.\w{2,10}){0,2}'
             sender_count += len(filter(lambda d: re.search(pattern, d.lower()), self.urls_domains))
+            logger.debug('pattern obj: '+self.pattern.__str__())
+            if not sender_count and self.pattern.__str__() in ['SPAM', 'HAM']:
+                sender_count += self.score
 
+        logger.debug('sender_count:'+str(sender_count))
         return sender_count
 
     def get_url_uppercase(self):
@@ -408,43 +434,39 @@ class AttachesChecker(BaseChecker):
 
         BaseChecker.__init__(self, pattern_obj)
 
-        self.attach_rules = get_regexp(pattern_obj.ATTACHES_RULES)
-
         self.mime_struct = pattern_obj.get_mime_struct()
         if len(self.mime_struct) == 0:
             logger.warn('Probably, this email is not multipart, or can\'t parse it properly !')
 
-        attach_reg = r'(file)?name([\*[:word:]]{1,2})?=.*'
-        self.attach_attrs = filter(lambda name: re.search(attach_reg, name, re.I), reduce(add, self.mime_struct))
+        attributes = reduce(add, self.mime_struct.values())
+        self.attributes = [v.strip() for v in attributes]
+        self.attach_attrs = [x for x in attributes if x.startswith('attachment')]
 
     def get_attaches_count(self):
         '''
         checks attachements count
         '''
-        logger.debug('MIME STRUCT >>>>>'+str(self.mime_struct)+'/n')
-        attach_attrs = [( x.partition(';')[2]).strip('\r\n\x20') for x in self.attach_attrs ]
-
-        return len(attach_attrs)
+        return len(self.attach_attrs)
 
     def get_attaches_in_score(self):
         '''
         checks how many "inline" attachements (Content-Disposition attribute value),
         inlined mailicious attachements are very often in russian spams ;
         '''
-        in_score = self.score*len(filter(lambda value: re.search(r'inline\s*;', value, re.I), self.mime_struct))
-        return in_score
+        in_score = [x for x in self.attributes if x.startswith('inline')]
+
+        return len(in_score)*self.score
 
     def get_attaches_score(self):
         '''
         checks attachments attribute "filename/name"
         with pattern.ATTACH_RULES;
         '''
-        score = self.score*len(filter(lambda name: re.search(r'(file)?name(\*[0-9]{1,2}\*)=.*',name), self.attach_attrs))
-        x = list()
-        for regexp_obj in self.attach_rules:
-            x.extend([value for value in self.attach_attrs if regexp_obj.search(value,re.M)])
+        score = INIT_SCORE
 
-        score += self.score*len(x)
+        for line in self.attach_attrs:
+            if filter(lambda x: re.search(x, line, re.I), self.obj.ATTACHES_RULES):
+                score += self.score
 
         return score
 
@@ -585,9 +607,10 @@ class OriginatorChecker(BaseChecker):
     def __init__(self, pattern_obj):
 
         BaseChecker.__init__(self, pattern_obj)
-        logger.info('>>>>>>>>>>'+str(self.msg.get_all('From')))
+
+        logger.debug('From: '.upper()+str(self.msg.get_all('From')))
         self.name_addr_tuples = self.pattern.get_addr_values(self.msg.get_all('From'))
-        logger.info('name_addr_tuples'.upper()+str(self.name_addr_tuples))
+        logger.debug('email.get_addr_values() :'+str(self.name_addr_tuples))
         name_addr = namedtuple('addr_value', 'realname address')
 
         self.name_addr_list = (name_addr(*pair) for pair in self.name_addr_tuples)
@@ -596,13 +619,14 @@ class OriginatorChecker(BaseChecker):
         self.domains = [pair.address.partition('@')[2] for pair in self.name_addr_list]
         self.mailboxes = [pair.realname.lower() for pair in self.name_addr_list]
 
-        logger.info('localnames : '+str(self.localnames))
-        logger.info('domains : '+str(self.domains))
-        logger.info('mailboxes : '+str(self.mailboxes))
+        logger.debug('localnames : '+str(self.localnames))
+        logger.debug('domains : '+str(self.domains))
+        logger.debug('mailboxes : '+str(self.mailboxes))
+        logger.debug('name_addr_list : '+str(self.name_addr_list))
 
     def get_originator_checksum(self):
         '''
-        :return: ORIG_CHECKSUM from mailbox element
+        :return: crc32 from mailbox element
                     of field value (From: <mail-box> <address>)
 
         this trigger is inverse to get_list_sender_flag(), and they are slightly different
@@ -611,16 +635,15 @@ class OriginatorChecker(BaseChecker):
         from_checksum = INIT_SCORE
         # todo: rfc6854 support of new format lists for From: values
 
-        logger.debug('\tFROM:----->'+str(self.name_addr_tuples))
-
         if len(self.name_addr_tuples) != 1:
-            logger.warning('\t----->'+str(self.name_addr_tuples))
+            logger.debug(str(self.name_addr_tuples))
 
         if self.name_addr_tuples:
             from_value, from_addr = reduce(add, self.name_addr_tuples[:1])
             from_checksum = binascii.crc32(from_value.encode(self.def_encoding, self.err_handling))
-            logger.debug('\t----->'+str(from_checksum))
-
+            
+        
+        logger.debug(from_checksum)
         return from_checksum
 
     def get_originator_forged_sender(self):
@@ -651,15 +674,21 @@ class OriginatorChecker(BaseChecker):
         for localname in self.localnames:
             addr_score += len([regexp for regexp in reg_compiled_list if regexp.search(localname, re.I)])*self.score
 
+        logger.warn('reg_compiled_list :'+str(addr_score))
+
         box_names_regs = get_regexp(self.pattern.ORIGINATOR_MAILBOX_RULES)
         for box_name in self.mailboxes:
             addr_score += len([regexp for regexp in box_names_regs if regexp.search(box_name)])*self.score
 
+        logger.warn('box_list :'+str(addr_score))
+
         addr_score += len([domain for domain in self.domains if re.search(self.puni_regex, domain, re.I)])*self.score
+        logger.warn('puni :'+str(addr_score))
 
         valid_domains = [domain for domain in self.domains if re.search(domain,self.pattern.get_smtp_originator_domain())]
         if not valid_domains:
             addr_score += self.score
+        logger.warn('valid domains :'+str(addr_score))
 
         return addr_score
 
@@ -736,62 +765,25 @@ class ContentChecker(BaseChecker):
         sents_generator = self.pattern.get_sentences()
 
         txt_score = INIT_SCORE
+
+        # parses in very accurate way, try to get the maximum from each line
         while(True):
             try:
-                for reg_obj in regs_list:
-                    #logger.info(l)
-                    txt_score += len(filter(lambda s: reg_obj.search(s.lower()), next(sents_generator)))*self.score
-                    #logger.debug("text_score: ".upper()+str(txt_score))
+                sentences = next(sents_generator)
+
+                for sentence in sentences:
+                    lines = sentence.split('\n')
+                    lines = [ line for line in lines if len(line.strip())>0 ]
+
+                    for reg_obj in regs_list:
+                        if [ el for el in lines if reg_obj.search(el.strip()) ]:
+                            txt_score += self.score
+                            logger.debug("text_score: "+str(txt_score))
+
             except StopIteration as err:
                 break
 
         return txt_score
-
-    def get_content_html_score(self):
-        '''
-        if HTML-body includes table - analyze tags and values inside
-        '''
-
-        html_score = INIT_SCORE
-        attr_value_pair = namedtuple('attr_value_pair', 'name value')
-
-        #logger.debug("tags_map: "+str(self.pattern.HTML_TAGS_MAP))
-
-        soups_list = self.pattern.get_html_parts()
-
-        while(True):
-            try:
-                soup = next(soups_list)
-            except StopIteration as err:
-                return html_score
-
-                if not soup.body.table:
-                    continue
-
-                # analyze tags and their attributes
-                soup_attrs_list = filter(lambda y: y, [ x.attrs.items() for x in soup.body.table.findAll(tag) ])
-                logger.debug(soup_attrs_list)
-                logger.debug('soup_attrs_list '+str(soup_attrs_list))
-                if not soup_attrs_list:
-                    continue
-
-                soup_attrs_list = [ attr_value_pair(*obj) for obj in reduce(add, soup_attrs_list) ]
-                logger.debug(soup_attrs_list)
-                logger.debug('type of parsing line in reg_obj: '+str(type(self.pattern.HTML_TAGS_MAP[tag])))
-                compiled_regexp_list = get_regexp(self.pattern.HTML_TAGS_MAP.get[tag], re.U)
-
-                pairs = list()
-                for key_attr in compiled_regexp_list: # expected_attrs_dict:
-                    #logger.debug(key_attr)
-                    pairs = filter(lambda pair: key_attr.match(pair.name.lower()), soup_attrs_list)
-                    #logger.debug(pairs)
-
-                    check_values = list()
-                    if pairs:
-                        check_values = filter(lambda pair: re.search(ur''+expected_attrs_dict.get(key_attr), pair.value.lower()), soup_attrs_list)
-                        html_score += self.score*len(check_values)
-
-        return html_score
 
     def get_content_html_checksum(self):
         '''
@@ -831,14 +823,16 @@ class ContentChecker(BaseChecker):
         n = 0
         txt_avg_ent = INIT_SCORE
         # todo: make n-grams
+        tokens_list = tuple(self.pattern.get_stemmed_tokens())
+        logger.debug(tokens_list)
 
-        for tokens in self.pattern.get_stemmed_tokens():
-            logger.warn(tokens)
+        for tokens in tokens_list:
+            logger.debug(tokens)
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
             txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
-            logger.info(n)
+            logger.debug(n)
 
         # :))
         if n !=0:

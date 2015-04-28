@@ -36,8 +36,8 @@ class SpamPattern(BasePattern):
 
     RCVDS_NUM = 2
     RCVD_RULES = [
-                            r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|unknown|trap)+',
-                            r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)',
+                            r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|unknown|trap)', \
+                            r'(\(|\s+)(([a-z]+?)-){0,2}(\d{1,3}-){1,3}\d{1,3}([\.a-z]{1,63})+\.(ru|in|id|ua|ch|)', \
                             r'(bnp|ca|aol|cic|([a-z]{1,2})?web|([a-z]{1-15})?bank)?(\.(tw|in|ua|ru|ch|msn|ne|nl|jp|[a-z]{1,2}net)){1,2}'
     ]
     EXCLUDED_HEADS = [
@@ -52,10 +52,10 @@ class SpamPattern(BasePattern):
     ]
 
     ORIGINATOR_MAILBOX_RULES = [
-                                    ur'((top)?meds|miss\s+you|flyboy|pfizer|fellowship)\s+.*',
-                                    ur'((passion|kiss(-you)?)(-info)?|lipstick|wine\s+red|face\s+to\s+face)\s+.*',
-                                    ur'(pickup|cute\s+girl|(happy|good)\s+letter|real-time|sweet_mail)\s+.*',
-                                    ur'(dark|gray|green|blue|turquoise|one-stop-log-in|cool-cool|eyes)\s+.*'
+                                    ur'((top)?meds|miss.*you|flyboy|pfizer|fellowship)', \
+                                    ur'(passion|kiss(-you)?|lipstick|wine.*red|face.*to.*face)', \
+                                    ur'(pickup|cute.*girl|(happy|good).*letter|real-time|sweet_mail)', \
+                                    ur'(dark|gray|green|blue|turquoise|one-stop-log-in|cool-cool|eyes)'
     ]
 
     ORIGINATOR_LOCAL_NAME_LEN = 15
@@ -63,103 +63,82 @@ class SpamPattern(BasePattern):
 
     SUBJ_RULES = [
 
-                            ur'((s)?sn|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click|Best\s+Deal\s+Ever|,|\!|\?!|>>\:|sale|-)',
-                            ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+',
-                            ur'-?[\d]{1,2}\s+%\s+',
-                            ur'[\d](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+',
-                            ur'[\*-=\+~]{1,}\S+[\*-=\+~]{1,}',
-                            ur'(free.*(pills?).*(every?)*.*(order)*|online.*&.*(save)*|tablet.*(split?ed?)*.*has?le)',
-	                        ur'(cheap([est])?.*(satisf[ied]?)*.*(u[sk])*.*(canadian)*.*customer|to.*be.*remov([ed])?.*(please?)*)',
-	                        ur'(100%\s+guarantee?d|free.{0,12}(?:(?:instant|express|online|no.?obligation).{0,4})+.{0,32})',
-	                        ur'(dear.*(?:it\w|internet|candidate|sirs?|madam|investor|travell?er|car\sshopper|ship))+',
-                            ur'^\s*(hello|discreet|fast|hi|good\s+(morning|evening)|hey([:;\)])?)\s+.*',
-                            ur'^\s*(meet\s+now\s+(greasy|dear|darling|babe|lady)\s+)|satisf(y|ied)\s+.*((to)?night|customer)\s+.*',
-                            ur'.*(eml|spam).*',
-                            ur'.*(payment|receipt|attach(ed)?|extra\s+inches)',
-                            ur'(такси|услуги\s+.*\s+учреждениям|реклама|рассылк.*\s+недорого|арбитражн.*\s+суд|ssтолько\s+для\s+(владельц.*|директор.*))',
-                            ur'(таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*|больше\s+.*\s+заказ|ликвид|помоги)'
+                            ur'(s+n|v+i+a+g+r+a+|c+i+a+(l|1)+i+(s|\$|z)+|pfizer|discount|med|click)', \
+                            ur'([0-9]{1,2}\s+[\d]{1,2}[0]{1,3}\s+|Best.*Deal.*Ever|\!|\?!|>>\:|sale|-)', \
+                            ur'(-?[0-9]{1,2}\s+%\s+|[0-9](-|\s+)?\S{1,4}(-|\s+)?[\d]\s+)', \
+                            ur'([\*-=\+~]{1,}\S+[\*-=\+~]{1,}|(eml|spam)|tablet.*(split?ed?)?.*(has?le)?)', \
+                            ur'(free.*(pills?)?.*(every?)?.*(order)|online.*&.*(save)?)', \
+	                        ur'(cheap[est]?|satisf[ied]?|(uk|us|canad[ian]?).*customer)', \
+	                        ur'((100%)?.*guarantee?d.*(100%)?|free.*instant|express.*online|no\s?obligation)',\
+	                        ur'(dear|candidates?|sirs?|madam|investor|travell?er|car.*shopper|ship[ing]?)', \
+                            ur'(hello|discree?t|fast|hi|good.*(morning|evening)|hey([:;\)])?)', \
+                            ur'(meet.*now.*(greasy|dear|darling|babe|lady)|satisf(y|ied).*((to)?night|customer))', \
+                            ur'(pay(ment)?|receipt?|attach(ed)?|extra.*inches|to.*be.*remov[ed]?.*(please)?)', \
+                            ur'(такси|услуги.*чреждениям|реклама|рассылк.*недорого|арбитражн.*суд)', \
+                            ur'(таможен.*(союз|пошлин.*|налог.*|сбор.*|правил.*)|деклараци.*|налог.*)', \
+                            ur'(больше.*заказ|ликвид|помоги|деньи|нужны||только.*для.*(владельца?|директора?))'
     ]
-
-    SUBJ_FUNCTION = lambda z,x,y: y.index(x)%2
 
     SUBJ_TITLES_THRESHOLD = 3
     ATTACHES_RULES = [
                             r'(application\/(octet-stream|pdf|vnd.*|ms.*|x-.*)|image\/(png|gif|message\/))',\
-                            r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|zip|png|gif|cgi)',
+                            r'.*\.(exe|xlsx?|pptx?|txt|maild.*|docx?|html|js|bat|eml|xz|rar|zip|png|gif|cgi)'
     ]
 
     TEXT_REGEXP_LIST = [
-                            ur'(order\s*cializ\s*viagra|0nline)*',
-                            ur'(bu[ying]\s+.*(hey(-hey)?|(on)?.*sale)|(click|go|open)[\\s\.,_-]+)',
-                            ur'(viagra|ciali([sz])+|doctors?|d(y|i)sfunction|discount\s+(on\s+)?all?|free\s+pills?|medications?|remed[yie]|\d{1,4}mg)',
-                            ur'(100%\s+guarantee?d||no\s*obligation|no\s*prescription\s+|(whole)?sale\s+.*prices?|phizer|pay(ment)?)',
-                            ur'(candidate|sirs?|investor|travell?er|car\s+.*shopper|free\s+shipp?ing|(to)?night|bed|stock|payroll|pharmacy)',
-                            ur'(prestigi?(ous)|non-accredit[ed]\s+.*(universit[yies]|institution)|(fda[-\s_]?approved|superb?\s+qua[l1][ity])\s+.*drugs?(\s+only)?)',
-                            ur'(accept\s+all?\s+(major\s+)?(credit\s+)?cards?|(\$|\u20ac|\u00a3)\d{1,3}[\.\,:\\]\d{1,3}|order.*online.*save)',
-                            ur'(автомати([зиче])*.*\sдоход|халяв([аыне])*.*деньг|куп.*продае|объявлен.*\sреклам|фотки.*смотр.*зажгл.*|франши.*|киев\s+)',
-                            ur'(улица.*\s+фонарь.*\s+виагра|икра.*(в)?\s+офис.*\s+секретар([ьша])*|ликвидац[иярова].*\s(по)?\s+законy?.*\s+бухгалтер([ия])?)',
-                            ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд|noprescription)',
-                            ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
-                            ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
-                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}',
-                            ur'((augment|gain|profit)[ezntsor]|facile|maigri[rstonezt]|cash|liquide|perfomance)\s+.*',
-                            ur'(opportunité|exceptionnel|vente\s+privée)\s+.*'
+
+                            ur'(opportunit[eé]|exception?nel+e?|gratui?te?[ment]?)',\
+                            ur'(ventes+.*priv[ée]|pea\s+enterpris[ing]?|tablet.*(split?ed?)?.*(has?le)?)',\
+                            ur'(order.*ciali[zs].*viagra|0nline|extremely.*avalanche)',\
+                            ur'(order.*today!|cialis.*levitre?|free|combo|superb?.*qua[l1ity])',\
+                            ur'(bu[ying]|hey(-hey)?|(on)?sale|click|open|trad[eing]?)', \
+                            ur'(free.*(pills?)?.*(every?)?.*(order)?|online.*&.*(save)?)', \
+	                        ur'(cheap[est]?|satisf[ied]?|(uk|us|canad[ian]).*(customer)?)',\
+	                        ur'(to.*(be)?.*remov[eding].*(please)?|drugs?.*(only)?)', \
+	                        ur'((100%)?.*guarantee?d.*(100%)?|free.*instant|express.*online|no\s?obligation)',\
+                            ur'(v?i?a?g?r?a?|ciali[sz]|doctors?|d(y|i)sfunction|discount.*(on)?.*(all)?)',\
+                            ur'(medications?|remed[yie]*|[0-9]{1,4}mg|(to)?night|bed|stock|payroll?|pharmacy?)',\
+                            ur'(no\s+prescriptions?|(whole)?.*sale.*prices?|phizer|pay(ment)?)', \
+                            ur'(candidate|sirs?|inves(tor)?|travell?er|car.*shopp?[er]|free.*shipp?[ing]?)', \
+                            ur'(prestigi?[ous]|(non-)?accredit[ed]?.*(universit[yies]|institution)|approv[ed]?)', \
+                            ur'(accept.*all.*credit.*cards|(\$|\u20ac|\u00a3)[0-9]{1,3}[\.\,:\\][0-9]{1,3})',\
+                            ur'(автомати[зиче].*доход|халяв[аыне].*деньг|куп.*продае|объявлен.*реклам|фотки.*смотр.*зажгл.*)',\
+                            ur'(виагра|икра.*(в)?.*офис|ликвидац[иярова]?.*(по)?.*законy?|бухгалтер[ия]?|франши.*|киев)',\
+                            ur'(\+[0-9])?(\([Ч4][0-9]{2}\))?(([0-9]\s{0,2}\s?){2,3}){1,4}',\
+                            ur'((augment|gain|profit|demand)[ezntsor]?|facile|maigri[rstonezt]?|cash|liquide|perfomance)'
     ]
 
-    HTML_TAGS_MAP = {
-                            'table':{
-                                        'width' : '[1-9]{3}[^%]',
-                                        'height' : '[1-9]{1,3}',
-                                        'cell(padding|spacing)' : '[1-9]',
-                                        'border-color' : '#[0-9A-F]{3,6}',
-                                        'border' : '[1-9]',
-                                        'style' : '([A-Z-][^(a-z)]){3,10}'
-                            },
-                            'span' :{
-                                        'style' : '(mso-.*|(x-)?large|([A-Z-][^(a-z)]){3,10}|VISIBILITY.*hidden|WEIGHT:.*bold)',
-                                        'lang' : '(RU|EN-US)'
-                            },
-                            'p' :   {
-                                        'style' : '(DISPLAY:\s*none|([A-Z-][^(a-z)]){3,10})|)',
-                                        'class' : '\[\'(Mso.*|.*)\'\]',
-                                        'align' : 'center',
-                                        'css' : ''
-                            }
-    }
-
     URL_FQDN_REGEXP =       [
-                            ur'tinyurl\.',
-                            ur'(\w{3,6}-){1,3}\w{2,45}(\.\w{2,5}){0,3}',
-                            ur'\D{1,3}(\.|-)\w{1,61}(\.\w{2,5}){0,3}',
+                            ur'tinyurl\.', \
+                            ur'(\w{3,6}-){1,3}\w{2,45}(\.\w{2,5}){0,3}', \
+                            ur'\D{1,3}(\.|-)\w{1,61}(\.\w{2,5}){0,3}', \
                             # match if contains only non-ascii
-                            ur'[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
-                            ur'(\w{1,10}\.)?[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
-                            ur'(\d{1,10}\.)?[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}',
-                            ur'([0-9-]{1,61}\.?){1,3}(\D{2,5}\.?){0,3}',
-                            ur'(\w{3,6}-){1,3}\w{2,45}\.(\w{2,5}){0,3}',
-                            ur'\w{1,61}(\.[a-zA-z]{1,4}){0,2}\.(in|me|ua|ru|mobi|red|es)',
-                            ur'\w{1,61}\.(in.ua|ru.all.biz|gl|ee|pp.ua|kiev.ua|com.ua|ro|lviv.ua|ly|pro|co.jp|c|c=|lt|by|asia)',
-                            ur'\w{1,3}(\.[a-zA-Z]{1,4}){1,3}',
-                            ur'(.*-loader|lets-|youtu.be|goo.gl|wix.com|us\d.|jujf.ru)',
-                            ur'\w{1,61}(\.\w{1,4}){0,3}\.\w{1,3}([^\u0000-\u007F]{1,3}|\d{1,5})'
+                            ur'[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}', \
+                            ur'(\w{1,10}\.)?[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}', \
+                            ur'(\d{1,10}\.)?[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,61}\.[^\u0000-\u002C\u002E-\u005E\u0061-\u007F]{1,6}', \
+                            ur'([0-9-]{1,61}\.?){1,3}(\D{2,5}\.?){0,3}', \
+                            ur'(\w{3,6}-){1,3}\w{2,45}\.(\w{2,5}){0,3}', \
+                            ur'\w{1,61}(\.[a-zA-z]{1,4}){0,2}\.(in|me|ua|ru|mobi|red|es)', \
+                            ur'\w{1,61}\.(in.ua|ru.all.biz|gl|ee|pp.ua|kiev.ua|com.ua|ro|lviv.ua|ly|pro|co.jp|c|c=|lt|by|asia)', \
+                            ur'\w{1,3}(\.[a-zA-Z]{1,4}){1,3}', \
+                            ur'(.*-loader|lets-|youtu.be|goo.gl|wix.com|us[0-9].|jujf.ru)', \
+                            ur'\w{1,61}(\.\w{1,4}){0,3}\.\w{1,3}([^\u0000-\u007F]{1,3}|[0-9]{1,5})'
 
     ]
 
     URL_TXT_REGEXP = [
-                            ur'(click|here|link|login|update|confirm|legilize|now|buy|online|movie|s(0|e)x(room|boat)?)+',
-                            ur'(free|shipping|options|pills|every?|order|best|deal|today|now|contact|pay|go)+',
-                            ur'(сcылк|курс|цен|посмотреть|каталог|здесь|сюда|регистрация|бесплатное|участие|на\s+сайт|подробн)',
-                            ur'(горяч|скидк|отписаться|отказаться)',
-                            ur'(message|view|can\'t\see)',
-                            #ur'(background-color|text-decoration|font\scolor|color|underline|font\ssize|img|style|<\/?wbr>|font\sface|<strong>|<em>)',
-                            ur'\/[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{1,3}[^\u0000-\u007F]{2,}',
-                            ur'[^\u0000-\u007F]{2,}(\.|\?|!|;){0,}',
-                            ur'(cid:)?\w{1,40}@(\d{1,3}-){1,3}\d{1,3}(\.[A-Za-z]{1,10}){1,3}',
-                            ur'([\a\b\t\r\n\f\v]{0,}|[\?!])',
-                            ur'(\S*)http:.*',
-                            ur'[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{3,}',
-                            ur'[\+=\$]{1,3}(\w){0,}',
-                            ur'\+?\d(\[|\()\d{3}(\)|\])\s?[\d~-]{0,}'
+                            ur'(click|here|link|login|update|confirm|legilize|now.*buy|online|movie|s(0|e)x(room|boat))', \
+                            ur'(free|shipp[ing]?|options?|pill?s?|every?|order|best|deal|today|now|contact|pay|go)', \
+                            ur'(сcылк|курс|цен|посмотреть|каталог|здесь|сюда|регистрация)', \
+                            ur'(горяч|скидк|отписаться|отказаться|бесплатное|участие|на.*сайт|подробн)', \
+                            ur'\/[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{1,3}[^\u0000-\u007F]{2,}', \
+                            ur'[^\u0000-\u007F]{2,}(\.|\?|!|;){0,}', \
+                            ur'(cid:)?\w{1,40}@([0-9]{1,3}-){1,3}[0-9]{1,3}(\.[A-Za-z]{1,10}){1,3}', \
+                            ur'([\a\b\t\r\n\f\v]{0,}|[\?!])', \
+                            ur'(\S*)http:.*', \
+                            ur'[\u0000-\u001F\u0041-\u005A\u0061-\u007A]{3,}', \
+                            ur'[\+=\$]{1,3}(\w){0,}', \
+                            ur'\+?[0-9](\[|\()[0-9]{3}(\)|\])\s?[0-9~-]{0,}'
     ]
 
     def __init__(self, **kwds):
@@ -176,15 +155,14 @@ class SpamPattern(BasePattern):
         super(SpamPattern, self).__init__(**kwds)
 
         features_map = {
-                         'pattern_score'    : ['rcvd', 'mime', 'disp_notification'],
-                         'subject'          : ['score','encoding','upper','checksum'],
+                         'pattern_score'    : ['rcvd', 'mime', 'disp_notification'], \
+                         'subject'          : ['score','encoding','upper','checksum'], \
                          'url'              : ['score','avg_len','distinct_count','sender_count',\
-                                                'uppercase','punicode', 'repetitions'],
-                         'list'             : ['score'],
-                         'attaches'         : ['score','in_score','count'],
-                         'originator'       : ['checksum','addr_score'],
-                         'content'          : ['compress_ratio','avg_entropy','txt_score','html_score']
-                         # would it be usefull compress_ratio for spams (search consequences here)
+                                                'uppercase','punicode', 'repetitions'], \
+                         'list'             : ['score'], \
+                         'attaches'         : ['score','in_score','count'], \
+                         'originator'       : ['checksum','addr_score'], \
+                         'content'          : ['compress_ratio','avg_entropy','txt_score']
         }
 
         for key in features_map.iterkeys():
@@ -216,11 +194,12 @@ class SpamPattern(BasePattern):
                 self.__setattr__(name, feature_value)
 
 
-        logger.info("total vect len : "+str(len(self.__dict__.items())-1))
+        logger.info("total vect len : ".upper()+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
-        logger.info("non_zero features count : "+str(len(non_zero)))
+        logger.info("non_zero features count : ".upper()+str(len(non_zero)))
 
-
+    def __str__(self):
+        return('SPAM')
 
     def get_rcvd_pattern_score(self):
 

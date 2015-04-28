@@ -156,7 +156,7 @@ class BeautifulBody(object):
             orig_domain = (regexp.search(orig_domain)).group(0)
             smtp_sender_domain = orig_domain.strip('.').strip('@').strip('=').strip()
 
-            logger.debug('ORIG_DOMAINS: '+str(smtp_sender_domain))
+            logger.debug('smtp originator domain : '+str(smtp_sender_domain))
 
         return smtp_sender_domain
 
@@ -290,7 +290,7 @@ class BeautifulBody(object):
             if l:
                 lang = ''.join(self.msg.get(''.join(l)).split('-')[:1])
 
-            yield (decoded_line, p.get_content_type(), lang)
+            yield(decoded_line, p.get_content_type(), lang)
 
     def get_url_obj_list(self):
         '''
@@ -349,8 +349,8 @@ class BeautifulBody(object):
     def get_sentences(self, remove_url=True):
         '''
         generator
-        :param remove_url --> replace URLs in sentences with one space char
-        :return: tuple of sentences from mime-part
+        :param remove_url --> replace URLs in sentences with one space char ;
+        :return: tuple of sentences for each mime-part ;
         '''
 
         tokenizer = PunktSentenceTokenizer()
@@ -373,7 +373,7 @@ class BeautifulBody(object):
             if remove_url:
                 sents = tuple(map(lambda sent: self.__URLINTEXT_PAT.sub(' ', sent.lower()), sents))
 
-            sents = (s.strip() for s in sents)
+            sents = (s.strip().lower() for s in sents)
             sents = tuple(s for s in tuple(sents) if s)
             if len(sents) == 0:
                 continue
@@ -391,6 +391,7 @@ class BeautifulBody(object):
         for pt in tuple(self.get_sentences()):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add, tokens)
+            # reduce returns list not tuple
             #logger.warn("tokens: "+str(type(tokens)))
             lang = self.get_lang(tokens)
             #logger.debug(lang)

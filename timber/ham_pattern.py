@@ -10,18 +10,11 @@ from pattern_wrapper import BasePattern
 import checkers
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 #formatter = logging.Formatter('%(filename)s %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
-'''''
-from email import parser
-parser = parser.Parser()
-with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
-#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
-    M = parser.parse(f)
-'''''
 
 INIT_SCORE = BasePattern.INIT_SCORE
 
@@ -45,30 +38,27 @@ class HamPattern(BeautifulBody):
 
     # try greedy regexes, maybe will precise them in future
     SUBJ_RULES = [
-                             ur'(Re\s*:|Fw(d)?\s*:|fly|ticket|account|payment|verify\s+your\s+(email|account)|bill)',
+                             ur'(Re\s*:|Fw(d)?\s*:|fly|ticket|account|payment|verify.*your.*(email|account)|bill)',\
                              ur'(support|help|participate|registration|electronic|answer|from|update|undelivered)',
-                             ur'от\s+[\w\.-]{3,10}\s+(счет|отчет|выписка|электронный\s+(билет)?)'
+                             ur'от.*[\w\.-]{3,10}.*(счет|отчет|выписка|электронный.*(билет)?)'
 
     ]
 
 
     TEXT_REGEXP_LIST = [
 
-                            ur'(track(ing)?\s+No|proc(é|e)+d(er)?|interview|invit[eation]|welcom(ing)?|introduc(tion)?|your\s.*(ticket|order)\s.*(\#|№)|day|quarter|inquir[yies])',
+                            ur'(track(ing)?.*No|proc(é|e)d(er)?|interview|invit[eation]?|welcom(ing)?|introduc(tion)?|your\s.*(ticket|order)\s.*(\#|№)|day|quarter|inquir[yies])',
                             ur'(feature|questions?|support|request|contrac?ts?|drafts?|teams?|priorit[yies]|details?|attach(ed)?|communic.*|train(ing)?)',
-                            ur'(propos[eal]|found\s+this|concern(ing|ant)?|remind[ers]|contrac?t|act|s(e|é)curit[yieés]|during\s+.*(the)?\s+period)',
-                            ur'(reports?|logs?|journals?|(re)?scheduled?|(specif[yied]|conference|call)\s+.*time|transfer|cancel(ed)?|payment|work|labour|mis\s+(à|a)\s+jour)',
-                            ur'(profile\s+activation|invit(aion)?|registration|forgot.*password|pre-.*|post-.*|document(ation)?|compte)',
-                            ur'((d\')?expiration|exchange|service|requisition|albeit|compl(é|e)mentaire(es)?|addition(al)?|terms?\s+and\s+conditions?)',
-                            ur'(en\s+invitant|ci-(jointe|dessous)|trans(mette|mis)|souscription|sp(é|e)siale?|procéd[eré]|(e|é)change|us(age|ing|er))',
-                            ur'(valider\s+les?|donnéés|дата|недел|тариф|уведомлен|связ|по\s+причин|магазин|поступил|отмен).*',
-                            ur'(заказ|сч(е|ё)т|предложен|контракт|отмена?|платеж|чек|данн|подтвер(ждение|ит[еть])|билет|номер|трэк|(тех)?поддерж).*',
-                            ur'(аккаунт|парол|доступ|истек[лоает]|договор|справка|интервью|встреча?|приглашен|собеседован|офис|врем|график|адрес).*',
-                            ur'(баланс|детали|выписк|прикреплен|(набор\s)?.*услуг).*',
-                            ur'(cordialement|veuillez\s+agrées|salutations\s+(distinguées)|à\s+la\s+suite\s+de\s+vo[stre]|souhaiter[ezitonsr])',
-                            ur'((tous\s+)?.*renseignements|de\s+bien\s+vouloir|(indiqu|expliqu|demand)[erzensto]|tarif|faire\s+parvenir)',
-                            ur'((nous\s+vous\s+)?.*remerci[ezonsti]|concern[enant]facture|délais\s+de\s+livraison|condition(s)\s+de\s+règlement)',
-                            ur'(tenons\s+(à\s+votre\s+disposition)|réservation\s+(effectuée)?|pré-approuvé|période|terme)'
+                            ur'(propos[eal]|found.*this|concern(ing|ant)?|remind[ers]|contrac?t|act|s(e|é)curit[yieés]|during.*(the)?.*period)',
+                            ur'(reports?|logs?|journals?|(re)?scheduled?|(specif[yied]|conference|call).*time|transfer|cancel(ed)?|payment|work|labour|mis.*(à|a).*jour)',
+                            ur'(profile.*activation|invit(aion)?|registration|forgot.*password|pre-.*|post-.*|document(ation)?|compte)',
+                            ur'((d\')?expiration|exchange|service|requisition|albeit|compl(é|e)mentaire(es)?|addition(al)?|terms?.*and.*conditions?)',
+                            ur'(en.*invitant|ci-(jointe|dessous)|trans(mette|mis)|souscription|sp(é|e)siale?|procéd[eré]|(e|é)change|us(age|ing|er))',
+                            ur'(valider.*les?.*donnéés)',
+                            ur'(veuillez.*agrées|salutations.*(distinguées)|à.*la.*suite.*de.*vo[stre]|souhaiter[ezitonsr])',
+                            ur'((tous)?.*renseignements|de.*bien.*vouloir|(indiqu|expliqu)[erzensto]|tarif|faire.*parvenir)',
+                            ur'((nous.*vous)?.*remerci[ezonsti]|concern[enant]facture|délais.*de.*livraison|conditions?de.*règlement)',
+                            ur'(tenons.*(à.*votre.*disposition)|réservation.*(effectuée)?|pré-approuvé|période|terme)'
 
     ]
 
@@ -87,12 +77,12 @@ class HamPattern(BeautifulBody):
 
     URL_FQDN_REGEXP = [
                             ur'(www\.)?(registration|account|payment|confirmation|password|intranet|emarket)',
-                            ur'(www\.)?(tickets+|anywayanyday|profile|job|my\.|email|blog|support)',
+                            ur'(www\.)?(tickets?|anywayanyday|profile|job|my\.|email|blog|support)',
                             ur'(www\.)?(meetup\.com|odnoklassniki\.ru|vk\.com|my\.mail\.ru|facebook\.com)',
                             ur'(www\.)?(linkedin\.com|facebook\.com|linternaute\.com|blablacar\.com)',
                             ur'(www\.)?(youtube\.com|plus\.google\.com|twitter\.com|pinterest\.com|tumblr\.com)',
                             ur'(www\.)?(instagram\.com|flickr\.com|vine\.com|tagged\.com|ask\.fm|meetme\.com)',
-                            ur'(www\.)?classmates'
+                            ur'(www\.)?classmates?'
 
     ]
 
@@ -121,7 +111,7 @@ class HamPattern(BeautifulBody):
                          'dmarc'        : ['spf'],
                          'emarket'      : ['domains_score'],
                          'url'          : ['score','avg_len','absence'],
-                         'content'      : ['txt_score','html_score']
+                         'content'      : ['txt_score']
         }
 
         for n, key in enumerate(features_map.keys(),start=1):
@@ -148,6 +138,9 @@ class HamPattern(BeautifulBody):
         logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
         logger.debug("non_zero features count : "+str(len(non_zero)))
+
+    def __str__(self):
+        return('HAM')
 
 
 		

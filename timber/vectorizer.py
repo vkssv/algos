@@ -37,8 +37,8 @@ class Vectorize(object):
     Supported patterns are : spam, ham, nets, info
     '''
 
-    SUPPORTED_CLASSES = ['spam','ham','nets','info']
-
+    #SUPPORTED_CLASSES = ['spam','ham','nets','info']
+    SUPPORTED_CLASSES = ['spam','ham','info']
     SETS_NAMES = ['X_train', 'Y_train', 'X_test', 'Y_test']
 
     def __init__(self, train_dir, label, score):
