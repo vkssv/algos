@@ -15,6 +15,7 @@ from itertools import ifilterfalse
 
 from pattern_wrapper import BasePattern
 from decorators import Wrapper
+from timber_exceptions import NaturesError
 
 try:
     from bs4 import Comment
@@ -221,10 +222,24 @@ class EmarketChecker(BaseChecker):
 @Wrapper
 class UrlChecker(BaseChecker):
     '''
-    returned features values are depended from presense or absence of
-    self.urls (URL list from msg body):
-    if we don't have self.urls => @validator(UrlChecker) initialiases dummy UrlChecker,
-    which will return BasePattern.INIT_SCORE for each method-attribute call
+    keeps trigger-methods for describing
+    URLs from emails bodies by following features:
+
+    SCORE           --> gained by checking each urlprse object with
+                        list of regexp for domain-part and query-part,
+                        regexp are defined in each particular pattern ;
+    AVG_LENGTH      --> maybe usefull, cause often in spams URLS are short
+                        in general, cause of url-short services, etc ;
+    COUNT           --> 42 ;
+    DISTINCT_COUNT  --> count of different domains in domain-parts of URLs,
+                        for legitime emails it's usually not very big ;
+    SENDER_COUNT    --> presence of smtp-originator domain in domain-parts of URLs ;
+    UPPER_CASE      --> presense of elements in upper-case/title-case ;
+    PUNCODE         --> prsence of punicode ;
+    SIM             --> count of urls with same queries or pathes ;
+    AVG_QUERY_LEN   --> avg query length for grabbed URLs list ;
+    REPETITIONS     --> presence of repetitions in domain-part ;
+    QUERY_ABSENCE   --> absence of query (only domain part or path or urlparse error :)) ;
     '''
 
     def __init__(self, pattern_obj):
@@ -237,9 +252,11 @@ class UrlChecker(BaseChecker):
     def get_url_score(self):
 
         url_score = INIT_SCORE
+        if len(self.urls_domains) == 0:
+            return url_score
+
         fqdn_reg_obj_list = get_regexp(self.pattern.URL_FQDN_REGEXP)
         txt_reg_obj_list = get_regexp(self.pattern.URL_TXT_REGEXP)
-
 
         for reg in fqdn_reg_obj_list:
             url_score += len([domain for domain in self.urls_domains if reg.search(domain.lower())])*self.score
@@ -255,15 +272,12 @@ class UrlChecker(BaseChecker):
         return url_score
 
     def get_url_avg_len(self):
-        # URL_AVG_LENGTH: they are short in general, cause of url-short services, etc
 
-        # mostly thinking about shortened urls, created by tinyurl and other services,
-        # but maybe this is weak feature
-        logger.info('urls_domains list : '+str(self.urls_domains))
-        logger.info('urls_domains list : '+str(len(self.urls_domains)))
+        logger.debug('urls_domains list : '+str(self.urls_domains))
+        logger.debug('urls_domains list : '+str(len(self.urls_domains)))
         avg_len = INIT_SCORE
 
-        if len(self.urls_domains) ==0:
+        if len(self.urls_domains) == 0:
             return avg_len
 
         avg_len = math.ceil(float(sum([len(s) for s in self.urls_domains]))/len(self.urls_domains))
@@ -282,6 +296,10 @@ class UrlChecker(BaseChecker):
 
         sender_domain = False
         sender_count = INIT_SCORE
+
+        if len(self.urls_domains) == 0:
+            return sender_count
+
         while not (sender_domain):
             sender_domain = self.pattern.get_smtp_originator_domain()
             originator = self.pattern.get_addr_values(self.msg.get_all('From'))
@@ -302,8 +320,6 @@ class UrlChecker(BaseChecker):
         return sender_count
 
     def get_url_uppercase(self):
-        #URL_UPPER: presense of elements in upper-case/title-case in URL
-
 
         uppercase = INIT_SCORE
         for method in [ unicode.isupper, unicode.istitle ]:
@@ -317,11 +333,13 @@ class UrlChecker(BaseChecker):
 
         return len([domain for domain in decoded if re.search(self.puni_regex, domain, re.I)])*self.score
 
-
     def get_url_sim(self):
-        similarity = INIT_SCORE
 
-        for attr in ['path','query']:
+        similarity = INIT_SCORE
+        if len(self.urls) == 0:
+            return similarity
+
+        for attr in ['path', 'query']:
             obj_list = [ url.__getattribute__(attr) for url in self.urls ]
             if math.ceil(float(len(set(obj_list)))/float(len(self.urls))) < self.score:
                 similarity += self.score
@@ -338,7 +356,10 @@ class UrlChecker(BaseChecker):
         return avg_query_len
 
     def get_url_repetitions(self):
-        # REPETITIONS: presense of repetitions like:
+
+        repetitions = INIT_SCORE
+        if len(self.urls) == 0:
+            return repetitions
 
         repet_regex = ur'(https?:\/\/|www\.)\w{1,61}(\.\w{2,10}){1,5}'
         urls = [x.geturl() for x in self.urls]
@@ -349,8 +370,11 @@ class UrlChecker(BaseChecker):
         return repetitions
 
     def get_url_query_absence(self):
-        # alchemi again
+
         query_absence = INIT_SCORE
+        if len(self.urls) == 0:
+            return query_absence
+
         q_list = [u.query for u in self.urls]
         queries_count = float(len(filter(lambda line: line, [ u.query for u in self.urls ])))
         if math.floor(queries_count/float(len(self.urls))) == 0.0:
@@ -552,8 +576,11 @@ class OriginatorChecker(BaseChecker):
     keeps trigger-methods for describing
     originators values by following features:
 
-    ORIG_CHECKSUM   -->
-    ORIG_SCORE      -->
+    ORIG_CHECKSUM       --> crc32-checksum from mailbox element, 'From' header value ;
+    ORIG_SCORE          --> gained by mailbox element and address by applied to them
+                            regexes from patterns + compare sender domain with
+                            smtp-originator domain ;
+    FORGET_SENDER_FLAG  --> check whether 'Sender' header is redundant or not ;
     '''
     def __init__(self, pattern_obj):
 

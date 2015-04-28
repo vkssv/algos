@@ -64,7 +64,11 @@ class HamPattern(BeautifulBody):
                             ur'(valider\s+les?|donnéés|дата|недел|тариф|уведомлен|связ|по\s+причин|магазин|поступил|отмен).*',
                             ur'(заказ|сч(е|ё)т|предложен|контракт|отмена?|платеж|чек|данн|подтвер(ждение|ит[еть])|билет|номер|трэк|(тех)?поддерж).*',
                             ur'(аккаунт|парол|доступ|истек[лоает]|договор|справка|интервью|встреча?|приглашен|собеседован|офис|врем|график|адрес).*',
-                            ur'(баланс|детали|выписк|прикреплен|(набор\s)?.*услуг).*'
+                            ur'(баланс|детали|выписк|прикреплен|(набор\s)?.*услуг).*',
+                            ur'(cordialement|veuillez\s+agrées|salutations\s+(distinguées)|à\s+la\s+suite\s+de\s+vo[stre]|souhaiter[ezitonsr])',
+                            ur'((tous\s+)?.*renseignements|de\s+bien\s+vouloir|(indiqu|expliqu|demand)[erzensto]|tarif|faire\s+parvenir)',
+                            ur'((nous\s+vous\s+)?.*remerci[ezonsti]|concern[enant]facture|délais\s+de\s+livraison|condition(s)\s+de\s+règlement)',
+                            ur'(tenons\s+(à\s+votre\s+disposition)|réservation\s+(effectuée)?|pré-approuvé|période|terme)'
 
     ]
 
@@ -120,10 +124,7 @@ class HamPattern(BeautifulBody):
                          'content'      : ['txt_score','html_score']
         }
 
-        logger.debug('Start vectorize msg with rules from HamPattern ')
-
         for n, key in enumerate(features_map.keys(),start=1):
-            logger.debug(str(n)+'. Add '+key.upper()+' features attributes to msg-vector class: ')
 
             features = ['get_'+key+'_'+name for name in features_map[key]]
             checker_obj = checkers.__getattribute__(key.title()+'Checker')
@@ -144,7 +145,6 @@ class HamPattern(BeautifulBody):
                 self.__setattr__(name, feature_value)
 
 
-        logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
         logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
         logger.debug("non_zero features count : "+str(len(non_zero)))

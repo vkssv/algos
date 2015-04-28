@@ -101,7 +101,9 @@ class SpamPattern(BasePattern):
                             ur'((рас)?таможн|валют|переезд|жил|вконтакт|одноклассник|твит.*\s+(как)?.*\s+труд|noprescription)',
                             ur'(мазь\s+(как\s+средство\s+от\s+жизни)?.*для\s+.*похуд|диет|прибыль|итальянск|франц|немец|товар|ликвидац|брус|\s1С)',
                             ur'(rubil\s+skor\s+ruxnet|Pereved\s+v|doll[oa]r\s+deposit|dengi|zakon|gosuslugi|tamozhn)',
-                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}'
+                            ur'(\+\d)?(\([Ч4]\d{2}\))?((\d\s{0,2}\s?){2,3}){1,4}',
+                            ur'((augment|gain|profit)[ezntsor]|facile|maigri[rstonezt]|cash|liquide|perfomance)\s+.*',
+                            ur'(opportunité|exceptionnel|vente\s+privée)\s+.*'
     ]
 
     HTML_TAGS_MAP = {
@@ -186,8 +188,6 @@ class SpamPattern(BasePattern):
         }
 
         for key in features_map.iterkeys():
-            logger.debug('Add '+key.upper()+' features to SpamPattern vector :')
-
 
             if key == 'pattern_score':
                 features = ['get_'+name+'_'+key for name in features_map[key]]
@@ -215,15 +215,7 @@ class SpamPattern(BasePattern):
                 logger.debug((name+' ==> '+str(feature_value)).upper())
                 self.__setattr__(name, feature_value)
 
-            logger.debug('===========\n'+str(self.__dict__).upper()+'\n')
 
-        logger.debug('SpamPattern was created'.upper()+' :'+str(id(self)))
-
-        for (k,v) in sorted(self.__dict__.items()):
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
-
-
-        logger.info("++++++++++++++++++++++++++++++++++++++++++++++++++")
         logger.info("total vect len : "+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
         logger.info("non_zero features count : "+str(len(non_zero)))
@@ -232,7 +224,6 @@ class SpamPattern(BasePattern):
 
     def get_rcvd_pattern_score(self):
 
-        # 1. "Received:" Headers
         rcvd_score = self.INIT_SCORE
         rcvds = self.get_rcvds(self.RCVDS_NUM)
 

@@ -41,16 +41,23 @@ class InfoPattern(BasePattern):
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
     ]
 
-    EMARKET_HEADS = r'^(X-)?((EM(ID|MAIL|V-.*)|SG-E?ID|(rp)?campaign(id)?|Feedback(-ID)?)$'
+    EMARKET_HEADS =   r'^(X-)?((EM(ID|MAIL|V-.*)|SG-E?ID|(rp)?campaign(id)?|Feedback(-ID)?)$'
 
-    KNOWN_MAILERS   = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver' ]
+    KNOWN_MAILERS   = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver',\
+                        r'EMS', r'eC-Messenger\s+Build', r'NMS.*Mail.*', 'Cabestan\s+DMS'
+    ]
 
-    KNOWN_DOMAINS = [   r'.*\.smartfares\.com',\
-                        r'.*\.anywayanyday.*\.com',\
-                        r'.*\.airbnb\.com',\
-                        r'.*\.booking\.com',\
-                        r'.*\.twitter\.com',\
-                        r'.*\.look-at-media\.com'
+    KNOWN_DOMAINS = [   r'.*\.?smartfares\.com',\
+                        r'.*\.?anywayanyday.*\.com',\
+                        r'.*\.?airbnb\.com',\
+                        r'.*\.?booking\.com',\
+                        r'.*\.?twitter\.com',\
+                        r'.*\.?look-at-media\.com',\
+                        r'.*\.?voyages-sncf\.com',\
+                        r'.*\.?redoute\.com',\
+                        r'.*\.?france-air\.com',\
+                        r'.*\.?fnac\.com'
+
     ]
 
     # take crc32 from the second half (first can vary cause of personalisation, etc)
@@ -140,7 +147,6 @@ class InfoPattern(BasePattern):
 
         super(InfoPattern, self).__init__(**kwds)
 
-
         features_map = {
                          'pattern_score': ['mime'],
                          'subject'      : ['score','len','encoding','upper','titled','checksum'],
@@ -153,10 +159,7 @@ class InfoPattern(BasePattern):
                          'content'      : ['compress_ratio','avg_entropy','txt_score','html_score','html_checksum']
         }
 
-        logger.debug('Start vectorize msg with rules from InfoPattern...')
-
         for n, key in enumerate(features_map.keys(),start=1):
-            logger.debug(str(n)+'. Add '+key.upper()+' features-attributes to msg-vector class: '+str(self.__class__))
 
             if key == 'pattern_score':
                 features = ['get_'+name+'_'+key for name in features_map[key]]
@@ -165,10 +168,6 @@ class InfoPattern(BasePattern):
                 features = ['get_'+key+'_'+name for name in features_map[key]]
                 checker_obj = checkers.__getattribute__(key.title()+'Checker')
                 checker_obj = checker_obj(self)
-
-            logger.debug('Instance of '+str(checker_obj.__class__)+' was initialized:')
-            logger.debug('>> '+str(checker_obj.__dict__))
-            logger.debug("================")
 
             functions_map = [(name.lstrip('get_'), getattr(checker_obj, name, lambda : self.INIT_SCORE)) for name in features]
 
@@ -184,16 +183,9 @@ class InfoPattern(BasePattern):
 
                 self.__setattr__(name, feature_value)
 
-
-
-        logger.debug('\n>> info-features vector : \n'.upper())
-        for (k,v) in sorted(self.__dict__.items()):
-            logger.debug(str(k).upper()+' ==> '+str(v).upper())
-        logger.debug("++++++++++++++++++++++++++++++++++++++++++++++++++")
         logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
         logger.debug("non_zero features count : "+str(len(non_zero)))
-        logger.debug('size in bytes: '.upper()+str(sys.getsizeof(self, 'not implemented')))
 
 
     def get_mime_pattern_score(self):
