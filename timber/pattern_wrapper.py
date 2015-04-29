@@ -8,8 +8,7 @@ from itertools import izip_longest
 from msg_wrapper import BeautifulBody
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
+#logger.setLevel(logging.DEBUG)
 #ch = logging.StreamHandler(sys.stdout)
 #ch.setLevel(logging.DEBUG)
 #ch.setFormatter(formatter)

@@ -20,7 +20,7 @@ from pattern_wrapper import BasePattern
 '''''
 from email import parser
 parser = parser.Parser()
-with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
+with open('','rb') as f:
     M = parser.parse(f)
 '''''
 

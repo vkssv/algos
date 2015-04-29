@@ -11,9 +11,9 @@ import checkers
 from pattern_wrapper import BasePattern
 
 
-formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
+#formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 

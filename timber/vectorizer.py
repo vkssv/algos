@@ -8,6 +8,8 @@ from email.parser import Parser
 from collections import defaultdict, OrderedDict
 from operator import itemgetter
 
+from sklearn.feature_selection import SelectKBest, f_classif
+
 from timber_exceptions import NaturesError
 from patterns_factory import MetaPattern
 
@@ -15,7 +17,7 @@ logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(levelname)s: %(filename)s: %(funcName)s: %(message)s')
 ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.INFO)
+ch.setLevel(logging.DEBUG)
 ch.setFormatter(formatter)
 fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
 fh.setLevel(logging.DEBUG)
@@ -38,7 +40,7 @@ class Vectorize(object):
     '''
 
     SUPPORTED_CLASSES = ['spam','ham','nets','info']
-    #SUPPORTED_CLASSES = ['spam','ham','info']
+
     SETS_NAMES = ['X_train', 'Y_train', 'X_test', 'Y_test']
 
     def __init__(self, train_dir, label, score):
@@ -51,6 +53,7 @@ class Vectorize(object):
         self.train_dir = train_dir
         self.label = label
         self.penalty = score
+        self.features_dict = dict()
 
         [ self.__setattr__(name, list()) for name in self.SETS_NAMES ]
 
@@ -60,13 +63,28 @@ class Vectorize(object):
             pathes_gen = self.__get_path(path)
             expected_len = None
             msg_path = ''
+            comp_ratios = list()
+            entropies = list()
 
             while(True):
 
                 try:
                     msg_path = next(pathes_gen)
 
-                    x_vector = self.__vectorize(msg_path)
+                    x_labeled_vector = self.__vectorize(msg_path)
+                    logger.debug('\nx_vector ===> '.upper()+str(x_labeled_vector))
+
+                    # todo: collect ratio and entropy, just to observe consequences for these two metrics
+                    #ratio = (dict(x_labeled_vector)).get('CONTENT_COMPRESS_RATIO')
+                    #comp_ratios.append(ratio)
+
+                    #avg_entropy = (dict(x_labeled_vector)).get('CONTENT_AVG_ENTROPY')
+                    #entropies.append(avg_entropy)
+
+                    if len(self.features_dict) == 0:
+                        self.features_dict = dict(enumerate(map(itemgetter(0), x_labeled_vector)))
+
+                    x_vector = tuple(map(itemgetter(1), x_labeled_vector))
                     logger.info('\nx_vector ===> '.upper()+str(x_vector))
 
                     if expected_len is None:
@@ -76,7 +94,7 @@ class Vectorize(object):
                         #logger.error('expected length: '+str(expected_len))
                         #logger.error('vector length : '+str(len(x_vector)))
                         #logger.error('path: '+msg_path)
-                        raise NaturesError('Vectors from one collection have different dimentions !')
+                        raise NaturesError('X_vectors from one collection have different dimentions !')
 
                     y_vector = None
 
@@ -119,7 +137,12 @@ class Vectorize(object):
             logger.info('\t'+feature)
 
     def __get_path(self, path):
-
+        '''
+        :return: generator with pathes to emails
+        -- checks collections dirs
+        -- constructs pathes to emails,
+        keep them in generator object
+        '''
         checks = {
                     stat.S_IFREG : lambda fd: os.stat(fd).st_size,
                     stat.S_IFDIR : lambda d: os.listdir(d)
@@ -144,6 +167,10 @@ class Vectorize(object):
                     yield msg_path
 
     def __vectorize(self, doc_path):
+        '''
+        :param doc_path: path to email
+        :return: vector of this email
+        '''
 
         parser = Parser()
         with open(doc_path, 'rb') as f:
@@ -162,18 +189,20 @@ class Vectorize(object):
         for i in vector:
             logger.info('\t'+str(i))
 
-        self.features_dict = dict(enumerate(map(itemgetter(0),vector)))
+        #self.features_dict = dict(enumerate(map(itemgetter(0),vector)))
 
-        msg_vector = tuple(map(itemgetter(1),vector))
+        #msg_vector = tuple(map(itemgetter(1),vector))
         #logger.debug('\nvector ===> '+str(msg_vector)+'\n')
 
-        return msg_vector
+        return vector
 
-    def __normalize(self):
-
-        pass
+    #def __normalize(self):
+        #pass
 
     def load_data(self):
+        '''
+        :return: matrixes for train and test collections
+        '''
 
         check_list = [ (name, self.__getattribute__(name)) \
                        for name in self.SETS_NAMES if len(self.__getattribute__(name))==0 ]
@@ -183,10 +212,43 @@ class Vectorize(object):
 
         return self.X_train, self.Y_train, self.X_test, self.Y_test
 
+    def transform(self, k_best=20):
+        '''
+        use SelectKBest selector class with ANOVA F-value
+        regressors set to choose k-best features
+        :return: reduced matrixes of X_vectors and Y_vectors
+        '''
+        self.selector = SelectKBest(score_func=f_classif, k=k_best)
+
+        X = self.selector.fit_transform(self.X_train, self.Y_train)
+        x = self.selector.transform(self.X_test)
+
+        return X, self.Y_train, x, self.Y_test
+
+    def support(self):
+        '''
+        :return: numpy array with indices of k_best features
+        '''
+
+        if not hasattr(self, 'selector'):
+            raise AttributeError('Selector class wasn\'t initialized, \
+                                    try call vectorizer.transform(X, k_best) method first !')
+
+        indices = self.selector.get_support(indices=True)
+        features_dict = dict([ (index,name) for index,name in self.features_dict.items() if index in indices ])
+        logger.warn(features_dict)
+        logger.warn(type(features_dict))
+        return features_dict
+
     def dump_dataset(self, to_file=None):
+        '''
+        :param to_file: flag, which triggered whether or not
+                        to dump datasets on disk ;
+        :return: copy datasets and transforms them in np.matrixes
+        '''
 
         datasets = ( np.array(x) for x in (self.__getattribute__(name) for name in self.SETS_NAMES) )
-        logger.debug(type(self.X_train))
+        #logger.debug(type(self.X_train))
         if to_file is not None:
 
             try:

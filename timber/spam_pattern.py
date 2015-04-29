@@ -11,7 +11,7 @@ from pattern_wrapper import BasePattern
 import checkers
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 #formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #ch.setLevel(logging.DEBUG)
@@ -20,10 +20,7 @@ logger.setLevel(logging.DEBUG)
 
 #from email import parser
 #parser = parser.Parser()
-#with open('/home/calypso/debug/spam/0000000175_1422266129_bc57f700.eml','rb') as f:
-#with open('/home/calypso/train/ham/without_rcvds.eml','rb') as f:
-#with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
-#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
+#with open('','rb') as f:
 #    M = parser.parse(f)
 
 

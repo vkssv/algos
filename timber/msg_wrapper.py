@@ -33,7 +33,7 @@ logger.setLevel(logging.DEBUG)
 
 #from email import parser
 #parser = parser.Parser()
-#with open('/home/calypso/debug/spam/0000000175_1422266129_bc57f700.eml','rb') as f:
+#with open('','rb') as f:
 #    M = parser.parse(f)
 
 
@@ -228,15 +228,15 @@ class BeautifulBody(object):
 
                 if head == 'content-type':
                     part_key = part.get(head)
-                    #logger.debug(part_key)
+                    logger.debug(part_key)
                     part_key = part_key.partition(';')[0].strip()
                     added_value = (re.sub(part_key+';','',part.get(head).strip(),re.M)).strip()
                     mime_parts[part_key].append(added_value.lower())
-                    #logger.debug(mime_parts)
+                    logger.debug(mime_parts)
 
                 else:
                     mime_parts[part_key].append(part.get(head).strip())
-                    #logger.debug(mime_parts)
+                    logger.debug(mime_parts)
                     #part_dict[head] = part.get(head).strip()
 
         mime_parts = dict((k,tuple(v)) for k,v in mime_parts.items())

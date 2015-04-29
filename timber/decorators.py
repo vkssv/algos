@@ -6,7 +6,7 @@ from pattern_wrapper import BasePattern
 INIT_SCORE = BasePattern.INIT_SCORE
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 
 class Wrapper(object):
     '''

@@ -72,22 +72,23 @@ class SubjectChecker(BaseChecker):
         self.obj = pattern_obj
         self.subj_line, self.subj_tokens, self.encodings_list = pattern_obj.get_decoded_subj()
         self.subj_line = self.subj_line.lower()
-        logger.debug(type(self.subj_line))
+        #logger.debug(type(self.subj_line))
         self.subj_rules = get_regexp(pattern_obj.SUBJ_RULES)
-        logger.debug(u'subj_line.lower(): '+self.subj_line)
-        logger.debug('subj_tokens: '+str(self.subj_tokens))
-        logger.debug('subj_encodings: '+str(self.encodings_list))
+
+        #logger.debug(u'subj_line.lower(): '+self.subj_line)
+        #logger.debug('subj_tokens: '+str(self.subj_tokens))
+        #logger.debug('subj_encodings: '+str(self.encodings_list))
 
     def get_subject_score(self):
 
-        logger.debug(self.subj_line.lower())
+        #logger.debug(self.subj_line.lower())
         subj_score = INIT_SCORE
 
         for rule in self.subj_rules:
             if rule.search(self.subj_line):
                 subj_score +=self.score
 
-        logger.debug('score:'+str(subj_score))
+        #logger.debug('score:'+str(subj_score))
 
         prefix_heads_map = {
                                 'RE' : ['(In-)?Reply-To', 'Thread(-.*)?', 'References'],
@@ -96,16 +97,16 @@ class SubjectChecker(BaseChecker):
         }
 
         for k in prefix_heads_map.iterkeys():
-            logger.debug(self.subj_line.encode(self.def_encoding, errors=self.err_handling))
+            #logger.debug(self.subj_line.encode(self.def_encoding, errors=self.err_handling))
             if re.match(r''+k+'\s*:', self.subj_line.encode(self.def_encoding, errors=self.err_handling), re.I):
                 heads_list = prefix_heads_map.get(k)
 
                 for h_name in self.msg.keys():
                     found_heads = filter(lambda reg: re.match(reg, h_name, re.I), h_name)
                     subj_score += (len(prefix_heads_map.get(k)) - len(found_heads))*self.score
-                    logger.debug('score:'+str(subj_score))
+                    #logger.debug('score:'+str(subj_score))
 
-        logger.debug('score:'+str(subj_score))
+        #logger.debug('score:'+str(subj_score))
         return subj_score
 
     def get_subject_encoding(self):
@@ -113,12 +114,12 @@ class SubjectChecker(BaseChecker):
         return len(set(self.encodings_list))
 
     def get_subject_upper(self):
-        logger.debug(self.subj_tokens)
+        #logger.debug(self.subj_tokens)
 
         return len([w for w in self.subj_tokens if w.isupper()])
 
     def get_subject_titled(self):
-        logger.debug(self.subj_tokens)
+        #logger.debug(self.subj_tokens)
 
         return len([w for w in self.subj_tokens if w.istitle()])
 
@@ -136,7 +137,7 @@ class SubjectChecker(BaseChecker):
                 tokens = tokens[len(tokens)/2:]
 
         subj_trace = ''.join(tuple([w.encode(self.def_encoding, errors=self.err_handling) for w in tokens]))
-        logger.debug('subj_trace : '+str(subj_trace))
+        #logger.debug('subj_trace : '+str(subj_trace))
 
         return binascii.crc32(subj_trace)
 
@@ -178,7 +179,7 @@ class DmarcChecker(BaseChecker):
 
         dmark_heads = [ 'Received-SPF', 'DKIM-Signature', 'DomainKey-Signature']
         found = [ head for head in self.msg.keys() if head in dmark_heads ]
-        logger.debug('found_dmarc_headers : '+str(found))
+        #logger.debug('found_dmarc_headers : '+str(found))
 
         dmarc_score += len(found)*self.score
 
@@ -209,10 +210,10 @@ class EmarketChecker(BaseChecker):
 
     def get_emarket_score(self):
 
-        logger.debug(self.pattern.EMARKET_HEADS)
+        #logger.debug(self.pattern.EMARKET_HEADS)
 
         emarket_heads_list = set( [ header for header in self.msg.keys() if re.search(self.pattern.EMARKET_HEADS, header, re.I) ] )
-        logger.warn(emarket_heads_list)
+        #logger.debug(emarket_heads_list)
 
         return len(emarket_heads_list)*self.score
 
@@ -221,28 +222,27 @@ class EmarketChecker(BaseChecker):
         emarket_flag = INIT_SCORE
         x_mailer_pattern = r'X-Mailer-.*'
         mailer_names = [mailer_head for mailer_head in self.msg.keys() if re.search(x_mailer_pattern, mailer_head, re.I)]
-        logger.warn(mailer_names)
-        logger.warn(self.pattern.KNOWN_MAILERS)
+
+        #logger.debug(mailer_names)
+        #logger.debug(self.pattern.KNOWN_MAILERS)
 
         for mailer_name in mailer_names:
-            logger.warn(mailer_name)
-            logger.warn(self.msg.get(mailer_name))
             if [pattern for pattern in self.pattern.KNOWN_MAILERS if re.search(pattern, self.msg.get(mailer_name), re.I)]:
                 emarket_flag = self.score
-                logger.warn(emarket_flag)
+                logger.debug(emarket_flag)
 
         return emarket_flag
 
     def get_emarket_domains_score(self):
 
         known_domains_score = INIT_SCORE
-        logger.debug(self.pattern.KNOWN_DOMAINS)
+        #logger.debug(self.pattern.KNOWN_DOMAINS)
 
         for domain_name in self.pattern.get_dkim_domains():
-            logger.debug(domain_name)
+            #logger.debug(domain_name)
             known_domains_score += len(filter(lambda regexp: re.search(regexp, domain_name, re.I), self.pattern.KNOWN_DOMAINS))*self.score
 
-        logger.debug(known_domains_score)
+        #logger.debug(known_domains_score)
         return known_domains_score
 
 
@@ -300,8 +300,9 @@ class UrlChecker(BaseChecker):
 
     def get_url_avg_len(self):
 
-        logger.debug('urls_domains list : '+str(self.urls_domains))
-        logger.debug('urls_domains list : '+str(len(self.urls_domains)))
+        #logger.debug('urls_domains list : '+str(self.urls_domains))
+        #logger.debug('urls_domains list : '+str(len(self.urls_domains)))
+
         avg_len = INIT_SCORE
 
         if len(self.urls_domains) == 0:
@@ -333,29 +334,28 @@ class UrlChecker(BaseChecker):
 
         while not (sender_domain):
             sender_domain = self.pattern.get_smtp_originator_domain()
-            logger.debug('sender domain :'+str(sender_domain))
+            #logger.debug('sender domain :'+str(sender_domain))
+
             originator = self.pattern.get_addr_values(self.msg.get_all('From'))
-            logger.debug('sender domain :'+str(originator))
+            #logger.debug('sender domain :'+str(originator))
             if not originator:
-                logger.debug('sender_count:'+str(sender_count))
                 return sender_count
 
             orig_name, orig_addr = reduce(add, originator)
-            logger.debug('originator address: '+str(orig_addr))
+            #logger.debug('originator address: '+str(orig_addr))
             if orig_addr.count('@') == 0:
-                logger.debug('sender_count:'+str(sender_count))
                 return sender_count
 
             sender_domain = (orig_addr.split('@')[1]).strip()
             sender_domain = (sender_domain.decode(self.def_encoding, self.err_handling)).lower()
-            logger.debug('sender_domain:'+str(sender_domain))
+            #logger.debug('sender_domain:'+str(sender_domain))
+
             pattern = ur'\.?'+sender_domain+u'(\.\w{2,10}){0,2}'
             sender_count += len(filter(lambda d: re.search(pattern, d.lower()), self.urls_domains))
-            logger.debug('pattern obj: '+self.pattern.__str__())
+
             if not sender_count and self.pattern.__str__() in ['SPAM', 'HAM']:
                 sender_count += self.score
 
-        logger.debug('sender_count:'+str(sender_count))
         return sender_count
 
     def get_url_uppercase(self):
@@ -449,7 +449,7 @@ class AttachesChecker(BaseChecker):
 
         self.mime_struct = pattern_obj.get_mime_struct()
         if len(self.mime_struct) == 0:
-            logger.warn('Probably, this email is not multipart, or can\'t parse it properly !')
+            logger.debug('Probably, this email is not multipart, or can\'t parse it properly !')
 
         attributes = reduce(add, self.mime_struct.values())
         self.attributes = [v.strip() for v in attributes]
@@ -509,7 +509,7 @@ class ListChecker(BaseChecker):
             else:
                 self.decoded_values[h] = self.pattern.get_addr_values(self.msg.get_all(h))
 
-        logger.warn(self.decoded_values)
+        #logger.debug(self.decoded_values)
 
     def get_list_score(self):
         '''
@@ -564,7 +564,7 @@ class ListChecker(BaseChecker):
         x = reduce(add,x)
         originators = set(map(itemgetter(1), x))
         # get_addr_values() strips '<>' on boundaries for address values
-        logger.warn(originators)
+        #logger.debug(originators)
         if len(originators) > 1:
             sender_flag += self.score
 
@@ -621,21 +621,20 @@ class OriginatorChecker(BaseChecker):
 
         BaseChecker.__init__(self, pattern_obj)
 
-        logger.debug('From: '.upper()+str(self.msg.get_all('From')))
-        self.name_addr_tuples = self.pattern.get_addr_values(self.msg.get_all('From'))
-        logger.debug('email.get_addr_values() :'+str(self.name_addr_tuples))
-        name_addr = namedtuple('addr_value', 'realname address')
 
+        self.name_addr_tuples = self.pattern.get_addr_values(self.msg.get_all('From'))
+
+        name_addr = namedtuple('addr_value', 'realname address')
         self.name_addr_list = (name_addr(*pair) for pair in self.name_addr_tuples)
 
         self.localnames = [pair.address.partition('@')[0] for pair in self.name_addr_list]
         self.domains = [pair.address.partition('@')[2] for pair in self.name_addr_list]
         self.mailboxes = [pair.realname.lower() for pair in self.name_addr_list]
 
-        logger.debug('localnames : '+str(self.localnames))
-        logger.debug('domains : '+str(self.domains))
-        logger.debug('mailboxes : '+str(self.mailboxes))
-        logger.debug('name_addr_list : '+str(self.name_addr_list))
+        #logger.debug('localnames : '+str(self.localnames))
+        #logger.debug('domains : '+str(self.domains))
+        #logger.debug('mailboxes : '+str(self.mailboxes))
+        #logger.debug('name_addr_list : '+str(self.name_addr_list))
 
     def get_originator_checksum(self):
         '''
@@ -654,8 +653,7 @@ class OriginatorChecker(BaseChecker):
         if self.name_addr_tuples:
             from_value, from_addr = reduce(add, self.name_addr_tuples[:1])
             from_checksum = binascii.crc32(from_value.encode(self.def_encoding, self.err_handling))
-            
-        
+
         logger.debug(from_checksum)
         return from_checksum
 
@@ -687,24 +685,23 @@ class OriginatorChecker(BaseChecker):
         for localname in self.localnames:
             addr_score += len([regexp for regexp in reg_compiled_list if regexp.search(localname, re.I)])*self.score
 
-        logger.warn('reg_compiled_list :'+str(addr_score))
+        #logger.debug('reg_compiled_list :'+str(addr_score))
 
         box_names_regs = get_regexp(self.pattern.ORIGINATOR_MAILBOX_RULES)
         for box_name in self.mailboxes:
             addr_score += len([regexp for regexp in box_names_regs if regexp.search(box_name)])*self.score
 
-        logger.warn('box_list :'+str(addr_score))
+        #logger.debug('box_list :'+str(addr_score))
 
         addr_score += len([domain for domain in self.domains if re.search(self.puni_regex, domain, re.I)])*self.score
-        logger.warn('puni :'+str(addr_score))
+        #logger.debug('puni :'+str(addr_score))
 
         valid_domains = [domain for domain in self.domains if re.search(domain,self.pattern.get_smtp_originator_domain())]
         if not valid_domains:
             addr_score += self.score
-        logger.warn('valid domains :'+str(addr_score))
+        #logger.debug('valid domains :'+str(addr_score))
 
         return addr_score
-
 
 @Wrapper
 class MimeChecker(BaseChecker):
@@ -733,8 +730,8 @@ class MimeChecker(BaseChecker):
 
         # EX_MIME_ATTRS_LIST: values of uninteresting mime-attrs
         mime_checksum = self.INIT_SCORE
-        logger.debug('excluded mime-header\'s attributes list from : '+str(self.__class__))
-        logger.debug(self.EX_MIME_ATTRS_LIST)
+        #logger.debug('excluded mime-header\'s attributes list from : '+str(self.__class__))
+        #logger.debug(self.EX_MIME_ATTRS_LIST)
 
         for prefix in self.EX_MIME_ATTRS_LIST:
             items = [[k, list(ifilterfalse(lambda x: x.startswith(prefix),v))] for k,v in self.pattern.get_mime_struct().items()]
@@ -775,10 +772,9 @@ class ContentChecker(BaseChecker):
         '''
 
         regs_list = get_regexp(self.pattern.TEXT_REGEXP_LIST)
-        logger.debug(tuple(self.pattern.get_sentences()))
+        #logger.debug(tuple(self.pattern.get_sentences()))
 
         sents_generator = self.pattern.get_sentences()
-
         txt_score = INIT_SCORE
 
         # parses in very accurate way, try to get the maximum from each line
@@ -793,7 +789,7 @@ class ContentChecker(BaseChecker):
                     for reg_obj in regs_list:
                         if [ el for el in lines if reg_obj.search(el.strip()) ]:
                             txt_score += self.score
-                            logger.debug("text_score: "+str(txt_score))
+                            #logger.debug("text_score: "+str(txt_score))
 
             except StopIteration as err:
                 break
@@ -817,13 +813,14 @@ class ContentChecker(BaseChecker):
             # get table checksum
             comments = body_line.findAll( text=lambda text: isinstance(text, Comment) )
             [comment.extract() for comment in comments]
+
             # leave only closing tags struct
             reg = re.compile(ur'<[a-z]*/[a-z]*>')
             body_line = (body_line.prettify()).lower()
             t = tuple(reg.findall(body_line, re.M))
-            logger.warn(t)
+
             html_skeleton.append(tuple(x.encode(self.def_encoding, errors=self.err_handling) for x in t))
-            logger.warn(html_skeleton)
+            #logger.debug(html_skeleton)
 
         if html_skeleton:
             html_checksum = reduce(add, html_skeleton)
@@ -839,7 +836,7 @@ class ContentChecker(BaseChecker):
         txt_avg_ent = INIT_SCORE
         # todo: make n-grams
         tokens_list = tuple(self.pattern.get_stemmed_tokens())
-        logger.debug(tokens_list)
+        #logger.debug(tokens_list)
 
         for tokens in tokens_list:
             logger.debug(tokens)
@@ -847,12 +844,12 @@ class ContentChecker(BaseChecker):
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]
             txt_avg_ent += -sum([p * math.log(p,2) for p in probs])
-            logger.debug(n)
+            #logger.debug(n)
 
         # :))
         if n !=0:
             txt_avg_ent = txt_avg_ent/n
-        logger.warn(txt_avg_ent)
+
         return txt_avg_ent
 
     def get_content_compress_ratio(self):
@@ -865,7 +862,7 @@ class ContentChecker(BaseChecker):
 
         if all_text_parts:
             x = reduce(add, all_text_parts)
-            logger.warn(str(x))
+            #logger.debug(str(x))
             all_text = ''.join(x)
             txt_compressed_ratio = float(len(zlib.compress(all_text.encode(self.def_encoding, self.err_handling))))/len(all_text)
 

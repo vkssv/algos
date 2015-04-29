@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys, os, logging, re, argparse, stat, tempfile, math, time
-import numpy as np
 
 from email.parser import Parser
 from collections import defaultdict
@@ -14,14 +13,11 @@ from clf_wrapper import ClfWrapper
 from timber_exceptions import NaturesError
 
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
-from sklearn import svm
 from sklearn.grid_search import GridSearchCV
 
-import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 # define some functions
-
 def create_report(predictions_dict, labels):
 
     report = dict()
@@ -39,9 +35,36 @@ def create_report(predictions_dict, labels):
         elif len(set(final)) > 1:
             status, cls_name, prob = decisions[0]
 
-        report[key] = (status,  clf_stat )
+        report[key] = (status, clf_stat)
 
     return report
+
+def dump_output(path, data_report, report, labels):
+
+    with open(path,'wb') as f:
+
+        for key, value in data_report.iteritems():
+            f.write('\n\nResults for '+key.upper()+' class :\n')
+            for el in value:
+                print(el)
+            
+            titles = ('classifier', 'used features set', 'params', 'strong features (selected by cls)')
+            for title, v in zip(titles, value):
+                f.write(title+' '+str(v))
+
+        f.write('\n\x20 statuses :\n'.upper())
+        for k,v in sorted(report.iteritems(),key=itemgetter(1),reverse=True):
+            status, clf_stat = v
+            add_info = '\x20\x20'.join(clf_stat)
+            f.write('\t{0:10} {1:3} {2:4} '.format(k, '==>', status)+' :\x20\x20'+add_info+'\n')
+
+def print_report(report):
+
+    print('\n\x20 statuses :\n'.upper())
+    for k,v in sorted(report.iteritems(),key=itemgetter(1),reverse=True):
+        status, clf_stat = v
+        add_info = '\x20\x20'.join(clf_stat)
+        print('\t{0:10} {1:3} {2:4} '.format(k, '==>', status)+' :\x20\x20'+add_info+'\n')
 
 
 if __name__ == "__main__":
@@ -49,27 +72,30 @@ if __name__ == "__main__":
     usage = 'usage: %prog [ samples_directory | file ] -c category -s score -v debug'
     parser = argparse.ArgumentParser(prog='helper')
     parser.add_argument('PATH', type=str, metavar = 'PATH',
-                            help="path to dir with collections")
+                            help="path to directory with collections")
 
-    parser.add_argument('-s', type = float,  action = 'store', dest = "score", default = 1.0,
+    parser.add_argument('-s', type = float, action = 'store', dest = "score", default = 1.0,
                             help = "penalty score for matched feature, def = 1.0")
 
-    #parser.add_argument('--forest-args',action = 'store', type=list, dest = "forest_args_dict", default = None,
-    #                        help = "list of forest classifier arguments")
+    parser.add_argument('--select', action = 'store_true', dest = "select", default = False,
+                            help = "select features with ANOVA F-value regressors set")
 
-    parser.add_argument('--estimators',action = 'store', type=int, dest = "estimators", default = 20,
+    parser.add_argument('-k', action = 'store', type=int, dest = "k", default = 20,
+                            help = "number of features to select, def = 20")
+
+    parser.add_argument('--estimators', action = 'store', type=int, dest = "estimators", default = 30,
                             help = "number of trees in forests")
 
     parser.add_argument('--accuracy', type = str, action = "store", dest = "accuracy_path", default = False,
-                            help = "path to file with ground truth to estimate accuracy")
+                            help = "path to file with ground truth to check accuracy")
 
     #parser.add_argument('--graph', action = "store_true", dest = "graph", default = False,
     #                        help = "plot feature impotances graph")
-    parser.add_argument('--dump', action = "store_true", dest = "dump", default = False,
-                            help = "dump used datasets in dir with collections (PATH argument)")
+    #parser.add_argument('--dump', action = "store_true", dest = "dump", default = False,
+    #                        help = "dump used datasets in dir with collections (PATH argument)")
 
-    #parser.add_argument('--report', action = "store", dest = "report", default = False,
-    #                        help = "dump estimated email statuses into file")
+    parser.add_argument('--report', action = "store", dest = "report", default = False,
+                            help = "write stdout to file")
 
     parser.add_argument('-v', action = "store_true", dest = "verbose", default = False,
                             help = "be verbose")
@@ -108,7 +134,6 @@ if __name__ == "__main__":
                             'criterion'         : ['gini', 'entropy']
     }
 
-    #svm_params_grid =  {'C': [1, 10]}
     add_params = list()
 
     classifiers = [
@@ -116,118 +141,143 @@ if __name__ == "__main__":
                     ('Extra\x20Trees', ExtraTreesClassifier, forest_params_grid)
     ]
 
-    labels = ['spam','ham']
-    #labels = ['spam']
-
+    labels = ['spam','ham','info','nets']
     predicted_probs = defaultdict(list)
+    data_report = dict()
 
-    # 3. vectorize emails for each label in that way
-    # as we have one-class classification problem
-    for label in labels :
+    # 3. vectorize emails from collections for each label
+    try:
 
-        print('\n\x20 Try to create dataset for '+label.upper()+' class...')
+        for label in labels :
+            results_for_label = list()
+            print('\n\x20 Try to create dataset for '+label.upper()+' class...')
 
-        vectorizer = Vectorize(train_dir=args.PATH, label=label, score=args.score)
-        X_train, Y_train, X_test, Y_test = vectorizer.load_data()
+            vectorizer = Vectorize(train_dir=args.PATH, label=label, score=args.score)
 
-        features_dict = vectorizer.features_dict
+            features_dict = vectorizer.features_dict
+            selected_features = None
+            if args.select and label != 'ham':
+            # because HamPattern class provides small number of features (nine),
+            # just to mark up in datasets transactional emails from banks, ticket-services, etc.
 
-        logger.info('\n\t\tX_train :'+str(X_train))
-        logger.info('\n\t\tY_train :'+str(Y_train))
-        logger.info('\n\t\tX_test :'+str(X_test)+'\n')
-        logger.info('\n\t\tY_test :'+str(Y_test)+'\n')
-        logger.info('\n\t\tfeatures_dict :'+str(features_dict)+'\n')
-        print('\t---> train and test datasets were successfully created.')
-        if args.dump:
-            vectorizer.dump_dataset(to_file=True)
-            print('\t---> train and test datasets were successfully exported into '+args.PATH+'.')
+                # preselect features with ANOVA F-value regressors set
+                X_train, Y_train, X_test, Y_test = vectorizer.transform(k_best=args.k)
+                selected_features = vectorizer.support()
+                print(selected_features)
+                results_for_label.append(selected_features)
 
-        # 4. train classifiers instances and perform forecasting...
-        results = dict
-
-        for clf in classifiers:
-            clf_name, class_obj, params_dict = clf
-            clf_instance = None
-
-            print('\n\x20 Try to find best parameters to initialize '+clf_name.upper()+' for '+label.upper()+' class...')
-
-            if clf_name in ['Random\x20Forest', 'Extra\x20Trees']:
-                clf_instance = class_obj(n_estimators=args.estimators)
-                add_params = [
-                                ('n_jobs',-1),\
-                                ('max_features',None),\
-                                ('max_depth',None),\
-                                ('max_leaf_nodes', None)
-                ]
             else:
-                clf_instance = class_obj()
-                add_params = [('kernel', 'linear'), ('cache_size', 200), ('max_iter',-1), ('probability',True)]
+                # use sparse matrixes
+                X_train, Y_train, X_test, Y_test = vectorizer.load_data()
+                results_for_label.append(features_dict)
 
-            grid_search = GridSearchCV(clf_instance, param_grid=params_dict)
-            fit_output = grid_search.fit(X_train, Y_train)
-            logger.info(str(fit_output))
+            logger.info('\n\t\tX_train :'+str(X_train))
+            logger.info('\n\t\tY_train :'+str(Y_train))
+            logger.info('\n\t\tX_test :'+str(X_test)+'\n')
+            logger.info('\n\t\tY_test :'+str(Y_test)+'\n')
+            logger.info('\n\t\tfeatures_dict :'+str(features_dict)+'\n')
+            print('\t---> train and test datasets were successfully created.')
+            print('\t---> features set :\n')
 
-            params = grid_search.best_params_
-            logger.info('best_params : '.upper()+str(params))
+            if selected_features is not None:
+                for k,name in selected_features.iteritems():
+                    print('\t\t'+str(k)+'. '+name)
+            else:
+                for k,name in features_dict.iteritems():
+                    print('\t\t'+str(k)+'. '+name)
 
-            params.update(dict(add_params))
-            print('\n\t---> will use parameters set:')
-            for k,value in params.iteritems():
-                print('\t{0:20} {1:3} {2:5}'.format(k, '=', str(value)))
+            #if args.dump:
+            #    vectorizer.dump_dataset(to_file=True)
+            #    print('\t---> train and test datasets were successfully exported into '+args.PATH+'.')
 
-            clf_instance = class_obj(**params)
-            print('\n\t --> '+clf_name.upper()+' was successfully constructed.')
+            # 4. tune classifiers with existing datasets by GridSearchCV
+            #results = dict
 
-            print('\n\t Fit them with '+label.upper()+' data...\n')
-            clf_instance.fit(X_train, Y_train)
-            wrapped_clf = ClfWrapper(clf_name, clf_instance, label)
+            for clf in classifiers:
 
-            logger.debug(str(type(X_test)))
-            logger.debug(str(type(Y_test)))
-            print('\n\x20 Try to make predictions...\n')
-            probs_dict, predics_vect, probs, classes = wrapped_clf.predict(X_test, Y_test)
-            logger.debug('+++PROBS '+str(probs))
-            logger.debug('+++CLASSES '+str(classes))
+                clf_name, class_obj, params_dict = clf
+                clf_instance = class_obj(n_estimators=args.estimators)
 
-            [ predicted_probs[name].append((label.upper(), clf_name, probability)) for name, probability in probs_dict.iteritems() ]
+                add_params = [
+                                    ('n_jobs',-1),\
+                                    ('max_features',None),\
+                                    ('max_depth',None),\
+                                    ('max_leaf_nodes', None)
+                ]
 
-            # 5. print results and some classifiers objects statistics
-            recipe = wrapped_clf.get_recipe(features_dict)
+                print('\n\x20 Try to find best parameters to initialize '+clf_name.upper()+' for '+label.upper()+' class...')
 
-            print('\n\x20 '+clf_name.upper()+' results for '+label.upper()+' categorizing :\n')
-            print('\x20\x20 --> Probabilities for '+label.upper()+' pattern : \n')
-            verdict = ''
+                grid_search = GridSearchCV(clf_instance, param_grid=params_dict)
+                fit_output = grid_search.fit(X_train, Y_train)
+                logger.info(str(fit_output))
 
-            for email, prediction in predics_vect:
+                params = grid_search.best_params_
+                logger.info('best_params : '.upper()+str(params))
 
-                if prediction.item() == 1.0:
-                    verdict = label.upper()
-                else:
-                    verdict = 'NON '+label.upper()
+                params.update(dict(add_params))
+                results_for_label.append(clf_name)
+                results_for_label.append(params)
 
-                print('\t{0:10} {1:3} {2:9} {3:4} {4:4}'.format(email, '==>', verdict, probs_dict[email], prediction))
+                print('\n\t---> will use parameters set:')
+                for k,value in params.iteritems():
+                    print('\t{0:20} {1:3} {2:5}'.format(k, '=', str(value)))
 
-            print('\n\x20\x20 --> Top 10 features : \n')
-            for f_name, importance in recipe:
-                print('\t{0:35} {1:3} {2:5}'.format(f_name, '==>', importance))
+                # 5. fit classifiers and perform forecasting...
+                clf_instance = class_obj(**params)
+                print('\n\t --> '+clf_name.upper()+' was successfully constructed.')
 
-            if args.accuracy_path:
-                print('\n\x20\x20 --> Accuracy :\n')
-                print('\x20\x20'+wrapped_clf.get_accuracy_report(args.accuracy_path))
+                print('\n\t Fit them with '+label.upper()+' data...\n')
+                clf_instance.fit(X_train, Y_train)
+                wrapped_clf = ClfWrapper(clf_name, clf_instance, label)
 
-            # 6. quelques photos pour bien souvenir
-            #if args.graph:
-            #    print(42)
+                #logger.debug(str(type(X_test)))
+                #logger.debug(str(type(Y_test)))
+                print('\n\x20 Try to make predictions...\n')
+                probs_dict, predics_vect, probs, classes = wrapped_clf.predict(X_test, Y_test)
+                logger.debug('+++PROBS '+str(probs))
+                logger.debug('+++CLASSES '+str(classes))
 
-    # 7. sum up final decisions
+                [ predicted_probs[name].append((label.upper(), clf_name, probability)) for name, probability in probs_dict.iteritems() ]
 
-    report = create_report(predicted_probs, labels)
+                # 6. print results and some classifiers objects statistics
+                recipe = wrapped_clf.get_recipe(features_dict)
+                results_for_label.append(recipe)
 
-    print('\n\x20 statuses :\n'.upper())
-    for k,v in sorted(report.iteritems(),key=itemgetter(1),reverse=True):
-        status, clf_stat = v
-        add_info = '\x20\x20'.join(clf_stat)
-        print('\t{0:10} {1:3} {2:4} '.format(k, '==>', status)+' :\x20\x20'+add_info+'\n')
+                print('\n\x20 '+clf_name.upper()+' results for '+label.upper()+' categorizing :\n')
+                print('\x20\x20 --> Probabilities for '+label.upper()+' pattern : \n')
+                verdict = ''
+
+                for email, prediction in predics_vect:
+
+                    if prediction.item() == 1.0:
+                        verdict = label.upper()
+                    else:
+                        verdict = 'NON '+label.upper()
+
+                    report_line = '\t{0:10} {1:3} {2:9} {3:4} {4:4}'.format(email, '==>', verdict, probs_dict[email], prediction)
+                    print(report_line)
+
+                print('\n\x20\x20 --> Top 5 features, selected by '+clf_name.upper()+'\n')
+                for f_name, importance in recipe:
+                    print('\t{0:35} {1:3} {2:5}'.format(f_name, '==>', importance))
+
+                if args.accuracy_path:
+                    print('\n\x20\x20 --> Accuracy :\n')
+                    print('\x20\x20'+wrapped_clf.get_accuracy_report(args.accuracy_path))
+
+            data_report[label] = tuple(results_for_label)
+
+        # 7. to sum up final decisions
+        report = create_report(predicted_probs, labels)
+        print_report(report)
+        if args.report:
+            dump_output(args.report, data_report, report, labels)
+
+    except Exception as err:
+        logger.error(str(err))
+        raise
+        #sys.exit(1)
+
 
 
 

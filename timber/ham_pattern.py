@@ -2,20 +2,20 @@
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for hams. """
 
-import os, sys, logging
+import sys, logging
 
 from msg_wrapper import BeautifulBody
 from pattern_wrapper import BasePattern
 import checkers
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 #formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
-
 INIT_SCORE = BasePattern.INIT_SCORE
+
 
 class HamPattern(BeautifulBody):
     """
@@ -26,7 +26,7 @@ class HamPattern(BeautifulBody):
         values, mostly don't equal to zeros ;
     """
 
-     # search them in DKIM maybe later SPF headers
+    # search them in DKIM headers
     KNOWN_DOMAINS = [
                         r'.*\.paypal\.com',\
                         r'.*\.smartfares\.com',\
