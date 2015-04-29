@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 """Keeps and applies vectorising rules for hams. """
 
-import os, sys, logging, math
-from collections import OrderedDict, Counter
+import os, sys, logging
 
 from msg_wrapper import BeautifulBody
 from pattern_wrapper import BasePattern
@@ -11,7 +10,7 @@ import checkers
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(filename)s %(message)s')
+#formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
@@ -61,19 +60,6 @@ class HamPattern(BeautifulBody):
                             ur'(tenons.*(à.*votre.*disposition)|réservation.*(effectuée)?|pré-approuvé|période|terme)'
 
     ]
-
-    HTML_TAGS_MAP = {
-
-                                'img' :{
-                                            'src'             : '(cid:(_.*|part.*|profile|photo|logo|google|ima?ge?\d{1,3}.*@[\w.])|assets|track(ing)?|api|ticket|logo|fb|vk|tw)',
-                                            'moz-do-not-send' : 'true'
-                                },
-                                'li'  :{
-                                            'dir'             : 'ltr',
-                                            'class'           : '\[\'.*\'\]'
-                                }
-                    }
-
 
     URL_FQDN_REGEXP = [
                             ur'(www\.)?(registration|account|payment|confirmation|password|intranet|emarket)',
@@ -135,9 +121,9 @@ class HamPattern(BeautifulBody):
                 self.__setattr__(name, feature_value)
 
 
-        logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
+        logger.debug("total vect len : ".upper()+str(len(self.__dict__.items())-1))
         non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
-        logger.debug("non_zero features count : "+str(len(non_zero)))
+        logger.debug("non_zero features count : ".upper()+str(len(non_zero)))
 
     def __str__(self):
         return('HAM')

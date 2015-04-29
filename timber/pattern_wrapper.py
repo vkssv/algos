@@ -9,7 +9,7 @@ from msg_wrapper import BeautifulBody
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-#formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
+formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
 #ch.setLevel(logging.DEBUG)
 #ch.setFormatter(formatter)

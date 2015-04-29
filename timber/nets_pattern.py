@@ -8,7 +8,7 @@ from operator import add
 from pattern_wrapper import BasePattern
 from collections import OrderedDict, Counter
 
-formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
+formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
 #ch = logging.StreamHandler(sys.stdout)
@@ -58,15 +58,18 @@ class NetsPattern(BasePattern):
                         # dingbats
                         ur'(meetup|do.*you.*know|congrat[suleta].*([\w-]{2,10}.*){1,3}|you.*g[eo]t)', \
                         ur'(see.*([\w-]{2,10}.*){1,3}.*new|welcome.*to|stay.*in.*touch.*with|meet.*the.*new)', \
-                        ur'^([\w\s-]{2,10}){1,2}\s*[,:]\s*.*(please\s.*add|try.*free|join.*these|are.*looking.*for)', \
+                        ur'((please)?.*add|try.*free|join.*these|are.*looking|bienvenue.*sur|confirm[ez])', \
+                        ur'(here\'s.*what.*you.*missed|added.*you.*(on)?|vo[stre].*compte|twitter)',\
+                        ur'(ajout[ez].*(une?).*(photo|adresse).*de.*profil|add.*(photo|email).*profile)',\
                         ur'(google\+|linkedin|twitter|facebook|viadeo|vk.com|vkontakte|odnoklassniki|create.*community)', \
                         ur'(top.*post|this.*week|viewed.*your|added.*you|you.*miss(ed)?|discussion.*on|connection)', \
                         ur'(invitation|reminder|(a)?wait(ing)?.*(for)?.*your?.*(response)?|suggested.*for)', \
-                        ur'(comment.*on|check.*out|tomorrow|(mon|thurs|wednes|tues|sun|satur|friday|new.*group)', \
-                        ur'(invitation|reminder)', \
-                        ur'(you.*g[eo]t|job.*on|endorsed|top.*pages|blog|profil(e)?)', \
-                        ur'(say.*happy.*birthday|people.*are.*look(ing)?|top.*suggested|you.*missed.*from)', \
-                        ur'(ajoutez|visité.*votre|profile.*views|last.*week|votre.*semaine)'
+                        ur'(comment.*on|check.*out|tomorrow|monday|thursday|wednesday|tuesday|sunday|saturday|friday|new.*group)', \
+                        ur'(invitation|reminder|connaissez-vous|lier.*(un)?.*e-mail|au.*profil|suiv[ezr])', \
+                        ur'(you.*g[eo]t|job.*on|endorsed|top.*pages|blog|profile?s?|répond[ezionsr])', \
+                        ur'(say.*happy.*birthday|people.*are.*look(ing)?|top.*suggest[edions]|you.*missed.*from)', \
+                        ur'(ajoutez|visité.*votre|profile.*views|last.*week|votre.*semaine|amie?s?|(re)?trouve[rztionse])'
+
     ]
 
     SUBJ_TITLES_THRESHOLD = 5
@@ -75,9 +78,15 @@ class NetsPattern(BasePattern):
 
     TEXT_REGEXP_LIST = [
                             ur'(say.*happy.*birthday|congratulat[eions]|new.*job|anniversary|meet)', \
-                            ur'(are.*looking|tomorrow|introduc[eing]?)', \
+                            ur'(are.*looking|tomorrow|introduc[eing]?|your?.*connections?|network)', \
                             ur'(fellow|new.*friends|(build|create|new).*(community|group)|passion|do.*you.*know)', \
-                            ur'(add.*me.*to.*connections|more.*people)'
+                            ur'(add.*me.*to.*connections|more.*people|collegs|add.*email|address|certificates?)',\
+                            ur'(connaissez.*vous|vo[stre].*adresses?|camarades?|amie?s?|classe|anciens?.*collègues?)',\
+                            ur'(ajout[ezionsr].*à|mes.*contacts|vo[stre].*réseau|abonnements?|personnalisées?)',\
+                            ur'(invit[ed].*you|to.*connect|respond|(accept|ignor)[ed]?|d\'autres.*suggestions?)',\
+                            ur'(forget.*to.*redeem|see.*the.*full.*list|connect.*on|respond|confirm[ez]|vo[ster]]compte)',\
+                            ur'(afin.*de.*compléter|bouton.*ci-dessous|étape|notre.*suggestion|suiv[re]|vo[stre].*intérêts?)',\
+                            ur'(post.*you.*might.*have.*miss[ed]|shar[ed].*public|photos?.*in.*album)'
     ]
 
     URL_FQDN_REGEXP =   [

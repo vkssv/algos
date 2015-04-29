@@ -194,11 +194,14 @@ class DmarcChecker(BaseChecker):
 class EmarketChecker(BaseChecker):
 
     '''
-    1. simply checks just presense or absence of emarket-headers,
-        which are typical for info/nets-email-patterns --> fills  get_emarket_score() attribute
-        (typical pattern's emarket-headers names are defined in pattern_instance.EMARKET_HEADS) ;
-    2. creates list of existed emarket-headers for current msg-instance ;
-    3. checks values of existed emarket-headers with regexp from KNOWN_MAILERS --> fills get_emarket_flag() attribute;
+    vectorize EMARKET-specific headers values by
+    following feature set :
+
+    SCORE               --> gained by checking presense or absence of specific emarket-headers,
+                            they are typical for info/nets-email-patterns ;
+    EMARKET_FLAG        --> set if values of existed emarket-headers contain KNOWN_MAILERS names;
+    KNOWN_DOMAINS_SCORE --> gained if domain value from 'DKIM-*' headers matches with list
+                            of well-known SN-domains (Facebook, Google+, etc) ;
     '''
 
     def __init__(self, pattern_obj):
@@ -218,18 +221,28 @@ class EmarketChecker(BaseChecker):
         emarket_flag = INIT_SCORE
         x_mailer_pattern = r'X-Mailer-.*'
         mailer_names = [mailer_head for mailer_head in self.msg.keys() if re.search(x_mailer_pattern, mailer_head, re.I)]
+        logger.warn(mailer_names)
+        logger.warn(self.pattern.KNOWN_MAILERS)
 
-        if [mailer_name for mailer_name in mailer_names if filter(lambda reg: re.search(reg, self.msg.get(mailer_name), re.I), self.pattern.KNOWN_MAILERS)]:
-            emarket_flag = self.score
+        for mailer_name in mailer_names:
+            logger.warn(mailer_name)
+            logger.warn(self.msg.get(mailer_name))
+            if [pattern for pattern in self.pattern.KNOWN_MAILERS if re.search(pattern, self.msg.get(mailer_name), re.I)]:
+                emarket_flag = self.score
+                logger.warn(emarket_flag)
 
         return emarket_flag
 
     def get_emarket_domains_score(self):
 
         known_domains_score = INIT_SCORE
+        logger.debug(self.pattern.KNOWN_DOMAINS)
+
         for domain_name in self.pattern.get_dkim_domains():
+            logger.debug(domain_name)
             known_domains_score += len(filter(lambda regexp: re.search(regexp, domain_name, re.I), self.pattern.KNOWN_DOMAINS))*self.score
 
+        logger.debug(known_domains_score)
         return known_domains_score
 
 
@@ -465,7 +478,7 @@ class AttachesChecker(BaseChecker):
         score = INIT_SCORE
 
         for line in self.attach_attrs:
-            if filter(lambda x: re.search(x, line, re.I), self.obj.ATTACHES_RULES):
+            if filter(lambda x: re.search(x, line, re.I), self.pattern.ATTACHES_RULES):
                 score += self.score
 
         return score
@@ -762,6 +775,8 @@ class ContentChecker(BaseChecker):
         '''
 
         regs_list = get_regexp(self.pattern.TEXT_REGEXP_LIST)
+        logger.debug(tuple(self.pattern.get_sentences()))
+
         sents_generator = self.pattern.get_sentences()
 
         txt_score = INIT_SCORE

@@ -11,9 +11,9 @@ import checkers
 from pattern_wrapper import BasePattern
 
 
-formatter_debug = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
+formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 logger = logging.getLogger('')
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
@@ -41,7 +41,7 @@ class InfoPattern(BasePattern):
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'
     ]
 
-    EMARKET_HEADS = r'((X-)?EMID|MAIL|SG-E?ID|(rp)?campaign(id)?|Feedback(-ID)?)'
+    EMARKET_HEADS = r'((X-)?EMID|MAIL|EDATIS|SG-E?ID|(rp)?campaign(id)?|Feedback(-ID)?)'
 
     KNOWN_MAILERS   = [ r'MailChimp', r'PHPMailer', r'GetResponse\s+360', 'GreenArrow', 'habrahabr', 'nlserver',\
                         r'EMS', r'eC-Messenger\s+Build', r'NMS.*Mail.*', 'Cabestan\s+DMS'
@@ -56,7 +56,9 @@ class InfoPattern(BasePattern):
                         r'.*\.?voyages-sncf\.com',\
                         r'.*\.?redoute\.com',\
                         r'.*\.?france-air\.com',\
-                        r'.*\.?fnac\.com'
+                        r'.*\.?fnac\.com',\
+                        r'.*\.?le-passage\.fr'
+
 
     ]
 
@@ -75,6 +77,10 @@ class InfoPattern(BasePattern):
                             ur'(all.*for|price|vip|special|trends|brands|shopping|hysteria|save|kick|super(b)?)', \
                             ur'(now.*or.*never|call|share|stock|exclusive|free.*shipping|car|shopper|bonus)', \
                             ur'(lpg|spa|trend|brand|opportunity|be.*the.*first|get.*it.*now|see|look|watch)', \
+                            ur'(devis.*de|de.*votre.*iphone|prix.*promotionnels.*jusqu.*|elections?|découv[tsirez])',\
+                            ur'(remise.*vo[tres].*commandes?|d[eé]rniere?s?|salon.*(du.*au)?|les.*journées?)',\
+                            ur'(sont.*arrivées?|hebdo|sp[eé]ciale?|itespresso|arcticles?.*prefere.*)',\
+                            ur'(qui|à.*quoi|pourquoi|actualité\.*monde|(vous.*)?recherch[ontiezrs]|enquete|comment)',\
                             ur'([\w\s-]{2,10}){1,2}\s*:([\w\s+,\.\$!]{2,15})', \
                             ur'[\d]{1,2}\s+[\d]{1,2}[0]{1,3}\s+.*', \
                             ur'-?[\d]{1,2}\s+%\s+.*', \
@@ -86,7 +92,12 @@ class InfoPattern(BasePattern):
                                 ur'(styl(ish)?|perfect|beauti|winter|summer|fall|spring|look|blog|spot)', \
                                 ur'(news|letter|discount|sale|info|unsubscribe?|bonus|ads|market)', \
                                 ur'((social)?media|partage|share|actu|publicité|télécharger|download)',\
-                                ur'(recommend[ations]?)'
+                                ur'(recommend[ations]?|toutes?.*marques?|si.*vous.*avez|promotion|présentation)',\
+                                ur'(elections?|(pour)?.*bénéfici[er].*|(vo[tres])?.*remise|(cette)?.*offre.*est.*valable)',\
+                                ur'(automatiqu[ement].*déduite?|pass[es].*vo[stre].*commandes?|derniere?s? )',\
+                                ur'(nous.*avons.*le.*plaisir|(à.*)?decouv[zonsriert]|les.nouveaut[ée]s?)',\
+                                ur'(rencontr[ezntons]|grandes?.*marques?|(particip|choisi)[ezstonsi]|sondage|décideurs?)',\
+                                ur'(choix|plus.*d\'information|autres?.*(actus|nouvelles?)|analyses?|infographies?)'
     ]
 
     URL_FQDN_REGEXP =   [
