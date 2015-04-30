@@ -1,28 +1,15 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
-"""
--- can be imported as submodule to build feature vectors for e,
-
-
--- returns NxM matrix --> N samples from collection x M features +label value
-( or "test" label if not defined ) in numpy array type
-"""
-
-import sys, os, logging, re, email, argparse, stat, tempfile, math, time
-import numpy as np
-
-from email.parser import Parser
-from collections import defaultdict, OrderedDict
+import logging
 from operator import itemgetter
 
-from timber_exceptions import NaturesError
-
+import numpy as np
 from sklearn.metrics import classification_report, precision_recall_curve
 
 
 logger = logging.getLogger('')
-#logger.setLevel(logging.WARN)
+logger.setLevel(logging.DEBUG)
 
 class ClfWrapper(object):
     '''
@@ -44,7 +31,6 @@ class ClfWrapper(object):
         and to swallow nails of its Destiny...
         """
 
-        logger.info('\n\n\t Try to make predictions...\n')
         self.probs = [(name, probability) for name, probability in zip(Y_test, self.obj.predict_proba(X_test))]
         self.crystal_ball = [(name, probability[1]) for name, probability in zip(Y_test, self.obj.predict_proba(X_test))]
         self.crystal_ball = dict((name,round(p,5)) for name, p in self.crystal_ball)
@@ -100,21 +86,23 @@ class ClfWrapper(object):
             logger.debug(err)
             logger.error('Can\'t parse "'+path_to_ground_truth+'" !')
             return clf_report
+
         target_map = {
                         0.0 :   'NON '+self.label,
                         1.0 :    self.label
         }
 
+        #logger.debug(self.obj.classes_)
         target_names = tuple((target_map[key]).upper() for key in tuple(self.obj.classes_))
-        logger.debug('cls: '.upper()+str(target_names))
+        #logger.debug('cls: '.upper()+str(target_names))
+
         truth_vector = tuple(map(itemgetter(1), sorted(expected_values, key=itemgetter(0))))
-        logger.debug('truth_vector TUPLE ====> '.upper()+str(truth_vector))
-       
+
         predicted_vector = tuple(map(itemgetter(1), sorted(self.glass_ball, key=itemgetter(0))))
-        logger.debug('PP'+str(predicted_vector))
+        #logger.debug('probabilities '+str(predicted_vector))
         
         clf_report = classification_report(truth_vector, predicted_vector, target_names=target_names)
-        #logger.debug(self.report)
+        #logger.debug(clf_report)
         self.precision, self.recall, self.thresholds = precision_recall_curve(truth_vector, predicted_vector, pos_label=self.label.upper)
 
         return clf_report

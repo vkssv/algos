@@ -1,11 +1,7 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
-
-import os, sys, logging, re, binascii, math
-
-from operator import add, itemgetter
-from collections import OrderedDict, Counter, namedtuple
+import sys, logging, re
 
 from pattern_wrapper import BasePattern
 import checkers
@@ -187,13 +183,8 @@ class SpamPattern(BasePattern):
                     logger.error(f.func_name+': '+str(err))
                     pass
 
-                logger.debug((name+' ==> '+str(feature_value)).upper())
                 self.__setattr__(name, feature_value)
 
-
-        logger.info("total vect len : ".upper()+str(len(self.__dict__.items())-1))
-        non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
-        logger.info("non_zero features count : ".upper()+str(len(non_zero)))
 
     def __str__(self):
         return('SPAM')
@@ -203,7 +194,7 @@ class SpamPattern(BasePattern):
         rcvd_score = self.INIT_SCORE
         rcvds = self.get_rcvds(self.RCVDS_NUM)
 
-        logger.debug('get_rcvd_score : '+str(rcvds))
+        #logger.debug('get_rcvd_score : '+str(rcvds))
 
         for rule in self.RCVD_RULES:
             if filter(lambda l: re.search(rule, l), rcvds):

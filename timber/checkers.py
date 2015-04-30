@@ -7,7 +7,7 @@
         in case of exceptions ;
 '''
 
-import sys, os, importlib, logging, re, binascii, zlib, math, string, urlparse
+import sys, os, logging, re, binascii, zlib, math, string, urlparse
 
 from operator import add, itemgetter
 from collections import namedtuple
@@ -31,7 +31,7 @@ INIT_SCORE = BasePattern.INIT_SCORE
 get_regexp = BasePattern.get_regexp
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 
 
 class BaseChecker(object):
@@ -229,7 +229,7 @@ class EmarketChecker(BaseChecker):
         for mailer_name in mailer_names:
             if [pattern for pattern in self.pattern.KNOWN_MAILERS if re.search(pattern, self.msg.get(mailer_name), re.I)]:
                 emarket_flag = self.score
-                logger.debug(emarket_flag)
+                #logger.debug(emarket_flag)
 
         return emarket_flag
 
@@ -449,7 +449,7 @@ class AttachesChecker(BaseChecker):
 
         self.mime_struct = pattern_obj.get_mime_struct()
         if len(self.mime_struct) == 0:
-            logger.debug('Probably, this email is not multipart, or can\'t parse it properly !')
+            logger.warn('\tProbably, this email is not multipart, or can\'t parse it properly !')
 
         attributes = reduce(add, self.mime_struct.values())
         self.attributes = [v.strip() for v in attributes]
@@ -647,14 +647,11 @@ class OriginatorChecker(BaseChecker):
         from_checksum = INIT_SCORE
         # todo: rfc6854 support of new format lists for From: values
 
-        if len(self.name_addr_tuples) != 1:
-            logger.debug(str(self.name_addr_tuples))
-
         if self.name_addr_tuples:
             from_value, from_addr = reduce(add, self.name_addr_tuples[:1])
             from_checksum = binascii.crc32(from_value.encode(self.def_encoding, self.err_handling))
 
-        logger.debug(from_checksum)
+        #logger.debug(from_checksum)
         return from_checksum
 
     def get_originator_forged_sender(self):
@@ -839,7 +836,7 @@ class ContentChecker(BaseChecker):
         #logger.debug(tokens_list)
 
         for tokens in tokens_list:
-            logger.debug(tokens)
+            #logger.debug(tokens)
             n +=1
             freqdist = FreqDist(tokens)
             probs = [freqdist.freq(l) for l in FreqDist(tokens)]

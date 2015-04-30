@@ -1,11 +1,7 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
-"""
-    Extract and parse email's headers and mime-parts
-"""
-
-import sys, logging, re
+import logging, re, sys
 
 from email import iterators, header, utils
 from urlparse import urlparse
@@ -24,10 +20,10 @@ except ImportError as err:
 from timber_exceptions import NaturesError
 
 logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.ERROR)
 #formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
 #ch = logging.StreamHandler(sys.stdout)
-#ch.setLevel(logging.DEBUG)
+#ch.setLevel(logging.ERROR)
 #ch.setFormatter(formatter)
 #logger.addHandler(ch)
 
@@ -73,8 +69,9 @@ class BeautifulBody(object):
 
         dammit_obj = UnicodeDammit(raw_line, [encoding], is_html=False)
         #logger.debug(dammit_obj.unicode_markup.strip())
+        x = dammit_obj.unicode_markup.strip()
 
-        return dammit_obj.unicode_markup.strip()
+        return x
 
     @classmethod
     def get_lang(cls, tokens_list, return_value=None):
@@ -90,7 +87,7 @@ class BeautifulBody(object):
             # cause we can have here: [('russian', 0), ('french', 0), ('english', 0)]
             return l
         else:
-            logger.info('can\'t define language for this token list >> '+str(tokens_list))
+            #logger.warn('can\'t define language for this token list >> '+str(tokens_list))
             return return_value
 
     def get_rcvds(self, rcvds_num=0):
@@ -101,7 +98,7 @@ class BeautifulBody(object):
         '''
         # parse all Received: headers by default if rcvds_num wasn't defined
         parsed_rcvds = tuple(rcvd.partition(';')[0] for rcvd in self.msg.get_all('Received',' '))[ -1*rcvds_num : ]
-        logger.debug(str(parsed_rcvds))
+        #logger.debug(str(parsed_rcvds))
         return parsed_rcvds
 
     def get_addr_values(self, header_value):
@@ -129,13 +126,13 @@ class BeautifulBody(object):
             for part in realname_parts:
                 if len(part)==0:
                     continue
-                logger.warn(part)
+
                 value += self._get_unicoded_value(*(reduce(add,part)))
 
             pairs.append((value, addr))
 
         pairs = tuple((p.realname, re.sub(r'<|>','',p.address)) for p in tuple(addr_value(*pair) for pair in pairs))
-        logger.debug(str(pairs))
+        #logger.debug(str(pairs))
         return pairs
 
     def get_smtp_originator_domain(self):
@@ -148,15 +145,15 @@ class BeautifulBody(object):
         smtp_sender_domain = ''
 
         l = filter(lambda value: regexp.search(value), self.get_rcvds())
-        logger.debug(l) # check that regexp matched exactly first
+        #logger.debug(l) # check that regexp matched exactly first
         if l:
             orig_domain = reduce(add,l)
 
-            logger.debug((orig_domain,))
+            #logger.debug((orig_domain,))
             orig_domain = (regexp.search(orig_domain)).group(0)
             smtp_sender_domain = orig_domain.strip('.').strip('@').strip('=').strip()
 
-            logger.debug('smtp originator domain : '+str(smtp_sender_domain))
+            #logger.debug('smtp originator domain : '+str(smtp_sender_domain))
 
         return smtp_sender_domain
 
@@ -180,7 +177,7 @@ class BeautifulBody(object):
         '''
 
         parts_list = header.decode_header(self.msg.get('Subject'))
-        logger.debug('subject parts >>>>>'+str(parts_list))
+
         subj_line = u''
         encodings_list = list()
 
@@ -191,8 +188,6 @@ class BeautifulBody(object):
                 dammit_obj = UnicodeDammit(line, [encoding], is_html=False)
 
             except Exception as err:
-                #logger.debug(err)
-                #logger.debug('>>> Please, add this to Kunstkamera')
                 if dammit_obj is None:
                     continue
 
@@ -205,7 +200,6 @@ class BeautifulBody(object):
         lang = self.get_lang(subj_tokens)
         if lang in self.SUPPORT_LANGS_LIST:
             subj_tokens = tuple(word for word in subj_tokens if word not in stopwords.words(lang))
-            #logger.debug('before stem: '+str(tokens))
             #subj_tokens  = tuple(SnowballStemmer(lang).stem(word) for word in tokens)
 
         return (subj_line, subj_tokens, encodings_list)
@@ -228,19 +222,19 @@ class BeautifulBody(object):
 
                 if head == 'content-type':
                     part_key = part.get(head)
-                    logger.debug(part_key)
+                    #logger.debug(part_key)
                     part_key = part_key.partition(';')[0].strip()
                     added_value = (re.sub(part_key+';','',part.get(head).strip(),re.M)).strip()
                     mime_parts[part_key].append(added_value.lower())
-                    logger.debug(mime_parts)
+                    #logger.debug(mime_parts)
 
                 else:
                     mime_parts[part_key].append(part.get(head).strip())
-                    logger.debug(mime_parts)
+                    #logger.debug(mime_parts)
                     #part_dict[head] = part.get(head).strip()
 
         mime_parts = dict((k,tuple(v)) for k,v in mime_parts.items())
-        logger.debug(str(mime_parts))
+        #logger.debug(str(mime_parts))
 
         return mime_parts
 
@@ -270,7 +264,6 @@ class BeautifulBody(object):
                 dammit_obj = UnicodeDammit(decoded_line, is_html=False)
 
             except Exception as err:
-                #logger.debug(err)
                 if dammit_obj is None:
                     continue
 
@@ -392,7 +385,7 @@ class BeautifulBody(object):
             tokens = tuple(tokenizer.tokenize(sent) for sent in pt)
             tokens = reduce(add, tokens)
             # reduce returns list not tuple
-            #logger.warn("tokens: "+str(type(tokens)))
+            #logger.debug("tokens: "+str(type(tokens)))
             lang = self.get_lang(tokens)
             #logger.debug(lang)
 
@@ -400,7 +393,7 @@ class BeautifulBody(object):
                 # todo: create stopwords list for jis ,
                 tokens = [word for word in tokens if word not in stopwords.words(lang)]
                 tokens = [SnowballStemmer(lang).stem(word) for word in tokens]
-                #logger.warn("tokens list: "+str(type(tokens)))
+                #logger.debug("tokens list: "+str(type(tokens)))
 
             yield tokens
 

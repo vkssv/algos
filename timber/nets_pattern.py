@@ -1,28 +1,23 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-""" Keeps and applies vectorising rules for messages from SNs. """
 
-import os, sys, logging, re, binascii
-
-from operator import add
-from pattern_wrapper import BasePattern
-from collections import OrderedDict, Counter
-
-formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
-logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-#ch = logging.StreamHandler(sys.stdout)
-#logger.addHandler(ch)
+import sys, logging, re
 
 import checkers
 from pattern_wrapper import BasePattern
 
-'''''
-from email import parser
-parser = parser.Parser()
-with open('','rb') as f:
-    M = parser.parse(f)
-'''''
+
+logger = logging.getLogger('')
+#logger.setLevel(logging.DEBUG)
+#formatter = logging.Formatter('%(levelname)s %(funcName)s: %(message)s')
+#ch = logging.StreamHandler(sys.stdout)
+#logger.addHandler(ch)
+
+#from email import parser
+#parser = parser.Parser()
+#with open('','rb') as f:
+#    M = parser.parse(f)
+
 
 class NetsPattern(BasePattern):
     """
@@ -151,9 +146,6 @@ class NetsPattern(BasePattern):
 
                 self.__setattr__(name, feature_value)
 
-        logger.debug("total vect len : "+str(len(self.__dict__.items())-1))
-        non_zero = [(k,v) for k,v in self.__dict__.iteritems() if float(v) !=0.0 ]
-        logger.debug("non_zero features count : "+str(len(non_zero)))
 
     def __str__(self):
         return('NETS')

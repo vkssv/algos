@@ -120,6 +120,7 @@ class BasePattern(BeautifulBody):
 
         all_heads_checksum = binascii.crc32(''.join(heads_vector))
         #logger.debug('all_heads_checksum ==> '.upper()+str(self.all_heads_checksum))
+
         return all_heads_checksum
 
     def get_rcvd_checksum(self):
@@ -129,14 +130,12 @@ class BasePattern(BeautifulBody):
                  parser is interested only in servers IPs-literals, domains, etc
         '''
 
-        logger.debug('rcvds num from '+str(self.__class__)+' : '+str(self.RCVDS_NUM))
         rcvds_vect = self.get_rcvds(self.RCVDS_NUM)
-        logger.debug('rcvds_vect :'+str(rcvds_vect))
         rcvd_checksum = {}
 
         for rcvd_line, n in izip_longest(rcvds_vect, range(self.RCVDS_NUM),fillvalue=''):
             self.__dict__['rcvd_'+str(n)] = self.INIT_SCORE
-            logger.debug('rcvd_line : '+rcvd_line)
+
             trace = map(lambda x: rcvd_line.replace(x,''),['from','by',''])[2]
             trace = trace.strip().lower()
             trace = binascii.crc32(trace)
@@ -154,14 +153,13 @@ class BasePattern(BeautifulBody):
         '''
 
         name_addr_tuples = self.get_addr_values(self.msg.get_all('To'))
-        logger.debug('To: '.upper()+str(name_addr_tuples))
+
         only_addr_list = map(itemgetter(1), name_addr_tuples)
-        logger.debug('only_addr_list : '+str(only_addr_list))
         parsed_rcvds = [ rcvd.partition(';')[0] for rcvd in self.get_rcvds() ]
 
         smtp_to_list = [ x for x in ( r.partition('for')[2].strip() for r in parsed_rcvds ) if x ]
         smtp_to_addr = re.findall(r'<(.*@.*)?>', ''.join(smtp_to_list))
-        logger.debug('smtp_to_addr : '+str(smtp_to_addr))
+        #logger.debug('smtp_to_addr : '+str(smtp_to_addr))
 
         if not (smtp_to_list or only_addr_list):
             return self.INIT_SCORE
@@ -169,16 +167,15 @@ class BasePattern(BeautifulBody):
         addrs = smtp_to_list + only_addr_list
 
         rcpt_score = len([value for value in addrs if re.search(r'undisclosed-recipients', value, re.I)])*self.PENALTY_SCORE
-        logger.debug('rcpt_score :'+str(rcpt_score))
+        #logger.debug('rcpt_score :'+str(rcpt_score))
 
         if len(only_addr_list) == 1 and ''.join(smtp_to_addr) != ''.join(only_addr_list):
             rcpt_score += self.PENALTY_SCORE
-            logger.debug('rcpt_score :'+str(rcpt_score))
+            #logger.debug('rcpt_score :'+str(rcpt_score))
 
         elif len(only_addr_list) > 2 and smtp_to_addr != '<multiple recipients>':
             rcpt_score += self.PENALTY_SCORE
-            logger.debug('rcpt_score :'+str(rcpt_score))
-
+            #logger.debug('rcpt_score :'+str(rcpt_score))
 
         return rcpt_score
 

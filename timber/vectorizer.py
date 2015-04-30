@@ -15,15 +15,15 @@ from patterns_factory import MetaPattern
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(levelname)s: %(filename)s: %(funcName)s: %(message)s')
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-ch.setFormatter(formatter)
-fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
+#formatter = logging.Formatter('%(levelname)s: %(filename)s: %(funcName)s: %(message)s')
+#ch = logging.StreamHandler(sys.stdout)
+#ch.setLevel(logging.DEBUG)
+#ch.setFormatter(formatter)
+#fh = logging.FileHandler(os.path.join(tempfile.gettempdir(), time.strftime("%d%m%y_%H%M%S", time.gmtime())+'.log'), mode = 'w')
+#fh.setLevel(logging.DEBUG)
+##fh.setFormatter(formatter)
+#logger.addHandler(fh)
+#logger.addHandler(ch)
 
 
 class Vectorize(object):
@@ -39,14 +39,14 @@ class Vectorize(object):
     Supported patterns are : spam, ham, nets, info
     '''
 
-    SUPPORTED_CLASSES = ['spam','ham','nets','info']
+    SUPPORTED_CLASSES = ['spam', 'ham', 'nets', 'info']
 
     SETS_NAMES = ['X_train', 'Y_train', 'X_test', 'Y_test']
 
     def __init__(self, train_dir, label, score):
 
         if label not in self.SUPPORTED_CLASSES:
-            raise NaturesError ('Don\'t have any module with rules for '+\
+            raise NaturesError('Don\'t have any module with rules for '+\
                                 label.upper()+' class\nSupported classes : '+\
                                 ', '.join(self.SUPPORTED_CLASSES))
 
@@ -59,7 +59,7 @@ class Vectorize(object):
 
         for path in [ os.path.join(self.train_dir, subdir) for subdir in self.SUPPORTED_CLASSES+['test'] ]:
 
-            logger.info('subdir : '.upper()+path)
+            logger.debug('  Subdir : '+path+'\n')
             pathes_gen = self.__get_path(path)
             expected_len = None
             msg_path = ''
@@ -72,7 +72,6 @@ class Vectorize(object):
                     msg_path = next(pathes_gen)
 
                     x_labeled_vector = self.__vectorize(msg_path)
-                    logger.debug('\nx_vector ===> '.upper()+str(x_labeled_vector))
 
                     # todo: collect ratio and entropy, just to observe consequences for these two metrics
                     #ratio = (dict(x_labeled_vector)).get('CONTENT_COMPRESS_RATIO')
@@ -85,7 +84,7 @@ class Vectorize(object):
                         self.features_dict = dict(enumerate(map(itemgetter(0), x_labeled_vector)))
 
                     x_vector = tuple(map(itemgetter(1), x_labeled_vector))
-                    logger.info('\nx_vector ===> '.upper()+str(x_vector))
+                    #logger.debug('\n\tx_vector ===> '.upper()+str(x_vector)+'\n')
 
                     if expected_len is None:
                         expected_len = len(x_vector)
@@ -101,7 +100,9 @@ class Vectorize(object):
                     if os.path.basename(path) == 'test':
 
                         self.X_test.append(x_vector)
+
                         y_vector = os.path.basename(msg_path)
+
                         self.Y_test.append(y_vector)
 
                     else:
@@ -116,6 +117,8 @@ class Vectorize(object):
 
                         self.Y_train.append(y_vector)
 
+                    logger.debug('\n\ty_vector ===> '.upper()+str(y_vector)+'\n')
+
                 except StopIteration as err:
                     break
 
@@ -127,14 +130,10 @@ class Vectorize(object):
 
         [ self.__setattr__(name, tuple(self.__getattribute__(name))) for name in self.SETS_NAMES ]
 
-        logger.info('\nSuccessfully built datasets with parameters: \n')
+        logger.info('  Successfully built train and test datasets with parameters: \n')
         logger.info('\tPath to collections => '+str(self.train_dir).upper())
-        logger.info('\tPattern => '+str(self.label).upper())
-        logger.info('\tPenalty score => '+str(self.penalty))
-        logger.info('\tFeatures set (total '+str(len(self.features_dict.values()))+') :\n')
-
-        for feature in self.features_dict.itervalues():
-            logger.info('\t'+feature)
+        logger.info('\tClass => '+str(self.label).upper())
+        logger.info('\tPenalty score => '+str(self.penalty)+'\n')
 
     def __get_path(self, path):
         '''
@@ -149,7 +148,6 @@ class Vectorize(object):
         }
 
         mode = filter(lambda key: os.stat(path).st_mode & key, checks.keys())
-        #logger.debug('file mode: '+str(mode))
         f = checks.get(*mode)
         if not f(path):
             logger.error('Collection dir : "'+path + '" is empty !')
@@ -177,20 +175,26 @@ class Vectorize(object):
             M = parser.parse(f)
 
         pattern_cls = MetaPattern.New(self.label)
-        logger.info('\n\n\t email to vectorize : '.upper() +doc_path+'\n')
+        logger.debug('\n\temail to vectorize ==> '.upper() +doc_path+'\n')
 
         pattern_instance = pattern_cls(msg=M, score=self.penalty)
         vector = pattern_instance.__dict__
+
         vector.pop('penalty_score'.upper())
         vector['msg_size'] = math.ceil(float((os.stat(doc_path).st_size)/1024))
 
+        logger.debug('\tsuccessfully created vector with :\n')
+        logger.debug("\t\tlength : ".upper()+str(len(vector)))
+
+        non_zero = [v for k,v in vector.iteritems() if float(v) !=0.0 ]
+        logger.debug("\t\tnon_zero features count : ".upper()+str(len(non_zero)))
+
         vector = tuple(sorted([(k.upper(),value) for k,value in vector.items()],key=itemgetter(0)))
-        logger.info('\nx_vector ==> ')
-        for i in vector:
-            logger.info('\t'+str(i))
+        logger.debug('\n\tx_vector :\n'.upper())
+        for k,v in vector :
+            logger.debug('\t\t{0:33} {1:4} {2:5}'.format(k, '===>', str(round(v,5))))
 
         #self.features_dict = dict(enumerate(map(itemgetter(0),vector)))
-
         #msg_vector = tuple(map(itemgetter(1),vector))
         #logger.debug('\nvector ===> '+str(msg_vector)+'\n')
 
@@ -236,8 +240,7 @@ class Vectorize(object):
 
         indices = self.selector.get_support(indices=True)
         features_dict = dict([ (index,name) for index,name in self.features_dict.items() if index in indices ])
-        logger.warn(features_dict)
-        logger.warn(type(features_dict))
+
         return features_dict
 
     def dump_dataset(self, to_file=None):

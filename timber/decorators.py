@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys, os, importlib, logging, re, binascii, zlib, math
-from pattern_wrapper import BasePattern
-
-INIT_SCORE = BasePattern.INIT_SCORE
+import sys, logging
 
 logger = logging.getLogger('')
 #logger.setLevel(logging.DEBUG)
@@ -36,18 +33,16 @@ class Wrapper(object):
         try:
 
             self.checker_inst = self.checker(pattern_inst)
-            logger.debug(str(self.checker_inst.__class__)+' was successfully initialized.')
+            #logger.debug(str(self.checker_inst.__class__)+' was successfully initialized.')
 
         except Exception as err:
             logger.warn('Can\'t initialize '+self.checker.__name__+' for processing msg :')
-            logger.warn('error : '.upper()+str(err))
+            logger.warn(str(err))
             self.checker_inst = self
             logger.debug(str(self)+' will intercept it.')
 
         return self.checker_inst
 
-    #def __getattr__(self, attr_name):
-    #    return lambda : INIT_SCORE
 
 
 

@@ -1,11 +1,7 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-""" Keeps and applies vectorising rules for infos. """
 
-import os, sys, logging, re, binascii, math, string
-
-from operator import add
-from collections import OrderedDict, Counter
+import sys, logging, re
 
 import checkers
 from pattern_wrapper import BasePattern
@@ -17,13 +13,12 @@ logger = logging.getLogger('')
 #ch = logging.StreamHandler(sys.stdout)
 #logger.addHandler(ch)
 
-'''''
-from email import parser
-parser = parser.Parser()
-with open('/home/calypso/train_dir/abusix/0000006192_1422258877_ff43700.eml','rb') as f:
-#with open('/tmp/201501251750_abusix/0000006194_1422258936_10744700.eml','rb') as f:
-    M = parser.parse(f)
-'''''
+
+#from email import parser
+#parser = parser.Parser()
+#with open('','rb') as f:
+#    M = parser.parse(f)
+
 
 class InfoPattern(BasePattern):
     """
@@ -159,8 +154,8 @@ class InfoPattern(BasePattern):
 
             for name, f in functions_map:
                 feature_value = self.INIT_SCORE
-                logger.debug(name)
-                logger.debug(f)
+                #logger.debug(name)
+
                 try:
                     feature_value = f()
                 except Exception as err:
@@ -169,13 +164,9 @@ class InfoPattern(BasePattern):
 
                 self.__setattr__(name, feature_value)
 
-        logger.debug("total vect len : ".upper()+str(len(self.__dict__.items())-1))
-        non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
-        logger.debug("non_zero features count : ".upper()+str(len(non_zero)))
 
     def __str__(self):
         return('INFO')
-
 
     def get_mime_pattern_score(self):
 
@@ -191,33 +182,11 @@ class InfoPattern(BasePattern):
             mime_score += self.PENALTY_SCORE
 
         mime_skeleton = self.get_mime_struct()
-        logger.debug('MIME STRUCT: '+str(mime_skeleton))
         if (mime_skeleton.keys()).count('text/html') and 'inline' in mime_skeleton.get('text/html'):
             mime_score += self.PENALTY_SCORE
 
-
-
         return mime_score
 
-
-'''''
-if __name__ == "__main__":
-
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(filename)s: %(message)s')
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-
-    try:
-        test = InfoPattern(env)
-        vector = test.run()
-        logger.debug(str(vector))
-
-
-    except Exception as details:
-        raise
-'''''
 
 
 	

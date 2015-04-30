@@ -1,6 +1,5 @@
 #! /usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-"""Keeps and applies vectorising rules for hams. """
 
 import sys, logging
 
@@ -110,8 +109,8 @@ class HamPattern(BeautifulBody):
 
             for name, f in functions_map:
                 feature_value = INIT_SCORE
-                logger.debug(name)
-                logger.debug(f)
+                #logger.debug(name)
+
                 try:
                     feature_value = f()
                 except Exception as err:
@@ -119,11 +118,6 @@ class HamPattern(BeautifulBody):
                     pass
 
                 self.__setattr__(name, feature_value)
-
-
-        logger.debug("total vect len : ".upper()+str(len(self.__dict__.items())-1))
-        non_zero = [v for k,v in self.__dict__.items() if float(v) !=0.0 ]
-        logger.debug("non_zero features count : ".upper()+str(len(non_zero)))
 
     def __str__(self):
         return('HAM')
