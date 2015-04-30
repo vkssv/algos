@@ -27,6 +27,9 @@ class NetsPattern(BasePattern):
     -- if email looks like notification from SN, it's vector will contain
         values, which are mostly don't equal to zeros ;
     """
+
+    AXIS_STRETCHING = 1.0
+
     EXCLUDED_HEADS = [
                         'Received', 'X-Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID',\
                         'Delivered-To', 'Authentication-Results', 'DKIM-Signature','Content-Type'

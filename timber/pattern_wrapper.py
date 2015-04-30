@@ -34,7 +34,7 @@ class BasePattern(BeautifulBody):
     PENALTY_SCORE = 1.0
 
     EX_MIME_ATTRS_LIST = ['boundary=','charset=']
-    BASE_FEATURES = ['all_heads_checksum','rcpt_score']
+    BASE_FEATURES = ['all_heads_checksum', 'rcpt_score']
 
     def __init__(self, score, **kwds):
 
@@ -61,7 +61,7 @@ class BasePattern(BeautifulBody):
             #logger.debug((name+' ==> '+str(value)).upper())
             self.__setattr__(name, value)
 
-        self.rcvd_num = self.msg.keys().count('Received')
+        #self.rcvd_num = self.msg.keys().count('Received')
         self.get_rcvd_checksum()
 
     

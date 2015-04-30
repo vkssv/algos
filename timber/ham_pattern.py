@@ -26,6 +26,8 @@ class HamPattern(BeautifulBody):
     """
 
     # search them in DKIM headers
+
+    AXIS_STRETCHING = 1.0
     KNOWN_DOMAINS = [
                         r'.*\.paypal\.com',\
                         r'.*\.smartfares\.com',\

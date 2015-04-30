@@ -31,6 +31,8 @@ class InfoPattern(BasePattern):
 
     RCVDS_NUM = 0
 
+    AXIS_STRETCHING = 1.0
+
     EXCLUDED_HEADS = [
                             'Received', 'Subject', 'From', 'Date', 'Received-SPF', 'To', 'Content-Type',\
                             'Authentication-Results', 'MIME-Version', 'DKIM-Signature', 'Message-ID', 'Reply-To'

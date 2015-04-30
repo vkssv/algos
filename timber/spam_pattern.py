@@ -27,6 +27,7 @@ class SpamPattern(BasePattern):
         values, which are mostly don't equal to zeros ;
     """
 
+    AXIS_STRETCHING = 2.0
     RCVDS_NUM = 2
     RCVD_RULES = [
                             r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|unknown|trap)', \
@@ -149,7 +150,7 @@ class SpamPattern(BasePattern):
 
         features_map = {
                          'pattern_score'    : ['rcvd', 'mime', 'disp_notification'], \
-                         'subject'          : ['score','encoding','upper'], \
+                         'subject'          : ['score','encoding','upper','checksum'], \
                          'url'              : ['score','avg_len','distinct_count','sender_count',\
                                                 'uppercase','punicode', 'repetitions'], \
                          'list'             : ['score'], \
@@ -185,6 +186,7 @@ class SpamPattern(BasePattern):
 
                 self.__setattr__(name, feature_value)
 
+        #  try to switch on/off features in attempt to improve this pythonic-chaos
         self.__delattr__('all_heads_checksum')
 
 

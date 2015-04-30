@@ -86,7 +86,7 @@ class SubjectChecker(BaseChecker):
 
         for rule in self.subj_rules:
             if rule.search(self.subj_line):
-                subj_score +=self.score
+                subj_score +=self.score*self.obj.AXIS_STRETCHING
 
         #logger.debug('score:'+str(subj_score))
 
