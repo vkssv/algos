@@ -19,12 +19,14 @@ def create_report(predictions_dict, labels):
     report = dict()
     for key, decisions in predictions_dict.iteritems():
 
+        logger.debug('\t'+key+' ===> '+str(tuple(sorted(decisions,key= itemgetter(2),reverse=True))))
         decisions = tuple(sorted(decisions,key= itemgetter(2),reverse=True))[:len(classifiers)]
-        #logger.debug('\t'+key+' ===> '+str(decisions)+'\n')
+
         final = map(itemgetter(0), decisions)
         clf_stat = tuple(clf_name+' : '+str(prob)+' % ('+label+');' for label, clf_name, prob in decisions)
 
         status = None
+        logger.debug(final)
         if len(set(final)) == 1:
             status = set(final).pop()
 
@@ -47,27 +49,28 @@ def print_report(report):
 if __name__ == "__main__":
 
     usage = 'usage: %prog [ samples_directory | file ] -c category -s score -v debug'
-    parser = argparse.ArgumentParser(prog='helper')
+    parser = argparse.ArgumentParser(prog='random_forest')
+
     parser.add_argument('PATH', type=str, metavar = 'PATH',
                             help="path to directory with samples")
 
-    parser.add_argument('--score', type = float, action = 'store', dest = "score", default = 1.0,
-                            help = "penalty score for matched feature, def = 1.0")
+    parser.add_argument('--score', type = float, metavar = ' ', action = 'store', dest = "score", default = 1.0,
+                            help = "penalty score for matched feature, default = 1.0")
 
-    parser.add_argument('--k-best', action = 'store', type=int, dest = "k", default = 0,
-                            help = "number of best features, preselected by ANOVA regressors set")
+    parser.add_argument('--k-best', action = 'store', metavar = ' ', type=int, dest = "k", default = 0,
+                            help = "number of best features, preselected by ANOVA F-value regressors set, default = 0")
 
-    parser.add_argument('--estimators', action = 'store', type=int, dest = "estimators", default = 30,
-                            help = "number of trees in classifiers")
+    parser.add_argument('--estimators', action = 'store', metavar = ' ', type=int, dest = "estimators", default = 20,
+                            help = "number of trees in classifiers, default = 20")
 
-    parser.add_argument('--accuracy', type = str, action = "store", dest = "accuracy", default = False,
-                            help = "path to file with ground truth to check accuracy")
+    parser.add_argument('--accuracy', type = str, action = "store", metavar = ' ', dest = "accuracy", default = False,
+                            help = "path to file with verified statuses for checking accuracy")
 
     #parser.add_argument('--dump', action = "store_true", dest = "dump", default = False,
     #                        help = "dump used datasets in dir with collections (PATH argument)")
 
-    parser.add_argument('--report', action = "store", type = str, dest = "report", default = False,
-                            help = "write stdout to file (INFO log level)")
+    parser.add_argument('--report', action = "store", type = str, metavar = ' ', dest = "report", default = False,
+                            help = "path to file for dumping results")
 
     parser.add_argument('-v', action = "store_true", dest = "verbose", default = False, help = "be verbose")
 
@@ -87,7 +90,7 @@ if __name__ == "__main__":
     if args.report:
         fh = logging.FileHandler(args.report, mode = 'wb')
         fh.setFormatter(formatter)
-        fh.setLevel(logging.INFO)
+        fh.setLevel(logging.DEBUG)
         logger.addHandler(fh)
 
     ch = logging.StreamHandler(sys.stdout)
@@ -176,7 +179,7 @@ if __name__ == "__main__":
 
                 add_params = [
                                     ('n_jobs',-1),\
-                                    ('max_features',None),\
+                                    ('max_features','auto'),\
                                     ('max_depth',None),\
                                     ('max_leaf_nodes', None)
                 ]

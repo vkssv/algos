@@ -1,0 +1,5 @@
+#
+# packages to satisfy random_forest.py dependencies
+# 
+beautifulsoup4>=4.2.0
+nltk>=3.0.0

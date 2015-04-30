@@ -74,11 +74,6 @@ class Vectorize(object):
                     x_labeled_vector = self.__vectorize(msg_path)
 
                     # todo: collect ratio and entropy, just to observe consequences for these two metrics
-                    #ratio = (dict(x_labeled_vector)).get('CONTENT_COMPRESS_RATIO')
-                    #comp_ratios.append(ratio)
-
-                    #avg_entropy = (dict(x_labeled_vector)).get('CONTENT_AVG_ENTROPY')
-                    #entropies.append(avg_entropy)
 
                     if len(self.features_dict) == 0:
                         self.features_dict = dict(enumerate(map(itemgetter(0), x_labeled_vector)))
@@ -93,7 +88,8 @@ class Vectorize(object):
                         #logger.error('expected length: '+str(expected_len))
                         #logger.error('vector length : '+str(len(x_vector)))
                         #logger.error('path: '+msg_path)
-                        raise NaturesError('X_vectors from one collection have different dimentions !')
+                        raise Exception('X_vectors from one collection have different dimentions !')
+
 
                     y_vector = None
 
@@ -123,10 +119,9 @@ class Vectorize(object):
                     break
 
                 except Exception as err:
-                    logger.error('Can\'t extract features from "'+msg_path+'", so it will be skipped !')
-                    logger.error(str(err))
-                    raise
-                    #pass
+                    logger.debug('Can\'t extract features from "'+msg_path+'", so it will be skipped !')
+                    logger.debug(str(err))
+                    pass
 
         [ self.__setattr__(name, tuple(self.__getattribute__(name))) for name in self.SETS_NAMES ]
 
@@ -175,7 +170,8 @@ class Vectorize(object):
             M = parser.parse(f)
 
         pattern_cls = MetaPattern.New(self.label)
-        logger.debug('\n\temail to vectorize ==> '.upper() +doc_path+'\n')
+        logger.debug('\n\temail to vectorize ==> '.upper() +doc_path)
+        logger.debug('\n\tpattern class ==> '+self.label+'\n')
 
         pattern_instance = pattern_cls(msg=M, score=self.penalty)
         vector = pattern_instance.__dict__

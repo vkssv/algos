@@ -65,7 +65,6 @@ class ClfWrapper(object):
                     if l.startswith('#') or len(l)==0:
                         continue
 
-
                     name, class_label = l.split(':')
 
                     if class_label.strip().upper() == self.label.upper():

@@ -45,7 +45,7 @@ class SpamPattern(BasePattern):
     ]
 
     ORIGINATOR_MAILBOX_RULES = [
-                                    ur'((top)?meds|miss.*you|flyboy|pfizer|fellowship)', \
+                                    ur'((top)?meds|miss.*you|flyboy|pfizer|fellowship|invacare)', \
                                     ur'(passion|kiss(-you)?|lipstick|wine.*red|face.*to.*face)', \
                                     ur'(pickup|cute.*girl|(happy|good).*letter|real-time|sweet_mail)', \
                                     ur'(dark|gray|green|blue|turquoise|one-stop-log-in|cool-cool|eyes)'
@@ -149,13 +149,13 @@ class SpamPattern(BasePattern):
 
         features_map = {
                          'pattern_score'    : ['rcvd', 'mime', 'disp_notification'], \
-                         'subject'          : ['score','encoding','upper','checksum'], \
+                         'subject'          : ['score','encoding','upper'], \
                          'url'              : ['score','avg_len','distinct_count','sender_count',\
                                                 'uppercase','punicode', 'repetitions'], \
                          'list'             : ['score'], \
                          'attaches'         : ['score','in_score','count'], \
                          'originator'       : ['checksum','addr_score'], \
-                         'content'          : ['compress_ratio','avg_entropy','txt_score']
+                         'content'          : ['txt_score']
         }
 
         for key in features_map.iterkeys():
@@ -184,6 +184,8 @@ class SpamPattern(BasePattern):
                     pass
 
                 self.__setattr__(name, feature_value)
+
+        self.__delattr__('all_heads_checksum')
 
 
     def __str__(self):
@@ -224,3 +226,18 @@ class SpamPattern(BasePattern):
 
         return disp_notification
 
+
+'''''
+ different features maps, tune and try, according to obtained results and Classifier's strong features estimation
+
+ features_map = {
+                         'pattern_score'    : ['rcvd', 'mime', 'disp_notification'], \
+                         'subject'          : ['score','encoding','upper','checksum'], \
+                         'url'              : ['score','avg_len','distinct_count','sender_count',\
+                                                'uppercase','punicode', 'repetitions'], \
+                         'list'             : ['score'], \
+                         'attaches'         : ['score','in_score','count'], \
+                         'originator'       : ['checksum','addr_score'], \
+                         'content'          : ['txt_score']
+        }
+'''''

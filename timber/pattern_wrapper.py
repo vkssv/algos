@@ -151,6 +151,7 @@ class BasePattern(BeautifulBody):
         :return: tuple with penalizing scores for To-header value from body,
         for debut works only with To-header values
         '''
+        rcpt_score = self.INIT_SCORE
 
         name_addr_tuples = self.get_addr_values(self.msg.get_all('To'))
 
@@ -158,11 +159,14 @@ class BasePattern(BeautifulBody):
         parsed_rcvds = [ rcvd.partition(';')[0] for rcvd in self.get_rcvds() ]
 
         smtp_to_list = [ x for x in ( r.partition('for')[2].strip() for r in parsed_rcvds ) if x ]
+        if len(smtp_to_list) == 0:
+            return rcpt_score
+
         smtp_to_addr = re.findall(r'<(.*@.*)?>', ''.join(smtp_to_list))
         #logger.debug('smtp_to_addr : '+str(smtp_to_addr))
 
         if not (smtp_to_list or only_addr_list):
-            return self.INIT_SCORE
+            return rcpt_score
 
         addrs = smtp_to_list + only_addr_list
 

@@ -1,0 +1,191 @@
+-*- mode: rst -*-
+
+random_forest
+==============
+
+RANDOM_FOREST - example of usage ensemble-based algorithms for email classification task
+and feature selection.
+
+Classification is multilabel : each document from train and test datasets should be labeled
+with one of these classes:
+
+    -- SPAM
+    -- HAM
+    -- INFO - newsletters and commercial emails ;
+    -- NETS - emails from social networks/services .
+
+Model was built on top of RandomForest and ExtraTrees estimators from scikit-learn Python module.
+
+Model was designed as a wrapper over sets of classifiers and heuristic-rules :
+
+    -- to check rules-classifiers combinations ;
+    -- to add / test / remove new rules easily ;
+    -- to arrange distinct sets of heuristic-logic and apply them to different datasets.
+
+It also allows to plug-in Python modules, which implementing various feature selection approaches
+( use SelectKBest method here to apply univariate feature selection to sparse datasets ).
+
+RandomForest and ExtraTrees estimators also provide feature selection after performing classification
+tasks. It allows to chain different feature selection methods together in different orders and
+to compare accuracy of classification.
+
+Dependencies
+============
+
+random_forest is tested to work under Python 2.7
+
+The required dependencies are:
+
+    -- beautifulsoup4.2.0 and highest
+    -- nltk 3.0.0 and highest
+    -- python-sklearn 0.15.1 and highest
+    -- python-sklearn-lib 0.15.1 and highest
+
+From nltk.corpus module we use stopwords corpora for russian, french, english languages and also
+SnowballStemmer corpora.
+
+Install
+=======
+
+For resolving dependencies, please, perform the following commands :
+
+1.  pip install -r requirements.txt  # in the root of repository, will install all necessary packages
+
+2.
+    sudo python -m nltk.downloader -d /usr/share/nltk_data stopwords
+    sudo python -m nltk.downloader -d /usr/share/nltk_data
+
+NOTICE: that -d flag here specifies corpora installation location, by default it is :
+    /usr/share/nltk_data in UNIX OS,
+
+but it is also worthy to check the NLTK_DATA environment variable before installation.
+
+Description
+===========
+
+Model was coded in such way, that each type of classifiers resolvs one-label classification
+problem.
+
+At first, we separate documents from the whole dataset between SPAM and NON-SPAM, and assign the labeled
+probability to each email. At the second step, whole dataset is tested against other class-specific rules,
+for example INFO/NON-INFO, etc.
+
+Thus, after four consecutive rounds of classification... )) we have four labels with probabilities for each
+email in test dataset. For making final desition script simply chooses the label with maximum probability value.
+
+Usage
+===========
+
+# ./random_forest.py --help
+
+usage: random_forest [-h] [--score ] [--k-best ] [--estimators ] [--accuracy ]
+                     [--report ] [-v]
+                     PATH
+
+positional arguments:
+  PATH            path to directory with samples
+
+optional arguments:
+  -h, --help      show this help message and exit
+  --score         penalty score for matched feature, default = 1.0
+  --k-best        number of best features, preselected by ANOVA F-value
+                  regressors set, default = 0
+  --estimators    number of trees in classifiers, default = 20
+  --accuracy      path to file with verified statuses for checking accuracy
+  --report        path to file for dumping results
+  -v              be verbose
+
+
+Description :
+
+1. PATH => path to directory with required subdirs structure:
+
+    /PATH
+    ├── ham
+    ├── info
+    ├── nets
+    ├── spam
+    └── test
+
+    So we have four types of samples in appropriate catalogs and < test > subdir for performing cross-validation
+
+    example of usage :
+
+        # ./random_forest.py PATH
+
+2. k-best option
+
+    if mentioned in sys.argv list ( see example of usage below ) : X feature-vectors will be pruned by SelectKBest
+        class from sklearn.feature_selection module.
+
+        X matrices, obtained by vectorizer module are sparse => as test function use f_classif() method
+        ( see description of its API here :
+            http://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.f_classif.html#sklearn.feature_selection.f_classif )
+
+    example of usage:
+
+        # ./random_forest.py PATH --k-best 20
+
+3. accuracy option
+
+    if specified (value is path-string) : it parces file with verified results of classification
+        and build report with accuracy metrics
+
+    example of usage:
+
+    # ./random_forest.py PATH --accuracy /tmp/status
+
+    classification report will look like this :
+
+        Accuracy :
+
+                       precision    recall  f1-score   support
+
+           NON SPAM       0.83      1.00      0.91        15
+               SPAM       1.00      0.50      0.67         6
+
+        avg / total       0.88      0.86      0.84        21
+
+
+        PRECISION   - ratio tp / (tp + fp) where tp is the number of true positives and fp the number
+                        of false positives ;
+
+        RECALL      - ratio tp / (tp + fn) where tp is the number of true positives and fn the number of
+                        false negatives ;
+
+        The recall is intuitively the ability of the classifier to find all the positive samples.
+
+        F1-SCORE    - can be interpreted as a weighted average of the precision and recall, where an F1 score reaches its
+                        best value at 1 and worst score at 0.
+
+        The relative contribution of precision and recall to the F1 score are equal. The formula for the F1 score is:
+        F1 = 2 * (precision * recall) / (precision + recall)
+
+        SUPPORT     - the number of occurrences of each class in y_true.
+
+    File with verified results should have the following format :
+
+    # cat /tmp/status
+        15.eml : INFO
+        25.eml : SPAM
+        38.eml : HAM
+        59.eml : NETS
+        EOF
+
+4. report option
+
+    if specified : simply writes all statistics and logs with logging.INFO level in appropriate file
+
+    example of usage:
+
+        # ./random_forest.py PATH --report /tmp/report.log
+
+
+Code ( the worst thing )
+----
+
+GIT
+~~~
+
+git clone https://github.com/ml-course-stanford/algos/tree/master/timber
+

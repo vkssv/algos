@@ -68,7 +68,7 @@ class InfoPattern(BasePattern):
                             ur'([\u0370-\u03ff]|[\u2010-\u337b]|[\u0460-\u0482]|[\u0488-\u056f])', \
                             ur'(whats?.*(are|is)|(why|how).*(do)?|when|since|could|may|is|in)', \
                             ur'(SALE|FREE|news(letter)?|do.*not.*|don\'t.*miss|they.*back|is.*here|now.*with)', \
-                            ur'(interesting|announcing|hurry|big(gest)?|great|only|deal|groupon|tour|travel|hot|inside)', \
+                            ur'(interesting|announcing|hurry|top\s+[0-9][1,2]|big(gest)?|great|only|deal|groupon|tour|travel|hot|inside)', \
                             ur'(all.*for|price|vip|special|trends|brands|shopping|hysteria|save|kick|super(b)?)', \
                             ur'(now.*or.*never|call|share|stock|exclusive|free.*shipping|car|shopper|bonus)', \
                             ur'(lpg|spa|trend|brand|opportunity|be.*the.*first|get.*it.*now|see|look|watch)', \
@@ -91,8 +91,11 @@ class InfoPattern(BasePattern):
                                 ur'(elections?|(pour)?.*bénéfici[er].*|(vo[tres])?.*remise|(cette)?.*offre.*est.*valable)',\
                                 ur'(automatiqu[ement].*déduite?|pass[es].*vo[stre].*commandes?|derniere?s? )',\
                                 ur'(nous.*avons.*le.*plaisir|(à.*)?decouv[zonsriert]|les.nouveaut[ée]s?)',\
-                                ur'(rencontr[ezntons]|grandes?.*marques?|(particip|choisi)[ezstonsi]|sondage|décideurs?)',\
-                                ur'(choix|plus.*d\'information|autres?.*(actus|nouvelles?)|analyses?|infographies?)'
+                                ur'(rencontr[ezntons]|grandes?.*marques?|(particip|choisi)[ezstonsi]|sondage|d[ée]cideurs?)',\
+                                ur'(choix|plus.*d\'information|autres?.*(actus|nouvelles?)|analyses?|infographies?)',\
+                                ur'(pourquoi.*(faut-il)?.*voter|ne.*manquez.*pas|bienvenue.*dans.*le.*monde)',\
+                                ur'(comment.*(je.*me.*suis)?.*présenté?|top\s+[0-9][1,2]|lire.*la.*suite)',\
+                                ur'(vo[stre].*t[eé]moingnages?)'
     ]
 
     URL_FQDN_REGEXP =   [
