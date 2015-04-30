@@ -1,4 +1,3 @@
--*- mode: rst -*-
 
 random_forest
 ==============
@@ -16,17 +15,17 @@ with one of these classes:
 
 Model was built on top of RandomForest and ExtraTrees estimators from scikit-learn Python module.
 
-Model was designed as a wrapper over sets of classifiers and heuristic-rules :
+Model was designed as a wrapper over sets of classifiers and heuristic-rules to achieve following purposes:
 
-    -- to check rules-classifiers combinations ;
-    -- to add / test / remove new rules easily ;
+    -- to check < rules - classifiers > combinations ;
+    -- to code / test / remove new heuristic-rules ;
     -- to arrange distinct sets of heuristic-logic and apply them to different datasets.
 
 It also allows to plug-in Python modules, which implementing various feature selection approaches
 ( use SelectKBest method here to apply univariate feature selection to sparse datasets ).
 
 RandomForest and ExtraTrees estimators also provide feature selection after performing classification
-tasks. It allows to chain different feature selection methods together in different orders and
+tasks. Thus, model allows to chain different feature selection methods together in different orders and
 to compare accuracy of classification.
 
 Dependencies
@@ -36,7 +35,7 @@ random_forest is tested to work under Python 2.7
 
 The required dependencies are:
 
-    -- beautifulsoup4.2.0 and highest
+    -- beautifulsoup 4.2.0 and highest
     -- nltk 3.0.0 and highest
     -- python-sklearn 0.15.1 and highest
     -- python-sklearn-lib 0.15.1 and highest
@@ -55,23 +54,18 @@ For resolving dependencies, please, perform the following commands :
     sudo python -m nltk.downloader -d /usr/share/nltk_data stopwords
     sudo python -m nltk.downloader -d /usr/share/nltk_data
 
-NOTICE: that -d flag here specifies corpora installation location, by default it is :
-    /usr/share/nltk_data in UNIX OS,
+NOTICE: -d flag here specifies corpora installation location, by default it is :
+            /usr/share/nltk_data in UNIX OS,
 
 but it is also worthy to check the NLTK_DATA environment variable before installation.
 
 Description
 ===========
 
-Model was coded in such way, that each type of classifiers resolvs one-label classification
-problem.
-
-At first, we separate documents from the whole dataset between SPAM and NON-SPAM, and assign the labeled
-probability to each email. At the second step, whole dataset is tested against other class-specific rules,
-for example INFO/NON-INFO, etc.
-
-Thus, after four consecutive rounds of classification... )) we have four labels with probabilities for each
-email in test dataset. For making final desition script simply chooses the label with maximum probability value.
+Model was coded in such way, that each type of classifiers resolvs one-label
+classification problem. Results of these tests are collected for each document.
+When classification finished we just iterate over labeled probabilities and
+choose the maximum.
 
 Usage
 ===========
