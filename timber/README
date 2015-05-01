@@ -157,7 +157,11 @@ Arguments description :
 
         # ./random_forest.py PATH --k-best 20
 
-3. criterion option - the function to measure the quality of a split values into trees : 'gini', 'entropy'.
+3. criterion option - the function to measure the quality of a split values into trees : 'gini', 'entropy'
+
+    example of usage :
+
+        # ./random_forest.py PATH --criterion gini
 
 4. accuracy option
 
