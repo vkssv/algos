@@ -36,10 +36,10 @@ class Wrapper(object):
             #logger.debug(str(self.checker_inst.__class__)+' was successfully initialized.')
 
         except Exception as err:
-            logger.debug('Can\'t initialize '+self.checker.__name__+' for processing msg :')
-            logger.debug(str(err))
+            logger.debug('\tCan\'t initialize '+self.checker.__name__+' for processing msg :')
+            logger.debug('\t'+str(err))
             self.checker_inst = self
-            logger.debug(str(self)+' will intercept it.')
+            logger.debug('\t'+str(self)+' will intercept it.')
 
         return self.checker_inst
 

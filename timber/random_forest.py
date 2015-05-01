@@ -52,7 +52,6 @@ def create_report(predictions_dict, labels):
         logger.info('\t{0:10} {1:3} {2:4} '.format(k, '==>', status)+' :'+add_info+'\n')
 
 
-
 if __name__ == "__main__":
 
     usage = 'usage: %prog [ samples_directory | file ] -c category -s score -v debug'
