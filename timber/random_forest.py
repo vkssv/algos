@@ -20,17 +20,13 @@ CLASS_TENANCY_THRESHOLD = 0.30
 # define some functions
 def create_report(predictions_dict, labels):
 
-
-    logger.info('statuses : \n'.upper())
+    total = []
     for key, decisions in predictions_dict.iteritems():
 
-        decisions = tuple(decisions)
-        decisions = sorted(decisions,key= itemgetter(0),reverse=True)
-
         #logger.debug('\t'+key+' ===> '+str(tuple(sorted(decisions,key= itemgetter(2),reverse=True))))
-        ham_probs = [(status, cls, p) for status, cls, p in decisions if p <= CLASS_TENANCY_THRESHOLD ]
+        ham_probs = [(status, cls, p) for status, cls, p in decisions if p < CLASS_TENANCY_THRESHOLD ]
 
-        if ham_probs:
+        if len(ham_probs) == len(decisions):
 
             ham_probs = tuple(sorted(ham_probs,key= itemgetter(2),reverse=True))[:len(classifiers)]
             clf_stat = tuple(clf_name+' : '+str(prob)+' % ('+label+' pattern) ;' for label, clf_name, prob in ham_probs)
@@ -49,7 +45,11 @@ def create_report(predictions_dict, labels):
             elif len(set(final)) > 1:
                 status, cls_name, prob = decisions[0]
 
-        logger.info('\t{0:10} {1:3} {2:4} '.format(key, '==>', status)+' :\x20\x20'+' '.join(clf_stat)+'\n')
+        total.append((key, status, '\x20\x20'.join(clf_stat)))
+
+    logger.info('statuses : \n'.upper())
+    for k, status, add_info in sorted(total, key=itemgetter(1), reverse=True):
+        logger.info('\t{0:10} {1:3} {2:4} '.format(k, '==>', status)+' :'+add_info+'\n')
 
 
 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # 1. preparations
+    # preparations
     required_vers = '2.7'
     version = str(sys.version_info.major)+'.'+str(sys.version_info.minor)
     if version != required_vers:
@@ -140,8 +140,7 @@ if __name__ == "__main__":
             selected_features = None
             n = None
             if args.k > len(features_dict):
-                logger.warn('  k-best='+str(args.k)+' > length X_vector='+str(len(features_dict))+', will use k=\'all\'\n')\
-
+                logger.warn('  k-best='+str(args.k)+' > length X_vector='+str(len(features_dict))+', will use k=\'all\'\n')
                 n = 'all'
 
             else:
@@ -169,7 +168,6 @@ if __name__ == "__main__":
             #if args.dump:
             #    vectorizer.dump_dataset(to_file=True)
             #    logger.info('\t---> train and test datasets were successfully exported into '+args.PATH+'.')
-
 
             logger.info('\n  Create classifiers instances...')
             for clf in classifiers:

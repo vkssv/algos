@@ -194,7 +194,7 @@ class Vectorize(object):
         vector = tuple(sorted([(k.upper(),value) for k,value in vector.items()],key=itemgetter(0)))
         logger.debug('\n\tx_vector :\n'.upper())
         for k,v in vector :
-            logger.debug('\t\t{0:33} {1:4} {2:5}'.format(k, '===>', str(round(v,5))))
+            logger.debug('\t\t{0:33} {1:4} {2:10}'.format(k, '===>', str(round(v,5))))
 
         #self.features_dict = dict(enumerate(map(itemgetter(0),vector)))
         #msg_vector = tuple(map(itemgetter(1),vector))

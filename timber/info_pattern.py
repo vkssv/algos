@@ -142,8 +142,8 @@ class InfoPattern(BasePattern):
                          'list'         : ['score', 'ext_headers_set', 'sender_flag', 'precedence', 'reply_to'], #delivered-to
                          #'attaches'     : ['count'],
                          'originator'   : ['domain_score'],  # ['checksum','eq_to_dkim']
-                         #'content'      : ['compress_ratio','avg_entropy','txt_score', 'html_checksum']
-                         'content'      : ['compress_ratio','avg_entropy','txt_score']
+                         'content'      : ['compress_ratio','avg_entropy','txt_score', 'html_checksum']
+                         #'content'      : ['compress_ratio','avg_entropy','txt_score']
         }
 
         for n, key in enumerate(features_map.keys(),start=1):
