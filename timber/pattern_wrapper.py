@@ -61,8 +61,8 @@ class BasePattern(BeautifulBody):
             #logger.debug((name+' ==> '+str(value)).upper())
             self.__setattr__(name, value)
 
-        #self.rcvd_num = self.msg.keys().count('Received')
-        self.get_rcvd_checksum()
+
+        #self.get_rcvd_checksum()
 
     
     @staticmethod

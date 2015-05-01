@@ -177,7 +177,13 @@ class Vectorize(object):
         vector = pattern_instance.__dict__
 
         vector.pop('penalty_score'.upper())
-        vector['msg_size'] = math.ceil(float((os.stat(doc_path).st_size)/1024))
+
+        if self.label == 'spam':
+
+            if float((os.stat(doc_path).st_size)/1024) < 4.0:
+                vector['small_size'] = 1
+            else:
+                vector['small_size'] = 0
 
         logger.debug('\tsuccessfully created vector with :\n')
         logger.debug("\t\tlength : ".upper()+str(len(vector)))

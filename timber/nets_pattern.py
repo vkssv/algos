@@ -28,7 +28,8 @@ class NetsPattern(BasePattern):
         values, which are mostly don't equal to zeros ;
     """
 
-    AXIS_STRETCHING = 1.0
+
+    AXIS_STRETCH = 1.0
 
     EXCLUDED_HEADS = [
                         'Received', 'X-Received', 'From', 'Subject', 'Date', 'MIME-Version', 'To', 'Message-ID',\
@@ -117,12 +118,12 @@ class NetsPattern(BasePattern):
 
         features_map = {
                          'pattern_score': ['mime'],
-                         'subject'      : ['score','encoding','upper','titled','checksum'],
+                         'subject'      : ['score','encoding','upper','titled'],
                          'dmarc'        : ['spf','score'],
                          'emarket'      : ['score','flag','domains_score'],
-                         'url'          : ['score','count','avg_len','distinct_count','sender_count','sim', 'avg_query_len'],
-                         'list'         : ['score','delivered_to'],
-                         'attaches'     : ['score','count'],
+                         'url'          : ['score','sim', 'avg_query_len'],
+                         #'list'         : ['score','delivered_to'],
+                         #'attaches'     : ['score','count'],
                          'originator'   : ['checksum'],  # ['checksum','eq_to_dkim']
                          'content'      : ['compress_ratio','avg_entropy','txt_score','html_checksum']
         }

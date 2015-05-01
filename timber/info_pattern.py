@@ -31,7 +31,7 @@ class InfoPattern(BasePattern):
 
     RCVDS_NUM = 0
 
-    AXIS_STRETCHING = 1.0
+    AXIS_STRETCH = 2.0
 
     EXCLUDED_HEADS = [
                             'Received', 'Subject', 'From', 'Date', 'Received-SPF', 'To', 'Content-Type',\
@@ -135,14 +135,15 @@ class InfoPattern(BasePattern):
 
         features_map = {
                          'pattern_score': ['mime'],
-                         'subject'      : ['score','len','encoding','upper','titled','checksum'],
+                         'subject'      : ['score','len','encoding','upper','titled'],
                          'dmarc'        : ['spf','score','x_score'],
                          'emarket'      : ['score','flag','domains_score'],
-                         'url'          : ['score','count','avg_len','distinct_count','sender_count', 'avg_query_len','sim'],
+                         'url'          : ['score', 'avg_query_len','sim'],
                          'list'         : ['score', 'ext_headers_set', 'sender_flag', 'precedence', 'reply_to'], #delivered-to
-                         'attaches'     : ['count'],
-                         'originator'   : ['checksum'],  # ['checksum','eq_to_dkim']
-                         'content'      : ['compress_ratio','avg_entropy','txt_score','html_checksum']
+                         #'attaches'     : ['count'],
+                         'originator'   : ['domain_score'],  # ['checksum','eq_to_dkim']
+                         #'content'      : ['compress_ratio','avg_entropy','txt_score', 'html_checksum']
+                         'content'      : ['compress_ratio','avg_entropy','txt_score']
         }
 
         for n, key in enumerate(features_map.keys(),start=1):
@@ -164,10 +165,12 @@ class InfoPattern(BasePattern):
                 try:
                     feature_value = f()
                 except Exception as err:
-                    logger.error(str(f)+' : '+str(err))
+                    logger.error(f.func_name+' : '+str(err))
                     pass
 
                 self.__setattr__(name, feature_value)
+
+        self.__delattr__('all_heads_checksum')
 
 
     def __str__(self):

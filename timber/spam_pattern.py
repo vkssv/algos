@@ -27,7 +27,8 @@ class SpamPattern(BasePattern):
         values, which are mostly don't equal to zeros ;
     """
 
-    AXIS_STRETCHING = 2.0
+    AXIS_STRETCH = 0.5
+
     RCVDS_NUM = 2
     RCVD_RULES = [
                             r'(public|airnet|wi-?fi|a?dsl|dynamic|pppoe|static|account|unknown|trap)', \
@@ -150,13 +151,13 @@ class SpamPattern(BasePattern):
 
         features_map = {
                          'pattern_score'    : ['rcvd', 'mime', 'disp_notification'], \
-                         'subject'          : ['score','encoding','upper','checksum'], \
+                         'subject'          : ['upper','score'], \
                          'url'              : ['score','avg_len','distinct_count','sender_count',\
                                                 'uppercase','punicode', 'repetitions'], \
                          'list'             : ['score'], \
                          'attaches'         : ['score','in_score','count'], \
-                         'originator'       : ['checksum','addr_score'], \
-                         'content'          : ['txt_score']
+                         'originator'       : ['punicode'], \
+                         'content'          : ['txt_score','avg_entropy']
         }
 
         for key in features_map.iterkeys():
@@ -186,8 +187,10 @@ class SpamPattern(BasePattern):
 
                 self.__setattr__(name, feature_value)
 
-        #  try to switch on/off features in attempt to improve this pythonic-chaos
+
         self.__delattr__('all_heads_checksum')
+
+
 
 
     def __str__(self):
@@ -227,19 +230,3 @@ class SpamPattern(BasePattern):
             disp_notification = self.PENALTY_SCORE
 
         return disp_notification
-
-
-'''''
- different features maps, tune and try, according to obtained results and Classifier's strong features estimation
-
- features_map = {
-                         'pattern_score'    : ['rcvd', 'mime', 'disp_notification'], \
-                         'subject'          : ['score','encoding','upper','checksum'], \
-                         'url'              : ['score','avg_len','distinct_count','sender_count',\
-                                                'uppercase','punicode', 'repetitions'], \
-                         'list'             : ['score'], \
-                         'attaches'         : ['score','in_score','count'], \
-                         'originator'       : ['checksum','addr_score'], \
-                         'content'          : ['txt_score']
-        }
-'''''

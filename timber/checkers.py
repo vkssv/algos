@@ -86,7 +86,7 @@ class SubjectChecker(BaseChecker):
 
         for rule in self.subj_rules:
             if rule.search(self.subj_line):
-                subj_score +=self.score*self.obj.AXIS_STRETCHING
+                subj_score +=self.score*self.obj.AXIS_STRETCH
 
         #logger.debug('score:'+str(subj_score))
 
@@ -621,7 +621,7 @@ class OriginatorChecker(BaseChecker):
 
         BaseChecker.__init__(self, pattern_obj)
 
-
+        self.obj = pattern_obj
         self.name_addr_tuples = self.pattern.get_addr_values(self.msg.get_all('From'))
 
         name_addr = namedtuple('addr_value', 'realname address')
@@ -671,8 +671,8 @@ class OriginatorChecker(BaseChecker):
 
     def get_originator_addr_score(self):
         '''
-        check with pattern regexps u'box_name', localname from address, domain from address
-        compare domain from From with smpt_domain
+        check with pattern regexps u'box_name'
+        and localname from address
 
         :return ADDR_SCORE
         '''
@@ -690,15 +690,34 @@ class OriginatorChecker(BaseChecker):
 
         #logger.debug('box_list :'+str(addr_score))
 
-        addr_score += len([domain for domain in self.domains if re.search(self.puni_regex, domain, re.I)])*self.score
-        #logger.debug('puni :'+str(addr_score))
 
-        valid_domains = [domain for domain in self.domains if re.search(domain,self.pattern.get_smtp_originator_domain())]
-        if not valid_domains:
-            addr_score += self.score
-        #logger.debug('valid domains :'+str(addr_score))
+    def get_originator_punicode(self):
+        '''
+        check domain from address with punicode regexp
 
-        return addr_score
+        :return P_FLAG
+        '''
+        p_flag = INIT_SCORE
+
+        punicode = [domain for domain in self.domains if re.search(self.puni_regex, domain, re.I)]
+        if punicode:
+            p_flag = self.score
+
+
+        return p_flag
+
+    def get_originator_domain_score(self):
+        '''
+        check that domain from address is equal to originator domain from SMTP MAIL FROM:
+        return DOM_SCORE
+        '''
+        dom_score = INIT_SCORE
+        valid_domains = [domain for domain in self.domains if re.search(domain, self.pattern.get_smtp_originator_domain())]
+
+        if valid_domains and self.obj.__str__() == 'HAM':
+            dom_score += self.score
+
+        return dom_score
 
 @Wrapper
 class MimeChecker(BaseChecker):
@@ -785,7 +804,7 @@ class ContentChecker(BaseChecker):
 
                     for reg_obj in regs_list:
                         if [ el for el in lines if reg_obj.search(el.strip()) ]:
-                            txt_score += self.score
+                            txt_score += self.score*self.pattern.AXIS_STRETCH
                             #logger.debug("text_score: "+str(txt_score))
 
             except StopIteration as err:

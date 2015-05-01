@@ -11,39 +11,46 @@ from vectorizer import Vectorize
 from clf_wrapper import ClfWrapper
 
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
-from sklearn.grid_search import GridSearchCV
+
+from sklearn.preprocessing import normalize
+from sklearn import svm
+
+CLASS_TENANCY_THRESHOLD = 0.30
 
 # define some functions
 def create_report(predictions_dict, labels):
 
-    report = dict()
+
+    logger.info('statuses : \n'.upper())
     for key, decisions in predictions_dict.iteritems():
 
-        logger.debug('\t'+key+' ===> '+str(tuple(sorted(decisions,key= itemgetter(2),reverse=True))))
-        decisions = tuple(sorted(decisions,key= itemgetter(2),reverse=True))[:len(classifiers)]
+        decisions = tuple(decisions)
+        decisions = sorted(decisions,key= itemgetter(0),reverse=True)
 
-        final = map(itemgetter(0), decisions)
-        clf_stat = tuple(clf_name+' : '+str(prob)+' % ('+label+');' for label, clf_name, prob in decisions)
+        #logger.debug('\t'+key+' ===> '+str(tuple(sorted(decisions,key= itemgetter(2),reverse=True))))
+        ham_probs = [(status, cls, p) for status, cls, p in decisions if p <= CLASS_TENANCY_THRESHOLD ]
 
-        status = None
-        logger.debug(final)
-        if len(set(final)) == 1:
-            status = set(final).pop()
+        if ham_probs:
 
-        elif len(set(final)) > 1:
-            status, cls_name, prob = decisions[0]
+            ham_probs = tuple(sorted(ham_probs,key= itemgetter(2),reverse=True))[:len(classifiers)]
+            clf_stat = tuple(clf_name+' : '+str(prob)+' % ('+label+' pattern) ;' for label, clf_name, prob in ham_probs)
+            status = 'HAM'
 
-        report[key] = (status, clf_stat)
+        else:
+            decisions = tuple(sorted(decisions,key= itemgetter(2),reverse=True))[:len(classifiers)]
+            clf_stat = tuple(clf_name+' : '+str(prob)+' % ('+label+' pattern) ;' for label, clf_name, prob in decisions)
 
-    return report
+            final = map(itemgetter(0), decisions)
+            status = None
+            #logger.debug(final)
+            if len(set(final)) == 1:
+                status = set(final).pop()
 
-def print_report(report):
+            elif len(set(final)) > 1:
+                status, cls_name, prob = decisions[0]
 
-    logger.info('\n  statuses :\n'.upper())
-    for k,v in sorted(report.iteritems(),key=itemgetter(1),reverse=True):
-        status, clf_stat = v
-        add_info = '\x20\x20'.join(clf_stat)
-        logger.info('\t{0:10} {1:3} {2:4} '.format(k, '==>', status)+' :\x20\x20'+add_info+'\n')
+        logger.info('\t{0:10} {1:3} {2:4} '.format(key, '==>', status)+' :\x20\x20'+' '.join(clf_stat)+'\n')
+
 
 
 if __name__ == "__main__":
@@ -65,6 +72,12 @@ if __name__ == "__main__":
 
     parser.add_argument('--accuracy', type = str, action = "store", metavar = ' ', dest = "accuracy", default = False,
                             help = "path to file with verified statuses for checking accuracy")
+
+    #parser.add_argument('--dump', action = "store_true", dest = "dump", default = False,
+    #                        help = "dump used datasets in dir with collections (PATH argument)")
+
+    parser.add_argument('--criterion', type = str, action = "store", metavar = ' ', dest = 'criterion', default = 'gini',
+                            help = 'function to measure the quality of a split, default="gini"')
 
     #parser.add_argument('--dump', action = "store_true", dest = "dump", default = False,
     #                        help = "dump used datasets in dir with collections (PATH argument)")
@@ -104,27 +117,16 @@ if __name__ == "__main__":
 
     logger.addHandler(ch)
 
-    # 2. choose best parameters to initialize classifiers
-    forest_params_grid = {
-                            #'max_depth'         : [1,10,33,None],
-                            #'max_features'      : [1,10,33,'auto','sqrt','log2',None],
-                            'min_samples_split' : [1, 3, 10],
-                            'min_samples_leaf'  : [1, 3, 10],
-                            'bootstrap'         : [True, False],
-                            'criterion'         : ['gini', 'entropy']
-    }
-
     add_params = list()
-
     classifiers = [
-                    ('Random\x20Forest', RandomForestClassifier, forest_params_grid),
-                    ('Extra\x20Trees', ExtraTreesClassifier, forest_params_grid)
+                    ('Random\x20Forest', RandomForestClassifier),\
+                    ('Extra\x20Trees', ExtraTreesClassifier)
     ]
 
     labels = ['spam','ham','info','nets']
     predicted_probs = defaultdict(list)
 
-    # 3. vectorize emails from collections for each label
+    # vectorize emails from collections for each label
     try:
 
         for label in labels :
@@ -152,9 +154,8 @@ if __name__ == "__main__":
                 selected_features = vectorizer.support()
 
             else:
-                # will use sparse matrixes
+                # will use sparse matrices
                 X_train, Y_train, X_test, Y_test = vectorizer.load_data()
-
 
             logger.info('\tFeatures set :\n')
 
@@ -170,39 +171,35 @@ if __name__ == "__main__":
             #    logger.info('\t---> train and test datasets were successfully exported into '+args.PATH+'.')
 
 
-            # 4. tune classifiers with existing datasets by GridSearchCV
             logger.info('\n  Create classifiers instances...')
             for clf in classifiers:
+                clf_name, class_obj = clf
 
-                clf_name, class_obj, params_dict = clf
-                clf_instance = class_obj(n_estimators=args.estimators)
+                params = {
+                                'n_estimators'      : args.estimators,
+                                'criterion'         : args.criterion,
+                                'max_depth'         : None,
+                                'max_features'      : 'auto',
+                                'n_jobs'            : -1,
+                                'class_weight'      :'auto',
+                                'min_samples_split' : 1
 
-                add_params = [
-                                    ('n_jobs',-1),\
-                                    ('max_features','auto'),\
-                                    ('max_depth',None),\
-                                    ('max_leaf_nodes', None)
-                ]
-
-                logger.info('\n\tFind best parameters to initialize '+clf_name.upper()+' ('+label.upper()+' class)...')
-
-                grid_search = GridSearchCV(clf_instance, param_grid=params_dict)
-                fit_output = grid_search.fit(X_train, Y_train)
-                #logger.debug(str(fit_output))
-
-                params = grid_search.best_params_
-
-                params.update(dict(add_params))
+                }
 
                 logger.info('\n\twill use this parameters set:\n')
                 for k,value in params.iteritems():
                     logger.info('\t\t{0:20} {1:3} {2:5}'.format(k, '=', str(value)))
 
-                # 5. fit classifiers and perform forecasting...
-                clf_instance = class_obj(**params)
+                # fit classifiers and perform forecasting...
+                clf_instance = class_obj(n_estimators=args.estimators, criterion=args.criterion, max_depth=None,\
+                                         max_features='auto', n_jobs=-1, class_weight='auto', min_samples_split=1 )
+
                 logger.debug('\n\t'+clf_name.upper()+' classifier was successfully constructed.')
 
                 logger.debug('\n\tFit '+clf_name.upper()+' with '+label.upper()+' data...\n')
+                X_train = normalize(X_train)
+                X_test = normalize(X_test)
+
                 clf_instance.fit(X_train, Y_train)
                 wrapped_clf = ClfWrapper(clf_name, clf_instance, label)
 
@@ -213,7 +210,7 @@ if __name__ == "__main__":
 
                 [ predicted_probs[name].append((label.upper(), clf_name, probability)) for name, probability in probs_dict.iteritems() ]
 
-                # 6. logger.info results and some classifiers objects statistics
+                # obtain features dictionary for current Pattern class and gain some classifiers statistics
                 recipe = wrapped_clf.get_recipe(features_dict)
 
                 logger.info('\n\t'+clf_name.upper()+' probabilities ('+label.upper()+' class) :\n')
@@ -237,9 +234,8 @@ if __name__ == "__main__":
                     logger.info('\n\tAccuracy :\n')
                     logger.info('  '+wrapped_clf.get_accuracy_report(args.accuracy))
 
-        # 7. to sum up final decisions
-        report = create_report(predicted_probs, labels)
-        print_report(report)
+        # to sum up final decisions
+        create_report(predicted_probs, labels)
 
     except Exception as err:
         logger.error(str(err))

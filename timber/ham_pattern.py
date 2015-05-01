@@ -27,7 +27,8 @@ class HamPattern(BeautifulBody):
 
     # search them in DKIM headers
 
-    AXIS_STRETCHING = 1.0
+    AXIS_STRETCH = 1.5
+
     KNOWN_DOMAINS = [
                         r'.*\.paypal\.com',\
                         r'.*\.smartfares\.com',\
@@ -39,7 +40,7 @@ class HamPattern(BeautifulBody):
     # try greedy regexes, maybe will precise them in future
     SUBJ_RULES = [
                              ur'(Re\s*:|Fw(d)?\s*:|fly|ticket|account|payment|verify.*your.*(email|account)|bill)',\
-                             ur'(support|help|participate|registration|electronic|answer|from|update|undelivered)',
+                             ur'(support|help|participate|registration|electronic|answer|from|update|undelivered)',\
                              ur'от.*[\w\.-]{3,10}.*(счет|отчет|выписка|электронный.*(билет)?)'
 
     ]
@@ -47,18 +48,18 @@ class HamPattern(BeautifulBody):
 
     TEXT_REGEXP_LIST = [
 
-                            ur'(track(ing)?.*No|proc(é|e)d(er)?|interview|invit[eation]?|welcom(ing)?|introduc(tion)?|your\s.*(ticket|order)\s.*(\#|№)|day|quarter|inquir[yies])',
-                            ur'(feature|questions?|support|request|contrac?ts?|drafts?|teams?|priorit[yies]|details?|attach(ed)?|communic.*|train(ing)?)',
-                            ur'(propos[eal]|found.*this|concern(ing|ant)?|remind[ers]|contrac?t|act|s(e|é)curit[yieés]|during.*(the)?.*period)',
-                            ur'(reports?|logs?|journals?|(re)?scheduled?|(specif[yied]|conference|call).*time|transfer|cancel(ed)?|payment|work|labour|mis.*(à|a).*jour)',
-                            ur'(profile.*activation|invit(aion)?|registration|forgot.*password|pre-.*|post-.*|document(ation)?|compte)',
-                            ur'((d\')?expiration|exchange|service|requisition|albeit|compl(é|e)mentaire(es)?|addition(al)?|terms?.*and.*conditions?)',
-                            ur'(en.*invitant|ci-(jointe|dessous)|trans(mette|mis)|souscription|sp(é|e)siale?|procéd[eré]|(e|é)change|us(age|ing|er))',
-                            ur'(valider.*les?.*donnéés)',
-                            ur'(veuillez.*agrées|salutations.*(distinguées)|à.*la.*suite.*de.*vo[stre]|souhaiter[ezitonsr])',
-                            ur'((tous)?.*renseignements|de.*bien.*vouloir|(indiqu|expliqu)[erzensto]|tarif|faire.*parvenir)',
-                            ur'((nous.*vous)?.*remerci[ezonsti]|concern[enant]facture|délais.*de.*livraison|conditions?de.*règlement)',
-                            ur'(tenons.*(à.*votre.*disposition)|réservation.*(effectuée)?|pré-approuvé|période|terme)'
+                            ur'(track(ing)?.*No|proc(é|e)d(er)?|interview|invit[eation]?|welcom(ing)?|introduc(tion)?|your\s.*(ticket|order)\s.*(\#|№)|day|quarter|inquir[yies])', \
+                            ur'(feature|questions?|support|request|contrac?ts?|drafts?|teams?|priorit[yies]|details?|attach(ed)?|communic.*|train(ing)?)', \
+                            ur'(propos[eal]|found.*this|concern(ing|ant)?|remind[ers]|contrac?t|act|s(e|é)curit[yieés]|during.*(the)?.*period)', \
+                            ur'(reports?|logs?|journals?|(re)?scheduled?|(specif[yied]|conference|call).*time|transfer|cancel(ed)?|payment|work|labour|mis.*(à|a).*jour)', \
+                            ur'(profile.*activation|invit(aion)?|registration|forgot.*password|pre-.*|post-.*|document(ation)?|compte)', \
+                            ur'((d\')?expiration|exchange|service|requisition|albeit|compl(é|e)mentaire(es)?|addition(al)?|terms?.*and.*conditions?)', \
+                            ur'(en.*invitant|ci-(jointe|dessous)|trans(mette|mis)|souscription|sp(é|e)siale?|procéd[eré]|(e|é)change|us(age|ing|er))', \
+                            ur'(valider.*les?.*donnéés|tickets?|meeting|reminder|verif[iyed]|approv[aled]|review[er]?|(this)?.*(is)?.*necessary)', \
+                            ur'(veuillez.*agrées|salutations.*(distinguées)|à.*la.*suite.*de.*vo[stre]|souhaiter[ezitonsr]|should.*(be)?.*before)', \
+                            ur'((tous)?.*renseignements|de.*bien.*vouloir|(indiqu|expliqu)[erzensto]|tarif|faire.*parvenir|status)', \
+                            ur'((nous.*vous)?.*remerci[ezonsti]|concern[enant]facture|délais.*de.*livraison|conditions?de.*règlement)', \
+                            ur'(tenons.*(à.*votre.*disposition)|réservation.*(effectuée)?|pré-approuvé|période|terme|have.*be)'
 
     ]
 
@@ -94,11 +95,12 @@ class HamPattern(BeautifulBody):
         super(HamPattern, self).__init__(**kwds)
 
         features_map = {
-                         'subject'      : ['score','len','style'],
+                         'subject'      : ['score'],
                          'dmarc'        : ['spf'],
                          'emarket'      : ['domains_score'],
-                         'url'          : ['score','avg_len','absence'],
-                         'content'      : ['txt_score']
+                         'url'          : ['score','query_absence'],
+                         'content'      : ['txt_score'],
+                         'originator'   : ['domain_score']
         }
 
         for n, key in enumerate(features_map.keys(),start=1):
@@ -116,7 +118,7 @@ class HamPattern(BeautifulBody):
                 try:
                     feature_value = f()
                 except Exception as err:
-                    logger.error(str(f)+' : '+str(err))
+                    logger.error(f.func_name+' : '+str(err))
                     pass
 
                 self.__setattr__(name, feature_value)
