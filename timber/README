@@ -21,12 +21,12 @@ Model was designed as a wrapper over sets of classifiers and heuristic-rules to 
     -- to code / test / remove new heuristic-rules ;
     -- to arrange distinct sets of heuristic-logic and apply them to different datasets.
 
-It also allows to plug-in Python modules, which implementing various feature selection approaches
-( use SelectKBest method here to apply univariate feature selection to sparse datasets ).
+It allows easily to plug-in Python modules with various feature selection approaches
+( use SelectKBest method here to apply univariate feature selection to sparse datasets matrices ).
 
-RandomForest and ExtraTrees estimators also provide feature selection after performing classification
-tasks. Thus, model allows to chain different feature selection methods together in different orders and
-to compare accuracy of classification.
+RandomForest and ExtraTrees estimators also provide feature selection after performing data classification.
+Thus, model allows to chain different feature selection methods together in different orders and
+to compare accuracy of classification for various combinations.
 
 Dependencies
 ============
