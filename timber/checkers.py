@@ -449,7 +449,8 @@ class AttachesChecker(BaseChecker):
 
         self.mime_struct = pattern_obj.get_mime_struct()
         if len(self.mime_struct) == 0:
-            logger.warn('\tProbably, this email is not multipart, or can\'t parse it properly !')
+            attributes = list()
+            #logger.warn('\tProbably, this email is not multipart, or can\'t parse it properly !')
 
         attributes = reduce(add, self.mime_struct.values())
         self.attributes = [v.strip() for v in attributes]

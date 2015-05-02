@@ -55,7 +55,7 @@ class BasePattern(BeautifulBody):
             try:
                 value = f()
             except Exception as err:
-                logger.error(f.func_name+' : '+str(err))
+                #logger.error(f.func_name+' : '+str(err))
                 pass
 
             #logger.debug((name+' ==> '+str(value)).upper())
@@ -158,8 +158,12 @@ class BasePattern(BeautifulBody):
         only_addr_list = map(itemgetter(1), name_addr_tuples)
         parsed_rcvds = [ rcvd.partition(';')[0] for rcvd in self.get_rcvds() ]
 
+        if len(parsed_rcvds) == 0:
+            return rcpt_score
+
         smtp_to_list = [ x for x in ( r.partition('for')[2].strip() for r in parsed_rcvds ) if x ]
-        if len(smtp_to_list) == 0:
+
+        if len(parsed_rcvds) == 0:
             return rcpt_score
 
         smtp_to_addr = re.findall(r'<(.*@.*)?>', ''.join(smtp_to_list))

@@ -99,6 +99,7 @@ if __name__ == "__main__":
     formatter = logging.Formatter('%(message)s')
     logger.setLevel(logging.DEBUG)
 
+
     if args.report:
         fh = logging.FileHandler(args.report, mode = 'wb')
         fh.setFormatter(formatter)

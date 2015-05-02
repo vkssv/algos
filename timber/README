@@ -126,7 +126,6 @@ optional arguments:
   -v              be verbose
 
 
-
 Arguments description :
 
 1. PATH => path to directory with required subdirs structure:
@@ -216,6 +215,15 @@ Arguments description :
     example of usage:
 
         # ./random_forest.py PATH --report /tmp/report.log
+
+Notice :
+========
+
+During vectorizing BeautifulSoup.UnicodeDammit object can emit into sys.stderr a lot of messages like this:
+
+    Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+
+It happens because logging.filter() isn't added to logging settings and base log level for StreamHandler is INFO.
 
 
 Code ( the worst thing )
