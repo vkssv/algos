@@ -7,6 +7,7 @@
         in case of exceptions ;
 '''
 
+from __future__ import division
 import sys, os, logging, re, binascii, zlib, math, string, urlparse
 
 from operator import add, itemgetter
@@ -164,7 +165,7 @@ class DmarcChecker(BaseChecker):
 
         dmarc_spf = INIT_SCORE
 
-        if self.msg.keys().count('Received-SPF') and re.match(r'^\s*pass\s+', self.msg.get('Received-SPF'), re.I):
+        if self.msg.keys().count('Received-SPF') and re.match(r'^s*pass\s+', self.msg.get('Received-SPF'), re.I):
             dmarc_spf += self.score
 
         return dmarc_spf
