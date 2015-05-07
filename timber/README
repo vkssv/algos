@@ -35,10 +35,7 @@ random_forest is tested to work under Python 2.7
 
 The required dependencies are:
 
-    -- beautifulsoup 4.2.0 and highest
-    -- nltk 3.0.0 and highest
-    -- python-sklearn 0.16.1 and highest
-    -- python-sklearn-lib 0.15.1 and highest
+
 
 From nltk.corpus module we use stopwords corpora for russian, french, english languages and also
 SnowballStemmer corpora.
@@ -224,6 +221,7 @@ During vectorizing BeautifulSoup.UnicodeDammit object can emit into sys.stderr a
     Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
 
 It happens because logging.filter() isn't added to logging settings and base log level for StreamHandler is INFO.
+This will be fixed later.
 
 
 Code ( the worst thing )
