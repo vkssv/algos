@@ -24,8 +24,9 @@ Model was designed as a wrapper over sets of classifiers and heuristic-rules to 
 It allows easily to plug-in Python modules with various feature selection approaches :
 use SelectKBest method here to apply univariate feature selection to sparse datasets matrices.
 
-RandomForest and ExtraTrees estimators also provide feature selection after performing data classification.
-Thus, model allows to chain different feature selection methods together in different orders and to compare accuracy of classification for various combinations.
+RandomForest and ExtraTrees estimators also provide feature selection after performing data classification. Thus, 
+model allows to chain different feature selection methods together in different orders and to compare accuracy 
+of classification for various combinations.
 
 Dependencies
 ============
@@ -52,7 +53,7 @@ For resolving dependencies, please, perform the following commands :
 NOTICE: -d flag here specifies corpora installation location, by default it is :
             /usr/share/nltk_data in UNIX OS,
 
-but it is also worthy to check the NLTK_DATA environment variable before installation.
+But it is also worthy to check the NLTK_DATA environment variable before installation.
 
 Description
 ===========
@@ -143,34 +144,34 @@ example of usage :
 
 2. k-best option
 
-   if mentioned in sys.argv list ( see example of usage below ) : X feature-vectors 
-   will be pruned by SelectKBest class from sklearn.feature_selection module.
+if mentioned in sys.argv list ( see example of usage below ) : X feature-vectors 
+will be pruned by SelectKBest class from sklearn.feature_selection module.
 
-   X matrices, obtained by vectorizer module are sparse => as test function use 
-   f_classif() method see description of its API here :
+X matrices, obtained by vectorizer module are sparse => as test function use 
+f_classif() method see description of its API here :
     
-   http://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.f_classif.html#sklearn.feature_selection.f_classif
+http://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.f_classif.html#sklearn.feature_selection.f_classif
 
-   example of usage:
+example of usage:
 
-   # ./random_forest.py PATH --k-best 20
+# ./random_forest.py PATH --k-best 20
 
 3. criterion option - the function to measure the quality of a split values into trees : 'gini', 'entropy'
 
-   example of usage :
+example of usage :
 
-   # ./random_forest.py PATH --criterion gini
+# ./random_forest.py PATH --criterion gini
 
 4. accuracy option
 
-   if specified (value is path-string) : it parces file with verified results of 
-   classification and build report with accuracy metrics
+if specified (value is path-string) : it parces file with verified results of classification and build 
+report with accuracy metrics
 
-   example of usage:
+example of usage:
 
-   # ./random_forest.py PATH --accuracy /tmp/status
+# ./random_forest.py PATH --accuracy /tmp/status
 
-   classification report will look like this :
+classification report will look like this :
 
    Accuracy :
 
@@ -212,11 +213,11 @@ example of usage :
 
 5. report option
 
-   if specified : simply writes all statistics and logs with logging.INFO level in appropriate file
+if specified : simply writes all statistics and logs with logging.INFO level in appropriate file
 
-   example of usage:
+example of usage:
 
-   # ./random_forest.py PATH --report /tmp/report.log
+# ./random_forest.py PATH --report /tmp/report.log
 
 Notice :
 ========
