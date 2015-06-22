@@ -36,7 +36,6 @@ random_forest is tested to work under Python 2.7
 The required dependencies are:
 
 
-
 From nltk.corpus module we use stopwords corpora for russian, french, english languages and also
 SnowballStemmer corpora.
 
@@ -69,32 +68,32 @@ When classification finished, we iterate over labeled probabilities :
     -- in the opposite case --> just take the label with maximum probability value.
 
 1. random_forest.py: starts to iterate over supported classes labels,
-    for each label it passes to Vectorizer class ( vectorizer.py ) the arguments list below :
-    (< PATH to dir with collections >, < current label name >, < penalty score > )
+   for each label it passes to Vectorizer class ( vectorizer.py ) the arguments list below :
+   (< PATH to dir with collections >, < current label name >, < penalty score > )
 
 2. Vectorizer instance iterates over subdirs in PATH and creates vector-form representation
-    for each document. For obtaining appropriate features and calculate its values Vectorizer
-    uses rules from Pattern classes. Appropriate Pattern Class is determined by label value.
+   for each document. For obtaining appropriate features and calculate its values Vectorizer
+   uses rules from Pattern classes. Appropriate Pattern Class is determined by label value.
 
 3. Taking label value, Vectorizer constructs particular PatternClass. Attributes of this class
-    represent features. They are calculated during initialization. So Vectorizer just calls
-    PatternClass constructor.
+   represent features. They are calculated during initialization. So Vectorizer just calls
+   PatternClass constructor.
 
 4. Each pattern keeps its own dictionary of feature attributes. Dictionary is mutable, it allows
-    to switch on/off some features according to the current runtime conditions. Patterns share
-    rules for calculating features from Checker classes ( checkers.py ). Rules are represented as
-    attribute-methods of these classes.
+   to switch on/off some features according to the current runtime conditions. Patterns share
+   rules for calculating features from Checker classes ( checkers.py ). Rules are represented as
+   attribute-methods of these classes.
 
 5. Obtaining PatternClass instance, Vectorizer crunches its  __dict__ and performs some
-    post-processing routine : remove labels, unused attributes. It can also add / remove / modify
-    features according to runtime conditions.
+   post-processing routine : remove labels, unused attributes. It can also add / remove / modify
+   features according to runtime conditions.
 
 6. sklearn.preprocessing.normalize - normilize values in prepared datasets
-    ( use it with parameter axis=1 - independently normalize each sample )
+   ( use it with parameter axis=1 - independently normalize each sample )
 
 7. Fit classifiers objects with one-class labeled dataset => for each email obtain probabilities
-    of tenancy to current processing label. Collect obtained probabilities in dictionary
-    { email_id : ( classifier name, class_probability % )} for final merging.
+   of tenancy to current processing label. Collect obtained probabilities in dictionary
+   { email_id : ( classifier name, class_probability % )} for final merging.
 
 8. Remove records with low level probabilities and print them to report as HAMs.
    For the rest of records simply take the label with maximum value.
@@ -143,34 +142,35 @@ Arguments description :
 2. k-best option
 
     if mentioned in sys.argv list ( see example of usage below ) : X feature-vectors will be pruned by SelectKBest
-        class from sklearn.feature_selection module.
+    class from sklearn.feature_selection module.
 
-        X matrices, obtained by vectorizer module are sparse => as test function use f_classif() method
-        ( see description of its API here :
-        http://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.f_classif.html#sklearn.feature_selection.f_classif )
+    X matrices, obtained by vectorizer module are sparse => as test function use f_classif() method
+    see description of its API here :
+    
+    http://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.f_classif.html#sklearn.feature_selection.f_classif
 
     example of usage:
 
-        # ./random_forest.py PATH --k-best 20
+    # ./random_forest.py PATH --k-best 20
 
 3. criterion option - the function to measure the quality of a split values into trees : 'gini', 'entropy'
 
-    example of usage :
+   example of usage :
 
-        # ./random_forest.py PATH --criterion gini
+   # ./random_forest.py PATH --criterion gini
 
 4. accuracy option
 
-    if specified (value is path-string) : it parces file with verified results of classification
-        and build report with accuracy metrics
+   if specified (value is path-string) : it parces file with verified results of classification
+   and build report with accuracy metrics
 
-    example of usage:
+   example of usage:
 
-    # ./random_forest.py PATH --accuracy /tmp/status
+   # ./random_forest.py PATH --accuracy /tmp/status
 
-    classification report will look like this :
+   classification report will look like this :
 
-        Accuracy :
+   Accuracy :
 
                        precision    recall  f1-score   support
 
@@ -196,9 +196,9 @@ Arguments description :
 
         SUPPORT     - the number of occurrences of each class in y_true.
 
-    File with verified results should have the following format :
+   File with verified results should have the following format :
 
-    # cat /tmp/status
+   # cat /tmp/status
         15.eml : INFO
         25.eml : SPAM
         38.eml : HAM
@@ -207,18 +207,18 @@ Arguments description :
 
 5. report option
 
-    if specified : simply writes all statistics and logs with logging.INFO level in appropriate file
+   if specified : simply writes all statistics and logs with logging.INFO level in appropriate file
 
-    example of usage:
+   example of usage:
 
-        # ./random_forest.py PATH --report /tmp/report.log
+   # ./random_forest.py PATH --report /tmp/report.log
 
 Notice :
 ========
 
 During vectorizing BeautifulSoup.UnicodeDammit object can emit into sys.stderr a lot of messages like this:
 
-    Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
 
 It happens because logging.filter() isn't added to logging settings and base log level for StreamHandler is INFO.
 This will be fixed later.
