@@ -21,12 +21,11 @@ Model was designed as a wrapper over sets of classifiers and heuristic-rules to 
     -- to code / test / remove new heuristic-rules ;
     -- to arrange distinct sets of heuristic-logic and apply them to different datasets.
 
-It allows easily to plug-in Python modules with various feature selection approaches
-( use SelectKBest method here to apply univariate feature selection to sparse datasets matrices ).
+It allows easily to plug-in Python modules with various feature selection approaches :
+use SelectKBest method here to apply univariate feature selection to sparse datasets matrices.
 
 RandomForest and ExtraTrees estimators also provide feature selection after performing data classification.
-Thus, model allows to chain different feature selection methods together in different orders and
-to compare accuracy of classification for various combinations.
+Thus, model allows to chain different feature selection methods together in different orders and to compare accuracy of classification for various combinations.
 
 Dependencies
 ============
@@ -35,10 +34,7 @@ random_forest is tested to work under Python 2.7
 
 The required dependencies are:
 
-
-From nltk.corpus module we use stopwords corpora for russian, french, english languages and also
-SnowballStemmer corpora.
-
+From nltk.corpus module we use stopwords corpora for russian, french, english languages and also SnowballStemmer corpora.
 
 Install
 =======
@@ -46,6 +42,7 @@ Install
 For resolving dependencies, please, perform the following commands :
 
 1.  pip install -r requirements.txt
+
 # in the root of repository, will install all necessary packages
 
 2.
@@ -79,21 +76,25 @@ When classification finished, we iterate over labeled probabilities :
    represent features. They are calculated during initialization. So Vectorizer just calls
    PatternClass constructor.
 
-4. Each pattern keeps its own dictionary of feature attributes. Dictionary is mutable, it allows
-   to switch on/off some features according to the current runtime conditions. Patterns share
-   rules for calculating features from Checker classes ( checkers.py ). Rules are represented as
-   attribute-methods of these classes.
+4. Each pattern keeps its own dictionary of feature attributes. Dictionary is mutable, 
+   it allows to switch on/off some features according to the current runtime conditions. 
+   Patterns share rules for calculating features from Checker classes ( checkers.py ). 
+   Rules are represented as attribute-methods of these classes.
 
-5. Obtaining PatternClass instance, Vectorizer crunches its  __dict__ and performs some
-   post-processing routine : remove labels, unused attributes. It can also add / remove / modify
-   features according to runtime conditions.
+5. Obtaining PatternClass instance, Vectorizer crunches its  __dict__ and performs some 
+   post-processing routine : remove labels, unused attributes. It can also 
+   add / remove / modify features according to runtime conditions.
 
 6. sklearn.preprocessing.normalize - normilize values in prepared datasets
    ( use it with parameter axis=1 - independently normalize each sample )
 
-7. Fit classifiers objects with one-class labeled dataset => for each email obtain probabilities
-   of tenancy to current processing label. Collect obtained probabilities in dictionary
-   { email_id : ( classifier name, class_probability % )} for final merging.
+7. Fit classifiers objects with one-class labeled dataset => for each email obtain 
+   probabilities of tenancy to current processing label. Collect obtained 
+   probabilities in dictionary : 
+   
+   { email_id : ( classifier name, class_probability % )} 
+   
+   for final merging.
 
 8. Remove records with low level probabilities and print them to report as HAMs.
    For the rest of records simply take the label with maximum value.
@@ -133,25 +134,26 @@ Arguments description :
     ├── spam
     └── test
 
-    So we have four types of samples in appropriate catalogs and < test > subdir for performing cross-validation
+So we have four types of samples in appropriate catalogs and < test > subdir 
+for performing cross-validation
 
-    example of usage :
+example of usage :
 
-        # ./random_forest.py PATH
+# ./random_forest.py PATH
 
 2. k-best option
 
-    if mentioned in sys.argv list ( see example of usage below ) : X feature-vectors will be pruned by SelectKBest
-    class from sklearn.feature_selection module.
+   if mentioned in sys.argv list ( see example of usage below ) : X feature-vectors 
+   will be pruned by SelectKBest class from sklearn.feature_selection module.
 
-    X matrices, obtained by vectorizer module are sparse => as test function use f_classif() method
-    see description of its API here :
+   X matrices, obtained by vectorizer module are sparse => as test function use 
+   f_classif() method see description of its API here :
     
-    http://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.f_classif.html#sklearn.feature_selection.f_classif
+   http://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.f_classif.html#sklearn.feature_selection.f_classif
 
-    example of usage:
+   example of usage:
 
-    # ./random_forest.py PATH --k-best 20
+   # ./random_forest.py PATH --k-best 20
 
 3. criterion option - the function to measure the quality of a split values into trees : 'gini', 'entropy'
 
@@ -161,8 +163,8 @@ Arguments description :
 
 4. accuracy option
 
-   if specified (value is path-string) : it parces file with verified results of classification
-   and build report with accuracy metrics
+   if specified (value is path-string) : it parces file with verified results of 
+   classification and build report with accuracy metrics
 
    example of usage:
 
@@ -172,33 +174,36 @@ Arguments description :
 
    Accuracy :
 
-                       precision    recall  f1-score   support
+               precision    recall  f1-score   support
 
-           NON SPAM       0.83      1.00      0.91        15
-               SPAM       1.00      0.50      0.67         6
+     NON SPAM       0.83      1.00      0.91        15
+         SPAM       1.00      0.50      0.67         6
 
-        avg / total       0.88      0.86      0.84        21
+    avg/total       0.88      0.86      0.84        21
 
 
-        PRECISION   - ratio tp / (tp + fp) where tp is the number of true positives and fp the number
-                        of false positives ;
+    PRECISION - ratio tp / (tp + fp) where tp is the number of true positives 
+                and fp the number of false positives ;
 
-        RECALL      - ratio tp / (tp + fn) where tp is the number of true positives and fn the number of
-                        false negatives ;
+       RECALL - ratio tp / (tp + fn) where tp is the number of true positives 
+                and fn the number of false negatives ;
 
-        The recall is intuitively the ability of the classifier to find all the positive samples.
+    The recall is intuitively the ability of the classifier to find all the 
+    positive samples.
 
-        F1-SCORE    - can be interpreted as a weighted average of the precision and recall, where an F1 score reaches its
-                        best value at 1 and worst score at 0.
+     F1-SCORE - can be interpreted as a weighted average of the precision and recall, 
+                where an F1 score reaches its best value at 1 and worst score at 0.
 
-        The relative contribution of precision and recall to the F1 score are equal. The formula for the F1 score is:
-        F1 = 2 * (precision * recall) / (precision + recall)
+    The relative contribution of precision and recall to the F1 score are equal. 
+    The formula for the F1 score is:
+        
+       F1 = 2 * (precision * recall) / (precision + recall)
 
-        SUPPORT     - the number of occurrences of each class in y_true.
+      SUPPORT - the number of occurrences of each class in y_true.
 
-   File with verified results should have the following format :
+    File with verified results should have the following format :
 
-   # cat /tmp/status
+    # cat /tmp/status
         15.eml : INFO
         25.eml : SPAM
         38.eml : HAM
