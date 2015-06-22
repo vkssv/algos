@@ -224,10 +224,10 @@ Notice :
 
 During vectorizing BeautifulSoup.UnicodeDammit object can emit into sys.stderr a lot of messages like this:
 
-Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
+    Some characters could not be decoded, and were replaced with REPLACEMENT CHARACTER.
 
-It happens because logging.filter() isn't added to logging settings and base log level for StreamHandler is INFO.
-This will be fixed later.
+It happens because logging.filter() isn't added to logging settings and base log level for StreamHandler 
+is INFO. This will be fixed later.
 
 
 Code ( the worst thing )
