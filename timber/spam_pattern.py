@@ -190,9 +190,6 @@ class SpamPattern(BasePattern):
 
         self.__delattr__('all_heads_checksum')
 
-
-
-
     def __str__(self):
         return('SPAM')
 
