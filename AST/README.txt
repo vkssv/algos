@@ -2,36 +2,32 @@
 analyser
 ==============
 
-analyser - попытка программной реализация простейшего парсера AST,
-который также производит описанные ниже модификации исходного
-кода (TestingChallenge.py) на уровне абстрактного
-синтаксического дерева.
+analyser - attempt to create simple AST parser, which is 
+also capable to perform some modifications of code 
+structures on the abstract syntax tree level 
 
 ------------------ Challenge Description ------------------
 
-1. Построить AST для приведенного ниже скрипта (это можно сделать
-как встроенными средствами, так и сторонними) и произвести
-описанные ниже действия на его уровне;
+1. build AST for TestingChallenge.py source file and perform 
+   some modifications of it's code structures on this level. 
+   Needed changes are described below. 
 
-2. Добавить новый метод fib для класса Foo, в задачи которого будет
-входить рекурсивное вычисление n-го числа ряда Фибоначчи,
-где n-передается в качестве значения единственного аргумента;
+2. add new method fib for class Foo, which will calculate 
+   Fibonacci numbers, using recursion call ;
+   n - input argument, should be passed only as a single 
+   argument ;
 
-3. Заменить каждое из значений массива переменной c метода baz на
-вызов метода fib, где аргументом будет достаточное значение числа
-для получения заменяемого значения массива и возможного остатка;
+3. replace all values of variable "c" in method Foo.baz by 
+   Foo.fib method calls. Use appropriate index as argument 
+   for Foo.fib for obtaining replacing value and possible 
+   remainder ; 
 
-4. Произвести оптимизацию кода метода bar класса Foo (удаление
-мертвого кода);
+4. perform some code optimizations for Foo.bar method 
+   ( remove dead code ) ;
 
-5. Преобразовать результирующий AST обратно в Python-код;
+5. compile modified AST into Python code object ;
 
-6. Написать юнит-тесты.
-
-7. Нужна программная реализация всех описанных действий:
-   - Работа с AST;
-   - Добавление методов;
-   - Оптимизация кода.
+6. create some unit-tests.
 
 -----------------------------------------------------------
 
